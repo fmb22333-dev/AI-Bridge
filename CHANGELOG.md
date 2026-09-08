@@ -8,6 +8,13 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Semantic-completeness delta — 2026-09-09
+- Accepted development-source commit `33b467a723aa635824c744a29b638fce7b36b53e` as the current semantic-completeness source delta.
+- SAFE COPY synchronized into existing product Adapter paths: Adapter version metadata, `compat_ops.py`, `dispatcher.py`, and `inspect_ops.py`.
+- The synchronized source adds `capability.search` discovery/integrity logic and read-only `inspect.parm_template` implementation, and includes Adapter source version `0.5.22`.
+- This does **not** make the product Adapter runnable yet: `client.py`, `knowledge_registry.py`, and regenerated clean Knowledge remain migration dependencies.
+- Product baseline was intentionally **not** advanced because the full Baseline -> current-source delta has not yet been reconciled/validated.
+
 ### Added
 - Independent `AI-Bridge` product repository separated from the developer Bus.
 - Canonical AI onboarding contract: generated Bus repositories point agents to `PROJECT_STATE_INDEX.json` first.
