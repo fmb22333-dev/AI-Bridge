@@ -4,138 +4,153 @@
 
 ## Objective
 
-Move distributable AI Bridge product authority out of the developer Bus repository into `fmb22333-dev/AI-Bridge` without interrupting the developer's active Houdini projects or live Bridge Runtime.
+Move distributable AI Bridge product authority out of the developer Bus repository into `fmb22333-dev/AI-Bridge` without interrupting active Houdini projects or the live Bridge Runtime, while allowing the development source and Knowledge to continue evolving.
 
-## Required product properties
+## Current baseline
 
-| Requirement | Current migration state |
+Machine-readable authority: `migration/BASELINE.json`.
+
+- source: `fmb22333-dev/ai-bridge-bus:bridge-runtime`
+- source baseline commit: `03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e`
+- Runtime source tree: `7ff7c780ba910bf96220b5d7c80e5f830f71cc2e`
+- live Runtime observed: `0.2.6.40`
+- Houdini Adapter: `0.5.21`
+- Knowledge tree: `a1a2e26e15c29e67860e375b1fdc194e27763ea6`
+- promotion registry: `8993f527074169a106326079fe48f911a869c9f6`
+- recipes tree: `6db974be24446efc7ea06f798ea50355dca92bb0`
+
+Source synchronization follows `docs/DELTA_SYNC_WORKFLOW.md`. The baseline advances only after reconciliation, validation, synchronization, and changelog audit.
+
+## Product requirements
+
+| Requirement | State |
 |---|---|
-| GitHub binding | **IN PROGRESS** — clean Bus provisioning implementation is migrated and retargeted to this repository |
-| Independent Knowledge Pack | **IN PROGRESS** — clean distribution filter migrated; public knowledge boundary documented |
-| First-run creates/initializes GitHub Bus | **IN PROGRESS** — clean Bus templates and provisioner migrated; full Setup UI/Runtime wiring still pending |
-| AI understands protocol automatically | **FOUNDATION COMPLETE** — AI Agent Protocol + generated Bus machine entrypoint/read-first/root-README hints are present |
-| Auditable updates | **FOUNDATION COMPLETE** — canonical `CHANGELOG.md`, change policy, remote preflight/recheck workflow, and AI maintenance rules are present |
-| Shared product update source | **CONTRACT COMPLETE / INTEGRATION PENDING** — Supervisor `0.1.3` resolver defaults to `fmb22333-dev/AI-Bridge:main` and forbids implicit Runtime publication into the user Bus |
+| GitHub binding | **IN PROGRESS / CORE PRESENT** — GitHub Bus transport and clean provisioning source migrated |
+| Independent Knowledge Pack | **IN PROGRESS** — deterministic clean filter present; final output must be regenerated from latest source before release |
+| First-run initializes independent GitHub Bus | **IN PROGRESS** — templates/provisioner/Setup frontend present; full rebased Setup routes pending |
+| AI understands protocol automatically | **FOUNDATION COMPLETE** — Bus README/read-first/index and product Agent protocol are established |
+| Auditable updates | **FOUNDATION COMPLETE** — CHANGELOG, change policy, baseline, Delta policy, remote pre/post checks |
+| Shared product update source | **CONTRACT COMPLETE / SUPERVISOR INTEGRATION PENDING** — product source is `fmb22333-dev/AI-Bridge:main`, never the user Bus |
+| Runtime Core | **MAJOR FOUNDATION MIGRATED** — Core service, execution/recovery, persistence/security and V5 transport are present |
+| Houdini Adapter | **MAJOR FOUNDATION MIGRATED** — dispatcher/primitives/graph transaction layer present; client/knowledge registry remain |
 
-## Migrated now
+## Migrated product foundation
 
-### Protocol/specification/audit
+### Protocol / audit / deployment
 
 - `AGENTS.md`
 - `CHANGELOG.md`
-- `specs/AI_AGENT_PROTOCOL.md`
-- `specs/AI_BRIDGE_EXECUTION_SPEC.md`
-- `specs/AI_BRIDGE_LEARNING_POLICY.md`
-- `specs/AI_BRIDGE_DEPLOYMENT_SPEC.md`
-- `docs/FIRST_INSTALL_FLOW.md`
-- `docs/REPOSITORY_MODEL.md`
-- `docs/UPDATE_WORKFLOW.md`
-- `docs/CHANGE_POLICY.md`
+- `migration/BASELINE.json`
+- `docs/DELTA_SYNC_WORKFLOW.md`
+- execution / learning / deployment / AI-agent specs
+- Bus templates and README bootstrap hint
+- clean GitHub provisioner
+- clean Knowledge Pack generator/filter
 
-### Generated Bus templates
+### Runtime
 
-- `templates/bus/PROJECT_STATE_INDEX.template.json`
-- `templates/bus/AI_BRIDGE_READ_FIRST.template.md`
-- `templates/bus/README.template.md`
+Present now:
 
-Generated indices point to `fmb22333-dev/AI-Bridge:main` for shared Runtime/protocol authority. They do not require the old developer repository's `bridge-runtime` branch.
+- protocol models
+- Runtime config/package entrypoints
+- Core service/control plane
+- execution budget policy
+- Adapter command bus / session / workspace registries
+- host process control and plugin manager
+- checkpoint/evidence/snapshot/recovery/SQLite persistence
+- Windows DPAPI secret store
+- local Adapter API
+- remote configuration/controller
+- result delivery / runner
+- GitHub transport with Contents fallback, V2/V3/V4 compatibility and V5 multi-channel
+- Runtime launcher and Houdini Adapter installer
 
-### Runtime/deployment source
+### Houdini Adapter
 
-Migrated:
+Present now:
 
-- package metadata/root/config
-- GitHub Bus provisioner
-- clean Knowledge Pack generator
-- host plugin manifest
-- protocol package (`command`, `capability`, `result`, `errors`)
-- Core foundation:
-  - `adapter_bus.py`
-  - `conflicts.py`
-  - `emergency_stop.py`
-  - `policy.py`
-  - `remote_adapter.py`
-  - `sessions.py`
-  - `workspace.py`
-- Persistence foundation:
-  - `db.py`
-  - `checkpoints.py`
-  - `evidence.py`
-  - `history.py`
-  - `recovery.py`
-  - `snapshots.py`
-- Security foundation:
-  - Windows DPAPI secret store
-  - non-Windows fail-closed fallback
-- Transport foundation:
-  - `base.py`
-  - `remote_config.py`
-  - `local_api.py`
-  - transport package entrypoint
-- tests:
-  - clean GitHub provisioning
-  - clean Knowledge distribution
-  - canonical Supervisor update-source regression
+- package/bootstrap/version
+- dispatcher
+- inspect/context/batch inspection
+- parameter/code primitives with expected-hash guards
+- node operations and atomic batch connections
+- Cook/checkpoint/error classification
+- capability guidance
+- graph validate/apply/transactional/ensure-plan/ensure-transactional
+- local log/package manifest
 
-Still pending before Runtime can be considered runnable from this repository:
+Remaining major Houdini files:
 
-- `core/service.py`
-- `core/execution_policy.py`
-- `core/host_process.py`
-- `core/plugin_manager.py`
-- remaining adapters / transport GitHub bus / result delivery / runner
-- app/web/Setup UI
-- Runtime launch/install scripts
-- complete test suite
+- `client.py`
+- `knowledge_registry.py`
+- remaining support modules/data
+- generated clean distributable Knowledge output
 
-### Bootstrap / Supervisor
+### Web / Setup
+
+Present now:
+
+- Web package entrypoint
+- Setup frontend
+- command-history page and script
+- Dashboard template
+- Setup frontend defaults shared Runtime source to `fmb22333-dev/AI-Bridge`
+
+Pending:
+
+- full `web/routes.py` REBASE so product update config is `AI-Bridge:main` + `runtime-release.json`
+- remaining Dashboard static assets
+- product Setup contract is intentionally RED until routes are integrated
+
+### Supervisor
 
 Present:
 
-- legacy bootstrap entry slice under `bootstrap/supervisor/0.1.2/`
-- new `bootstrap/supervisor/0.1.3/supervisor_update_source.py`
+- legacy 0.1.2 reference slice
+- 0.1.3 product update-source resolver
+- regression proving user Bus is never implicit Runtime source
 
-The legacy Supervisor used the user's Bus as a fallback Runtime release source. That behavior is now explicitly forbidden. The `0.1.3` resolver implements the corrected product contract, but full Supervisor source integration is still pending.
+The mature 0.1.2 process monitoring, validation, activation and rollback logic remains reusable. Integration must replace the two incompatible legacy paths:
 
-## Explicitly excluded from the product repository
+1. `_load_update_config()` Bus fallback;
+2. `_bootstrap_release_if_needed()` publication of Runtime into a user's Bus.
 
-- `.ai-bridge/commands/`
-- `.ai-bridge/results/`
-- developer live status/presence
-- developer Bridge ID
-- AutoUV/Retarget/SubdivNormalBake/Locomotion project authority/history
-- local HIP/FBX paths
-- command/recovery history from the developer machine
-- credentials/secrets
-- project-family candidate knowledge as generic execution authority
-- generated package/cache metadata (`*.egg-info`, `__pycache__`, `.pytest_cache`, etc.)
+Default product update authority is `fmb22333-dev/AI-Bridge:main` with `runtime-release.json`.
 
-## Live-development isolation
+## Delta classification
 
-The developer Bus remains `fmb22333-dev/ai-bridge-bus` and remains authority for the developer's live Bridge/Houdini state until an explicit migration/activation is validated.
+- **SAFE COPY:** ordinary generic Runtime/Adapter fixes and generic tests where product architecture has not diverged.
+- **REBASE REQUIRED:** Supervisor/update source, Setup/provisioning, installer/release authority, Bus templates, or any productized file.
+- **DO NOT DISTRIBUTE:** `.ai-bridge` runtime state/history, credentials, Bridge IDs, local sessions/workspaces/paths, project authority/handoffs, caches, or candidate/project-specific knowledge as generic execution authority.
 
-At this checkpoint the live Runtime remains `0.2.6.37` with the existing Houdini sessions untouched. This migration has not sent Host mutation commands and has not restarted Houdini, replaced the active Adapter, switched Runtime, modified a HIP, or rewritten the developer Bus configuration.
+Knowledge changes are detected independently from Runtime/Adapter versions by Knowledge-tree and promotion hashes.
 
-## Mandatory audit workflow
+## Live isolation
 
-`read CHANGELOG -> remote preflight -> reconcile -> modify -> validate -> update CHANGELOG -> remote recheck -> synchronize`
+The developer Bus remains live authority for the developer machine. This repository migration has not:
 
-During the current initialization window the user has declared this repository single-writer, but the workflow remains mandatory so multi-user collaboration can be enabled later without changing process.
+- sent Host mutation commands;
+- restarted Houdini;
+- replaced the active Adapter;
+- switched the live Runtime;
+- modified a HIP;
+- rewritten the developer Bus configuration.
 
-## Next migration sequence
+The live Runtime observed while establishing this baseline was `0.2.6.40`; this movement from earlier `0.2.6.37` migration observations is the reason continuous Baseline + Delta synchronization is now mandatory.
 
-1. Integrate the `0.1.3` shared-product update-source resolver into the complete Supervisor and migrate remaining bootstrap files.
-2. Complete Runtime Core by whitelist (`execution_policy`, process/plugin management, then `service`).
-3. Complete Transport and app/web/Setup UI.
-4. Migrate Houdini Adapter kernel.
-5. Generate and commit only the clean distributable Knowledge Pack output.
-6. Migrate installer assembly and release-manifest logic.
-7. Migrate/retarget Blender and Unreal adapter skeletons.
-8. Run repository regression tests.
-9. Build a clean installer from this repository.
-10. Validate on a fresh Windows environment / fresh Bus repository.
-11. Only after acceptance, move live developer Runtime update authority away from the old developer repository.
+## Next executable sequence
+
+1. Rebase full Setup `web/routes.py` to product update authority and finish Web static assets.
+2. Integrate Supervisor 0.1.3 resolver into the mature Supervisor body and remove Bus bootstrap publication.
+3. Migrate `bridge_admin.py`.
+4. Migrate Houdini `client.py` and `knowledge_registry.py` plus required generic knowledge source.
+5. Migrate remaining generic tests and run `compileall + pytest`.
+6. Re-read source HEAD and perform first baseline-to-current Delta classification/reconciliation.
+7. Regenerate clean Knowledge Pack from the latest reconciled Knowledge tree.
+8. Add product `runtime-release.json`, installer assembly and clean release flow.
+9. Build clean installer and validate fresh Windows + fresh GitHub Bus installation.
+10. Only after acceptance, change live developer update authority away from the old development source.
 
 ## Acceptance boundary
 
-The repository is **not yet a complete release**. The architecture, audit model, Bus provisioning, Knowledge filtering, Supervisor update-source contract, and several Runtime foundation layers are now present. Full Runtime integration and fresh-install validation remain pending.
+The product repository is **not yet a release**. It now has a durable synchronization model and most of the Runtime control/transport foundation, but Setup backend, Supervisor integration, remaining Houdini kernel/Knowledge, full tests, release manifest and fresh-install validation are still required.
