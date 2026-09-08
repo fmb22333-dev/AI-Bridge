@@ -270,3 +270,92 @@ def inspect_batch_nodes(
         "truncated": omitted > 0,
         "items": items,
     }
+
+
+
+def _call0(obj, name, default=None):
+    fn = getattr(obj, name, None)
+    if not callable(fn):
+        return default
+    try:
+        return fn()
+    except Exception:
+        return default
+
+
+def _enum_name(value):
+    if value is None:
+        return None
+    fn = getattr(value, "name", None)
+    if callable(fn):
+        try:
+            return fn()
+        except Exception:
+            pass
+    return str(value)
+
+
+def inspect_parm_template(hou, path: str, parameter: str):
+    node = hou.node(path)
+    if node is None:
+        raise ValueError(f"NODE_NOT_FOUND: {path}")
+    parm = node.parm(parameter)
+    if parm is None:
+        raise ValueError(f"PARM_NOT_FOUND: {path}/{parameter}")
+
+    template = parm.parmTemplate()
+    type_value = _call0(template, "type")
+    callback_language = _call0(template, "scriptCallbackLanguage")
+    callback_script = _call0(template, "scriptCallback")
+    if callback_script is None:
+        callback_script = _call0(template, "callbackScript")
+    default_expression_language = _call0(template, "defaultExpressionLanguage")
+    item_generator_language = _call0(template, "itemGeneratorScriptLanguage")
+    conditionals_raw = _call0(template, "conditionals", {})
+    conditionals = {}
+    if isinstance(conditionals_raw, dict):
+        conditionals = {
+            _enum_name(key): _safe(value)
+            for key, value in conditionals_raw.items()
+        }
+
+    disable_when = _call0(template, "disableWhen")
+    hide_when = _call0(template, "hideWhen")
+    if disable_when is None:
+        for key, value in conditionals.items():
+            if "disable" in str(key).lower():
+                disable_when = value
+                break
+    if hide_when is None:
+        for key, value in conditionals.items():
+            if "hide" in str(key).lower():
+                hide_when = value
+                break
+
+    return {
+        "path": node.path(),
+        "parameter": parm.name(),
+        "name": _call0(template, "name", parm.name()),
+        "label": _call0(template, "label"),
+        "type": _enum_name(type_value),
+        "is_spare": bool(_call0(parm, "isSpare", False)),
+        "script_callback": _safe(callback_script),
+        "script_callback_language": _enum_name(callback_language),
+        "callback_script": _safe(callback_script),
+        "callback_language": _enum_name(callback_language),
+        "tags": _safe(_call0(template, "tags", {})),
+        "default_value": _safe(_call0(template, "defaultValue")),
+        "default_expression": _safe(_call0(template, "defaultExpression")),
+        "default_expression_language": _safe(
+            [_enum_name(value) for value in default_expression_language]
+            if isinstance(default_expression_language, (list, tuple))
+            else _enum_name(default_expression_language)
+        ),
+        "conditionals": conditionals,
+        "disable_when": _safe(disable_when),
+        "hide_when": _safe(hide_when),
+        "menu_items": _safe(_call0(template, "menuItems")),
+        "menu_labels": _safe(_call0(template, "menuLabels")),
+        "item_generator_script": _safe(_call0(template, "itemGeneratorScript")),
+        "item_generator_script_language": _enum_name(item_generator_language),
+    }
