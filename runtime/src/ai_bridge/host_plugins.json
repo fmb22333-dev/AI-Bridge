@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "hosts": [
+    {
+      "id": "houdini",
+      "display_name": "Houdini",
+      "state": "ready",
+      "bundled": true,
+      "adapter_dir": "houdini_adapter",
+      "installer": "install_houdini_adapter.py",
+      "adapter_module": "ai_bridge_houdini",
+      "supports_install": true,
+      "supports_restart_apply": true
+    },
+    {
+      "id": "blender",
+      "display_name": "Blender",
+      "state": "scaffold",
+      "bundled": true,
+      "adapter_dir": "blender_adapter",
+      "supports_install": false,
+      "supports_restart_apply": false
+    },
+    {
+      "id": "unreal",
+      "display_name": "Unreal Engine",
+      "state": "scaffold",
+      "bundled": true,
+      "adapter_dir": "unreal_adapter",
+      "supports_install": false,
+      "supports_restart_apply": false
+    }
+  ]
+}
