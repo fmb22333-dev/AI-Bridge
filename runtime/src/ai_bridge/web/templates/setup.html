@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Bridge Setup</title>
+  <style>
+    :root{font-family:Inter,Segoe UI,Arial,sans-serif;color-scheme:dark;background:#111;color:#eee}*{box-sizing:border-box}body{margin:0;background:#111}main{max-width:780px;margin:32px auto;padding:0 20px}.card{background:#191919;border:1px solid #2a2a2a;border-radius:12px;padding:22px;margin-bottom:16px}h1{font-size:26px;margin:0 0 8px}h2{font-size:16px;margin:0 0 14px}p,small{color:#aaa;line-height:1.5}label{display:grid;gap:6px;margin:12px 0;color:#bbb;font-size:13px}input,button{border:1px solid #383838;border-radius:7px;background:#222;color:#eee;padding:10px 12px}button{cursor:pointer}.row{display:flex;gap:10px;flex-wrap:wrap}.primary{border-color:#4b6d59}.muted{color:#888}.ok{color:#86c493}.error{color:#d6aa72;white-space:pre-wrap}.status{padding:10px 12px;background:#141414;border-radius:7px;margin-top:14px}.helper{border-color:#334355}.hint{margin-top:8px}.compact{padding:8px 10px;font-size:12px}.split{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}.split label{margin:12px 0 0}@media(max-width:640px){.split{grid-template-columns:1fr}.row button{flex:1 1 auto}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1>AI Bridge 首次配置</h1>
+    <p>推荐直接创建一个全新的干净 Bus。它不会复制任何现有项目，只连接共享 Runtime / 通用知识源。旧的手动连接流程仍保留。</p>
+    <div id="localStatus" class="status">正在检测本机 GitHub 环境…</div>
+    <div class="row" style="margin-top:12px">
+      <button id="githubLogin" class="helper" type="button">打开 GitHub 登录</button>
+      <button id="ghWebLogin" class="helper" type="button" style="display:none">启动 GitHub CLI 网页登录</button>
+      <button id="installGh" type="button" style="display:none">GitHub CLI 官网（可选）</button>
+      <button id="refreshState" type="button">重新检测登录状态</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>1. GitHub Bus</h2>
+    <p>推荐使用“一键创建干净 Bus”：自动创建 Private Repository、空 PROJECT_STATE_INDEX、Issue #1 和固定 mailbox，再直接连接。不会复制当前项目。</p>
+    <div class="row">
+      <button id="provisionRepo" class="primary" type="button">一键创建干净 Bus 并连接</button>
+      <button id="createRepo" class="helper" type="button">手动创建仓库</button>
+      <button id="openRepo" type="button">打开已填写仓库</button>
+    </div>
+    <label>Repository
+      <input id="repo" placeholder="owner/ai-bridge-bus 或 GitHub 仓库 URL" autocomplete="off">
+    </label>
+    <label>Branch
+      <input id="branch" value="main" autocomplete="off">
+    </label>
+  </div>
+
+  <div class="card">
+    <h2>2. GitHub 凭据</h2>
+    <p id="credentialHint">如果本机 GitHub CLI 已登录，可以不填写 Token。</p>
+    <div class="row">
+      <button id="createToken" class="helper" type="button">创建 AI Bridge Token（权限已预填）</button>
+      <button id="manageToken" type="button">管理已有 Token</button>
+    </div>
+    <label>Token
+      <input id="token" type="password" autocomplete="off" placeholder="已登录 gh 时可留空">
+    </label>
+    <small>一键创建仓库需要 Administration: Read and write；Bus 运行需要 Contents / Issues: Read and write。Token 仅保存到本机 Windows DPAPI。若不希望授予创建权限，可继续使用手动创建仓库 + 保存连接流程。</small>
+  </div>
+
+  <div class="card">
+    <h2>3. Bridge</h2>
+    <div class="split">
+      <label>Bridge ID
+        <input id="bridgeId" autocomplete="off">
+      </label>
+      <button id="copyBridgeId" class="compact" type="button">复制 ID</button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="save" type="button">连接已有 GitHub Bus</button>
+      <button id="dashboard" type="button" style="display:none">返回 Dashboard</button>
+    </div>
+    <div id="out" class="status muted">等待配置。</div>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let setupState = null;
+function normalizeRepo(value){let v=(value||'').trim();v=v.replace(/^git@github\.com:/i,'').replace(/^https?:\/\/github\.com\//i,'').replace(/^github\.com\//i,'');v=v.replace(/^\/+|\/+$/g,'').replace(/\.git$/i,'');const parts=v.split('/').filter(Boolean);return parts.length>=2?`${parts[0]}/${parts[1]}`:v;}
+async function parseResponse(response){const text=await response.text();let data={};try{data=text?JSON.parse(text):{};}catch{data={detail:text};}if(!response.ok)throw new Error(data.detail||text||`HTTP ${response.status}`);return data;}
+async function loadState({preserveInput=false}={}){const response=await fetch('/setup/state');setupState=await response.json();if(!preserveInput||!$('repo').value.trim())$('repo').value=setupState.repository||(setupState.gh_login?`${setupState.gh_login}/ai-bridge-bus`:'');if(!preserveInput||!$('branch').value.trim())$('branch').value=setupState.branch||'main';if(!preserveInput||!$('bridgeId').value.trim())$('bridgeId').value=setupState.bridge_id||'local-bridge';if(setupState.gh_cli_authenticated){$('localStatus').innerHTML=`<span class="ok">✓ GitHub CLI 已登录${setupState.gh_login?`：${setupState.gh_login}`:''}</span><br><small>Token 输入框可以留空，Bridge 会直接复用本机 gh 凭据。</small>`;$('credentialHint').textContent='已检测到 GitHub CLI 登录，可直接使用；也可以粘贴单独的 Fine-grained Token。';$('ghWebLogin').style.display='none';$('installGh').style.display='none';}else if(setupState.gh_cli_available){$('localStatus').innerHTML='GitHub CLI 已安装但未登录。可点击“启动 GitHub CLI 网页登录”，无需手敲命令；也可以直接使用 Token。';$('ghWebLogin').style.display='inline-block';$('installGh').style.display='none';}else{$('localStatus').innerHTML='未检测到 GitHub CLI。可直接使用下方 Token 流程，不需要安装额外工具。';$('ghWebLogin').style.display='none';$('installGh').style.display='inline-block';}if(setupState.configured){$('dashboard').style.display='inline-block';$('out').textContent=`当前配置：${setupState.repository} · ${setupState.status}`;}}
+$('repo').addEventListener('blur',()=>{$('repo').value=normalizeRepo($('repo').value);});
+$('githubLogin').onclick=()=>window.open('/setup/github-login','_blank','noopener');$('installGh').onclick=()=>window.open('/setup/github-cli','_blank','noopener');$('createRepo').onclick=()=>window.open('/setup/github-repository','_blank','noopener');
+$('provisionRepo').onclick=async()=>{$('provisionRepo').disabled=true;$('save').disabled=true;$('out').className='status muted';$('out').textContent='正在创建/检查干净 Bus 仓库、初始化 Issue #1 与 mailbox…';try{const repository=normalizeRepo($('repo').value);$('repo').value=repository;const data=await parseResponse(await fetch('/setup/provision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repository,bridge_id:$('bridgeId').value.trim(),runtime_source_repository:setupState?.runtime_source_repository||'fmb22333-dev/AI-Bridge',token:$('token').value.trim(),private:true})}));$('token').value='';$('repo').value=data.provisioned?.repository||repository;$('out').className='status ok';$('out').textContent='✓ 干净 Bus 已初始化并连接。projects={}，未继承任何现有项目。正在进入 Dashboard…';setTimeout(()=>{window.location.href='/';},900);}catch(error){$('out').className='status error';$('out').textContent='一键部署失败：'+error.message+'\n你仍可使用下方“连接已有 GitHub Bus”流程。';}finally{$('provisionRepo').disabled=false;$('save').disabled=false;}};
+$('openRepo').onclick=()=>{const repo=normalizeRepo($('repo').value);$('repo').value=repo;window.open('/setup/github-open-repository?repository='+encodeURIComponent(repo),'_blank','noopener');};
+$('createToken').onclick=()=>{const owner=(normalizeRepo($('repo').value).split('/')[0]||setupState?.gh_login||'').trim();window.open('/setup/github-token?owner='+encodeURIComponent(owner),'_blank','noopener');};$('manageToken').onclick=()=>window.open('/setup/github-token-settings','_blank','noopener');$('dashboard').onclick=()=>window.location.href='/';$('refreshState').onclick=()=>loadState({preserveInput:true}).catch((error)=>{$('localStatus').textContent=error.message;});
+$('copyBridgeId').onclick=async()=>{try{await navigator.clipboard.writeText($('bridgeId').value.trim());$('copyBridgeId').textContent='已复制';setTimeout(()=>$('copyBridgeId').textContent='复制 ID',900);}catch{$('out').textContent='浏览器不允许直接复制，请手动复制 Bridge ID。';}};
+$('ghWebLogin').onclick=async()=>{$('ghWebLogin').disabled=true;$('localStatus').textContent='正在启动 GitHub CLI 网页登录窗口…';try{await parseResponse(await fetch('/setup/github-cli-login',{method:'POST'}));$('localStatus').innerHTML='已启动 GitHub CLI 登录窗口。完成浏览器授权后，点击“重新检测登录状态”。';}catch(error){$('localStatus').className='status error';$('localStatus').textContent='启动失败：'+error.message;}finally{$('ghWebLogin').disabled=false;}};
+$('save').onclick=async()=>{$('save').disabled=true;$('out').className='status muted';$('out').textContent='正在验证仓库、分支和写入权限…';try{const repository=normalizeRepo($('repo').value);$('repo').value=repository;await parseResponse(await fetch('/setup/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repository,branch:$('branch').value.trim(),bridge_id:$('bridgeId').value.trim(),token:$('token').value.trim()})}));$('token').value='';$('out').className='status ok';$('out').textContent='✓ GitHub Bus 已连接，配置已安全保存。正在进入 Dashboard…';setTimeout(()=>{window.location.href='/';},700);}catch(error){$('out').className='status error';$('out').textContent='连接失败：'+error.message;}finally{$('save').disabled=false;}};
+loadState().catch((error)=>{$('localStatus').className='status error';$('localStatus').textContent='环境检测失败：'+error.message;});
+</script>
+</body>
+</html>
