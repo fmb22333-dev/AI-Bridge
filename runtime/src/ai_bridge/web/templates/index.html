@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Bridge</title>
+  <link rel="stylesheet" href="/control/app.css?v=0.2.6.14">
+</head>
+<body>
+<main class="shell">
+  <header class="topbar">
+    <div>
+      <h1>AI Bridge <small>V0.2.6.40</small></h1>
+      <p>GitHub Bus · Local Core · Host Adapters</p>
+    </div>
+    <div id="coreBadge" class="badge">...</div>
+  </header>
+
+  <section class="dashboardGrid overviewGrid">
+    <article class="card statusCard">
+      <h2>Bridge 状态</h2><div id="status"></div><div class="actions"><button id="stop" class="danger">停止 AI 写入</button><button id="resume">恢复 AI 写入</button></div>
+    </article>
+    <article class="card"><h2>软件 Session</h2><div id="sessions"></div></article>
+    <article class="card"><div class="sectionTitleRow"><h2>Host 插件</h2><button id="installAllPlugins" class="tiny">安装可用插件</button></div><div id="plugins"><p class="muted">正在读取插件状态…</p></div><div id="pluginError" class="errorText"></div><small>插件随 Bridge Runtime 分发；需要重启的 Host 会通过安全重启流程应用。</small></article>
+  </section>
+
+  <section class="dashboardGrid twoColGrid">
+    <article class="card"><h2>Workspace</h2><div id="workspaces"></div><form id="workspaceForm"><input id="wsName" placeholder="名称，例如 Houdini Test" required><div class="pathInput"><input id="wsRoot" placeholder="工程根目录，例如 E:\AA" required><button id="pickWorkspace" type="button">选择目录</button></div><button>添加 Workspace</button></form><small>删除只取消 Bridge 注册，不删除磁盘目录。</small></article>
+    <article class="card"><h2>GitHub Bus</h2><div id="remote"></div><div class="actions"><button id="editRemote">修改配置</button><button id="openRemoteRepo">打开仓库</button><button id="manageRemoteToken">管理 Token</button><button id="disconnectRemote" class="danger">断开并清除凭据</button></div><div id="remoteError" class="errorText"></div></article>
+  </section>
+
+  <section class="dashboardGrid twoColGrid">
+    <article class="card"><h2>Supervisor / 自动更新</h2><div id="supervisor"><p class="muted">正在读取 Supervisor 状态…</p></div><small>Supervisor 独立于 Runtime；Runtime 更新失败时自动回滚。</small></article>
+    <article class="card utilityCard"><h2>本地快捷入口</h2><p class="muted">仅用于打开 Bridge 与 Houdini 的本机目录。</p><div class="actions helperActions"><button id="openDataDir">Bridge 数据目录</button><button id="openHoudiniDir">Houdini 用户目录</button></div></article>
+  </section>
+
+  <details class="card collapsibleCard" id="executionBudgetPanel"><summary><span class="summaryTitle"><strong>执行预算与自动恢复</strong><small>高级配置，按需展开</small></span><span id="budgetSummary" class="summaryMeta">读取中…</span></summary><div class="detailsBody"><div id="executionPolicy"><p class="muted">正在读取执行预算…</p></div><h3>最近自动恢复</h3><div id="recoveryHistory"><p class="muted">暂无恢复记录</p></div><div id="budgetError" class="errorText"></div><small>预算优先级：AI 显式 → 当前工程精确覆盖 → Workspace → Bridge 默认。自动恢复策略：AI 显式 → Workspace → Bridge 默认。预算只约束主 Host 操作，不计安全 checkpoint 保存时间。</small></div></details>
+
+  <article class="card commandsCard"><div class="sectionTitleRow commandsTitle"><div><h2>最近命令</h2><small>最近 10 条；时间来自 Bridge 本地记录，并按本机时区显示。目的由 Bridge UI 从现有命令字段推断，不改变 AI 输入协议。</small></div><button id="openCommandHistory" class="tiny">打开完整命令历史</button></div><div class="tableWrap"><table><thead><tr><th>本机时间</th><th>目的</th><th>Operation</th><th>Status</th><th>进度 / 耗时</th><th>Evidence</th></tr></thead><tbody id="recentCommands"><tr><td colspan="6" class="muted">正在读取最近命令…</td></tr></tbody></table></div><div style="display:none"><table><tbody id="commands"></tbody></table></div></article>
+</main>
+<script src="/control/app.js?v=0.2.6.14"></script>
+<script>
+const RECENT_COMMAND_LIMIT=10;const commandBudgets=new Map();const TERMINAL_COMMAND_STATUSES=new Set(["success","failed","denied","conflict","cancelled","canceled","timeout","timed_out","rolled_back"]);
+function commandDate(value){if(!value)return null;const raw=String(value);const normalized=/[zZ]$|[+-]\d\d:\d\d$/.test(raw)?raw:raw.replace(" ","T")+"Z";const date=new Date(normalized);return Number.isNaN(date.getTime())?null:date;}
+function commandTimeText(value){const date=commandDate(value);return date?date.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—";}
+function commandElapsed(startValue,endValue){const start=commandDate(startValue),end=commandDate(endValue);if(!start||!end)return null;return Math.max(0,(end.getTime()-start.getTime())/1000);}
+function commandDurationText(seconds){if(seconds==null||!Number.isFinite(seconds))return "—";if(seconds<1)return `${Math.round(seconds*1000)}ms`;if(seconds<60)return `${seconds.toFixed(seconds<10?1:0)}s`;const minutes=Math.floor(seconds/60),remain=Math.floor(seconds%60);return `${minutes}m ${remain}s`;}
+function commandPurpose(item){const op=String(item.operation||"");const workspace=String(item.workspace_id||"");const projectHint=workspace&&workspace!=="__bridge_system__"?` · ${workspace}`:"";const exact={"bridge.project.resume":"恢复项目状态","code.safe_patch_and_cook":"安全修改代码并 Cook","network.build_and_cook":"构建节点网络并 Cook","network.build":"构建节点网络","cook.execute":"执行 Cook","hip.save":"保存工程","checkpoint.create":"创建工程检查点","rollback.execute":"回滚工程状态","selection.get":"读取当前选择","selection.set":"修改当前选择"};if(exact[op])return exact[op]+projectHint;if(op==="inspect.find")return "查找节点 / 对象"+projectHint;if(op.startsWith("inspect."))return "检查项目 / 节点状态"+projectHint;if(op.startsWith("parm."))return "读取 / 修改参数"+projectHint;if(op.startsWith("node."))return "创建 / 修改节点"+projectHint;if(op.startsWith("code."))return "读取 / 修改节点代码"+projectHint;if(op.startsWith("bridge.update.test")||op==="bridge.update.validate")return "验证 Bridge 更新";if(op.startsWith("bridge.update."))return "更新 Bridge Runtime";if(op.startsWith("bridge.plugin."))return "管理 Host 插件";if(op.startsWith("bridge."))return "Bridge 管理操作";return op||"未知命令";}
+function commandProgress(item){const status=String(item.status||"unknown").toLowerCase();const terminal=TERMINAL_COMMAND_STATUSES.has(status);if(terminal){const seconds=commandElapsed(item.created_at,item.updated_at);return {text:`${status} · ${commandDurationText(seconds)}`,stuck:false};}const age=commandElapsed(item.created_at,new Date().toISOString());const budget=Number(commandBudgets.get(item.command_id));if(Number.isFinite(budget)&&budget>0&&age!=null&&age>budget)return {text:`疑似卡住 · ${commandDurationText(age)} / 预算 ${commandDurationText(budget)}`,stuck:true};const label=status==="received"?"已收到":status==="queued"?"排队中":status==="running"||status==="executing"?"执行中":status;return {text:`${label} · ${commandDurationText(age)}`,stuck:false};}
+async function loadCommandBudget(item){const status=String(item.status||"unknown").toLowerCase();if(TERMINAL_COMMAND_STATUSES.has(status)||commandBudgets.has(item.command_id))return;try{const detail=await api(`/control/commands/${encodeURIComponent(item.command_id)}`);const budget=detail?.request?.execution?.budget_seconds;if(budget!=null)commandBudgets.set(item.command_id,Number(budget));}catch{commandBudgets.set(item.command_id,NaN);}}
+async function refreshRecentCommands(){try{const data=await api("/control/commands?limit="+RECENT_COMMAND_LIMIT);const items=(data.commands||[]).slice(0,RECENT_COMMAND_LIMIT);await Promise.all(items.map(loadCommandBudget));const target=document.querySelector("#recentCommands");if(!target)return;target.innerHTML=items.length?items.map((item)=>{const progress=commandProgress(item);return `<tr${progress.stuck?' class="commandStuck"':''}><td>${esc(commandTimeText(item.created_at))}</td><td><b>${esc(commandPurpose(item))}</b><small class="mono">${esc(item.command_id)}</small></td><td>${esc(item.operation||"—")}</td><td><span class="statusPill ${esc(item.status||"")}">${esc(item.status||"unknown")}</span></td><td>${progress.stuck?'<b>':''}${esc(progress.text)}${progress.stuck?'</b>':''}</td><td>${item.evidence_id?`<a href="/control/evidence/${encodeURIComponent(item.evidence_id)}" target="_blank">查看</a>`:"—"}</td></tr>`;}).join(""):'<tr><td colspan="6" class="muted">暂无命令</td></tr>'; }catch(error){const target=document.querySelector("#recentCommands");if(target)target.innerHTML=`<tr><td colspan="6" class="errorText">${esc(error.message)}</td></tr>`;}}
+refreshRecentCommands();setInterval(refreshRecentCommands,2000);
+</script>
+</body>
+</html>
