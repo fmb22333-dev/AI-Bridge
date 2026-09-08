@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "index_role": "single_machine_entrypoint",
+  "repository": "{{BUS_REPOSITORY}}",
+  "entrypoint": {
+    "ref": "main",
+    "path": "PROJECT_STATE_INDEX.json"
+  },
+  "authority_policy": {
+    "read_this_index_first": true,
+    "normal_recovery_must_not_repository_search": true,
+    "precedence": [
+      "live_runtime_status",
+      "project_current_state",
+      "normative_bridge_specs",
+      "historical_handoff_or_chat"
+    ],
+    "volatile_runtime_versions_must_not_be_taken_from_static_docs": true,
+    "on_missing_pointer": "only then use targeted repository search"
+  },
+  "bridge": {
+    "live_runtime_status": {
+      "ref": "main",
+      "path": ".ai-bridge/status/{{BRIDGE_ID}}.json"
+    },
+    "read_first": {
+      "ref": "main",
+      "path": "AI_BRIDGE_READ_FIRST.md"
+    },
+    "runtime_source": {
+      "repository": "fmb22333-dev/AI-Bridge",
+      "ref": "main"
+    },
+    "normative_specs": {
+      "execution": {
+        "repository": "fmb22333-dev/AI-Bridge",
+        "ref": "main",
+        "path": "specs/AI_BRIDGE_EXECUTION_SPEC.md"
+      },
+      "learning_policy": {
+        "repository": "fmb22333-dev/AI-Bridge",
+        "ref": "main",
+        "path": "specs/AI_BRIDGE_LEARNING_POLICY.md"
+      },
+      "deployment": {
+        "repository": "fmb22333-dev/AI-Bridge",
+        "ref": "main",
+        "path": "specs/AI_BRIDGE_DEPLOYMENT_SPEC.md"
+      },
+      "ai_protocol": {
+        "repository": "fmb22333-dev/AI-Bridge",
+        "ref": "main",
+        "path": "specs/AI_AGENT_PROTOCOL.md"
+      }
+    }
+  },
+  "projects": {},
+  "recovery_profiles": {
+    "bridge_modify": [
+      "fetch main:PROJECT_STATE_INDEX.json",
+      "fetch live runtime status",
+      "fetch normative Bridge specifications from runtime_source",
+      "inspect only source files relevant to the requested modification"
+    ]
+  }
+}
