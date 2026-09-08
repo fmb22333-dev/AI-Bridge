@@ -1,0 +1,30 @@
+[project]
+name = "ai-bridge"
+version = "0.2.6.37"
+description = "Local deterministic AI bridge core"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "pydantic>=2.6",
+  "httpx>=0.27",
+  "websockets>=14,<16",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+"ai_bridge.web" = ["templates/*.html", "static/*.js", "static/*.css"]
+"ai_bridge" = ["host_plugins.json"]
