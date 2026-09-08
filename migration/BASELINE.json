@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "captured_date": "2026-09-09",
+  "purpose": "Anchor ongoing migration from the continuously changing development source into the distributable AI-Bridge product repository.",
+  "source": {
+    "repository": "fmb22333-dev/ai-bridge-bus",
+    "ref": "bridge-runtime",
+    "commit": "03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e",
+    "root_tree": "f15122f94bd9ccbc3b5aa93a19f279bbff7fe0ba",
+    "runtime_source_tree": "7ff7c780ba910bf96220b5d7c80e5f830f71cc2e",
+    "houdini_adapter_tree": "99adcc76e443867574b3b345a1a2965e08e056b8",
+    "houdini_adapter_version": "0.5.21",
+    "knowledge_tree": "a1a2e26e15c29e67860e375b1fdc194e27763ea6",
+    "promotion_registry_blob": "8993f527074169a106326079fe48f911a869c9f6",
+    "recipes_tree": "6db974be24446efc7ea06f798ea50355dca92bb0"
+  },
+  "live_runtime_at_capture": {
+    "version": "0.2.6.40",
+    "status_source": "fmb22333-dev/ai-bridge-bus:main:.ai-bridge/status/FMB-6f5f1b.json",
+    "status_published_at": "2026-09-08T19:53:18.384011+00:00",
+    "transport": "issue_channel_v5",
+    "multi_channel": true
+  },
+  "product_repository": {
+    "repository": "fmb22333-dev/AI-Bridge",
+    "ref": "main",
+    "head_before_baseline_record": "ae7b1fea45807eabf8af6d9b061cc5dc79da0271"
+  },
+  "delta_policy": {
+    "compare_source_from_commit": "03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e",
+    "safe_copy": [
+      "ordinary Runtime bug fixes whose product path has not diverged",
+      "Houdini Adapter kernel fixes whose distributable semantics are unchanged",
+      "tests that remain generic and contain no developer-machine state"
+    ],
+    "rebase_required": [
+      "Supervisor/update-source code",
+      "GitHub Bus provisioning/default product authority",
+      "Setup UI repository initialization flow",
+      "installer/release-source logic",
+      "any file already productized differently in AI-Bridge"
+    ],
+    "do_not_distribute": [
+      ".ai-bridge runtime state/history",
+      "credentials or secret material",
+      "developer Bridge IDs/sessions/workspaces/local paths",
+      "project authority/handoff documents",
+      "candidate or project-family knowledge as generic execution authority",
+      "generated caches/package metadata"
+    ],
+    "knowledge_rule": "Never incrementally copy a stale clean Knowledge Pack. Regenerate distributable knowledge from the latest source Knowledge tree using the clean filter after each delta synchronization.",
+    "post_sync_rule": "After a successful delta sync and validation, advance this baseline to the reconciled source commit and record the old/new baseline in CHANGELOG.md."
+  }
+}
