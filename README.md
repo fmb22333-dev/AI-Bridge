@@ -21,6 +21,12 @@ It is intentionally separate from each user's per-install **Bus repository**.
 
 A user installation creates its own Bus repository containing runtime presence, transport resources, project authority documents, and the machine entrypoint `PROJECT_STATE_INDEX.json`.
 
+## Changelog / audit
+
+Meaningful product changes are recorded in [`CHANGELOG.md`](CHANGELOG.md). Maintainers and AI agents should read it before material Bridge/Knowledge work so they can see what changed, what remains pending, and whether an installation/release may need updating.
+
+Logging rules are defined in [`docs/CHANGE_POLICY.md`](docs/CHANGE_POLICY.md).
+
 ## Target first-run flow
 
 `download -> install -> Setup UI -> authorize GitHub -> Create & Connect Bus -> install host adapters -> ready`
@@ -43,11 +49,11 @@ The public integration contract is [`specs/AI_AGENT_PROTOCOL.md`](specs/AI_AGENT
 
 Bridge Runtime, Adapter, Installer, protocol, and promoted generic Knowledge Pack changes must remain synchronized with this repository.
 
-Before modifying those areas, an AI or human maintainer should inspect the current repository head/recent commits and relevant PRs, reconcile newer remote work, then modify from that state. After validation, remote state should be checked again before publication.
+Before modifying those areas, an AI or human maintainer must read `CHANGELOG.md`, inspect current head/recent commits and relevant PRs, reconcile newer remote work, then modify from that state. After validation, update the changelog when required and check remote state again before publication.
 
 Required sequence:
 
-`remote preflight -> reconcile -> modify -> validate -> remote recheck -> synchronize/publish`
+`read changelog -> remote preflight -> reconcile -> modify -> validate -> update changelog -> remote recheck -> synchronize/publish`
 
 See [`docs/UPDATE_WORKFLOW.md`](docs/UPDATE_WORKFLOW.md).
 
@@ -76,18 +82,6 @@ It must not contain:
 
 ## Current migration status
 
-The independent product repository is initialized and the public protocol layer is now present:
-
-- AI Agent Protocol
-- Execution Specification
-- Learning Policy
-- Deployment Specification
-- clean Bus `PROJECT_STATE_INDEX` template
-- generated `AI_BRIDGE_READ_FIRST` template
-- generated Bus root README AI bootstrap
-- Knowledge Pack boundary
-- first-install flow
-- repository synchronization/update workflow
-- Supervisor/bootstrap migration has started
+The independent product repository is initialized and the public protocol/audit layer plus an initial Runtime source slice are present. See [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md) for the exact current boundary.
 
 The old development Bus remains the live developer/runtime authority until Runtime/installer source migration and clean-distribution validation are completed. This migration does not activate or replace the developer's running Runtime or Houdini Adapter.
