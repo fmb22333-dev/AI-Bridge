@@ -1,0 +1,8 @@
+{
+  "enable": true,
+  "load_package_once": true,
+  "hpath": "$HOUDINI_USER_PREF_DIR/ai_bridge_houdini",
+  "env": [
+    {"PYTHONPATH": {"method": "prepend", "value": "$HOUDINI_USER_PREF_DIR/ai_bridge_houdini/python"}}
+  ]
+}
