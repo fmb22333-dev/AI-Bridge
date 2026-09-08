@@ -21,7 +21,7 @@ from ai_bridge.deployment.github_provision import (
 )
 
 
-def test_clean_bus_provision_creates_repo_index_and_issue_one():
+def test_clean_bus_provision_creates_repo_ai_entrypoints_and_issue_one():
     writes = {}
     created_repo = {"full_name": "alice/ai-bridge-bus", "default_branch": "main"}
 
@@ -43,8 +43,11 @@ def test_clean_bus_provision_creates_repo_index_and_issue_one():
             return httpx.Response(200, json={"sha": "sha-index", "content": base64.b64encode(raw).decode()})
         if request.method == "GET" and path == "/repos/alice/ai-bridge-bus/contents":
             return httpx.Response(200, json=[{"name": "README.md"}])
-        if request.method == "GET" and path == "/repos/alice/ai-bridge-bus/contents/AI_BRIDGE_READ_FIRST.md":
-            return httpx.Response(404)
+        if request.method == "GET" and path.startswith("/repos/alice/ai-bridge-bus/contents/"):
+            name = path.rsplit("/", 1)[-1]
+            if name not in writes:
+                return httpx.Response(404)
+            return httpx.Response(200, json={"sha": f"sha-{name}", "content": base64.b64encode(writes[name]).decode()})
         if request.method == "PUT" and path.startswith("/repos/alice/ai-bridge-bus/contents/"):
             name = path.rsplit("/", 1)[-1]
             body = json.loads(request.content)
@@ -79,6 +82,12 @@ def test_clean_bus_provision_creates_repo_index_and_issue_one():
     assert index["bridge"]["runtime_source"]["ref"] == "main"
     assert index["bridge"]["normative_specs"]["ai_protocol"]["path"] == "specs/AI_AGENT_PROTOCOL.md"
     assert "AUTO_UV" not in writes["PROJECT_STATE_INDEX.json"].decode("utf-8")
+
+    readme = writes["README.md"].decode("utf-8")
+    assert "AI / Agent — Start Here" in readme
+    assert "Read `PROJECT_STATE_INDEX.json`" in readme
+    assert "Do not perform repository-wide discovery" in readme
+    assert "canonical machine entrypoint" in readme
 
 
 def test_existing_project_bus_is_not_overwritten():
