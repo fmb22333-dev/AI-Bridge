@@ -81,12 +81,36 @@ Present now:
 
 Remaining major Houdini files:
 
-- `client.py`
+- `client.py` (required to register the newly synchronized `capability.search` / `inspect.parm_template` operations)
 - `knowledge_registry.py`
 - remaining support modules/data
 - generated clean distributable Knowledge output
 
-### Web / Setup
+#
+### Semantic-completeness sync
+
+Development source commit `33b467a723aa635824c744a29b638fce7b36b53e` was reviewed after the migration baseline and classified as a bounded Adapter/Knowledge semantic delta.
+
+SAFE COPY completed for product paths that already existed:
+- `runtime/houdini_adapter/python/ai_bridge_houdini/__init__.py`
+- `compat_ops.py`
+- `dispatcher.py`
+- `inspect_ops.py`
+
+This carries the generic implementation for:
+- unified `capability.search` discovery/integrity;
+- read-only Houdini `inspect.parm_template`;
+- canonical ParmTemplate callback metadata handling.
+
+Activation remains incomplete because the product migration has not yet supplied:
+- `client.py` capability registration/session runtime;
+- `knowledge_registry.py`;
+- the regenerated clean Knowledge Pack carrying Promotion Registry, Capability Guidance, and promoted Recipe authority.
+
+Therefore the product repository must not yet claim Adapter 0.5.22 as a runnable release. The migration baseline remains unchanged until those dependencies and regression validation are completed.
+
+
+## Web / Setup
 
 Present now:
 
