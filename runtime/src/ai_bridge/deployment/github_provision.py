@@ -13,6 +13,7 @@ PRODUCT_REPOSITORY = "fmb22333-dev/AI-Bridge"
 PRODUCT_REF = "main"
 BUS_ISSUE_TITLE = "AI Bridge Bus"
 BUS_ISSUE_MARKER = "<!-- AI_BRIDGE_BUS_ISSUE_V1 -->"
+BUS_README_MARKER = "<!-- AI_BRIDGE_BUS_README_V1 -->"
 
 
 class GitHubProvisionError(RuntimeError):
@@ -111,6 +112,26 @@ merely because a previous chat response is missing; recover durable state first.
 
 This Bus starts with `projects={{}}`. Do not infer or import projects from the
 shared Runtime/product repository.
+
+Repository: `{repository}`
+"""
+
+
+def _bus_readme(repository: str) -> str:
+    return f"""{BUS_README_MARKER}
+# AI Bridge Bus
+
+## AI / Agent — Start Here
+
+Before searching this repository or performing any Bridge/project operation:
+
+1. Read `PROJECT_STATE_INDEX.json`.
+2. Follow the pointers and authority order declared there.
+3. Do not perform repository-wide discovery unless the index cannot resolve the required information.
+
+`PROJECT_STATE_INDEX.json` is the canonical machine entrypoint.
+
+This repository is a per-install AI Bridge Bus. Runtime, adapters, protocol, and distributable generic knowledge come from the shared product repository referenced by the index.
 
 Repository: `{repository}`
 """
@@ -259,6 +280,26 @@ class GitHubBusProvisioner:
         if response.status_code not in (200, 201):
             raise GitHubProvisionError(f"Unable to write {path}: " + self._detail(response))
 
+    def _ensure_bus_readme(self, repository: str, branch: str) -> None:
+        url = f"https://api.github.com/repos/{repository}/contents/README.md"
+        existing = self._request("GET", url, params={"ref": branch})
+        current = ""
+        if existing.status_code == 200:
+            try:
+                current = base64.b64decode(
+                    str(existing.json().get("content") or "").replace("\n", "")
+                ).decode("utf-8")
+            except Exception as exc:
+                raise GitHubProvisionError("Unable to decode existing README.md") from exc
+        elif existing.status_code != 404:
+            raise GitHubProvisionError("Unable to inspect README.md: " + self._detail(existing))
+
+        if BUS_README_MARKER in current:
+            return
+        bootstrap = _bus_readme(repository).rstrip() + "\n"
+        merged = bootstrap if not current.strip() else bootstrap + "\n---\n\n" + current.lstrip()
+        self._put_text(repository, branch, "README.md", merged, "Add AI Bridge Bus AI entrypoint")
+
     def _ensure_issue_one(self, repository: str) -> dict:
         response = self._request("GET", f"https://api.github.com/repos/{repository}/issues/1")
         if response.status_code == 200:
@@ -333,6 +374,7 @@ class GitHubBusProvisioner:
             _read_first(repository, branch),
             "Initialize AI Bridge read-first entrypoint",
         )
+        self._ensure_bus_readme(repository, branch)
         issue = self._ensure_issue_one(repository)
 
         return {
