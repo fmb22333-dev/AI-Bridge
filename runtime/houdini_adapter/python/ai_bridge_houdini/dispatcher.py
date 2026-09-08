@@ -154,6 +154,8 @@ def dispatch(hou, command: dict, session_info: dict) -> dict:
             return _result(command_id, session_id, payload, stages={"READBACK": "VERIFIED"})
         if op == "inspect.node":
             return _result(command_id, session_id, inspect_ops.inspect_node(hou, args["path"], args.get("mode", "normal")), stages={"READBACK": "VERIFIED"})
+        if op == "inspect.parm_template":
+            return _result(command_id, session_id, inspect_ops.inspect_parm_template(hou, args["path"], args["parameter"]), stages={"READBACK": "VERIFIED"})
         if op == "inspect.batch_nodes":
             return _result(
                 command_id,
@@ -375,6 +377,9 @@ def dispatch(hou, command: dict, session_info: dict) -> dict:
                 }
                 return out
             return _result(command_id, session_id, knowledge_registry.apply_recipe(hou, recipe_id, args.get("values", args.get("inputs", {}))), stages={"EXECUTE": "PASS", "READBACK": "VERIFIED"})
+
+        if op == "capability.search":
+            return _result(command_id, session_id, compat_ops.capability_search(hou, session_info, args.get("query"), int(args.get("limit", 20))), stages={"READBACK": "VERIFIED"})
 
         if op == "adapter.capabilities":
             return _result(command_id, session_id, compat_ops.adapter_capabilities(hou, session_info), stages={"READBACK": "VERIFIED"})

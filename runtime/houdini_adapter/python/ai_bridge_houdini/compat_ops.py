@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import copy
+import json
+import re
 from pathlib import Path
 
 from . import capability_guidance
@@ -23,6 +26,24 @@ def _call(obj, name: str, default=None):
 
 
 ARGUMENT_SCHEMAS = {
+    "capability.search": {
+        "required": {"query": "str"},
+        "optional": {"limit": "int 1..100"},
+        "write": False,
+        "searches": [
+            "live implemented adapter capabilities",
+            "argument schemas",
+            "capability guidance",
+            "recipe lifecycle/promotion authority",
+            "deprecated/superseded recipe metadata",
+        ],
+        "matching": "deterministic exact-name/substring plus partial token-overlap ranking",
+    },
+    "inspect.parm_template": {
+        "required": {"path": "str", "parameter": "str"},
+        "write": False,
+        "summary": "read Houdini ParmTemplate metadata including callback/menu/default/condition fields without pressing buttons or mutating the HIP",
+    },
     "inspect.batch_nodes": {
         "required": {"paths": "list[str] (1..1000)"},
         "optional": {
@@ -109,6 +130,215 @@ def adapter_capabilities(hou, session_info: dict) -> dict:
         "capabilities": capability_guidance.enrich_capabilities(list(session_info.get("capabilities") or [])),
         "argument_schemas": ARGUMENT_SCHEMAS,
         "capability_guidance": capability_guidance.catalog(promoted_only=False),
+    }
+
+
+def _capability_search_tokens(value: str) -> list[str]:
+    return [token for token in re.split(r"[\W_]+", str(value or "").lower()) if token]
+
+
+def _capability_search_score(query: str, payload: dict, primary_name: str) -> dict | None:
+    query = str(query or "").strip().lower()
+    if not query:
+        return None
+    primary = str(primary_name or "").strip().lower()
+    hay = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+    if query == primary:
+        return {"mode": "exact_name", "score": 10000}
+    if query in primary:
+        return {"mode": "name_substring", "score": 7000 + len(query)}
+    if query in hay:
+        return {"mode": "exact_substring", "score": 5000 + len(query)}
+
+    query_tokens = _capability_search_tokens(query)
+    if not query_tokens:
+        return None
+    hay_tokens = set(_capability_search_tokens(hay))
+    overlap = sum(1 for token in query_tokens if token in hay_tokens)
+    if overlap <= 0:
+        return None
+    coverage = overlap / max(1, len(query_tokens))
+    return {
+        "mode": "token_overlap",
+        "score": 1000 + overlap * 100 + int(coverage * 100),
+        "matched_tokens": overlap,
+        "query_tokens": len(query_tokens),
+    }
+
+
+def capability_integrity(session_info: dict) -> dict:
+    from . import knowledge_registry
+
+    implemented = {
+        str(item.get("name") or "")
+        for item in session_info.get("capabilities") or []
+        if isinstance(item, dict) and str(item.get("name") or "")
+    }
+    recipes = {
+        item["id"]: item
+        for item in knowledge_registry.recipes()
+    }
+    recipe_entries = {
+        str(item.get("target") or "").split(":", 1)[1]: item
+        for item in knowledge_registry.promotion_entries()
+        if item.get("kind") == "recipe"
+        and str(item.get("target") or "").startswith("recipe:")
+    }
+
+    issues = []
+
+    for item in capability_guidance.catalog(promoted_only=True)["entries"]:
+        capability = str(item.get("capability") or "")
+        if capability and capability not in implemented:
+            issues.append({
+                "code": "GUIDANCE_CAPABILITY_MISSING",
+                "id": item.get("id"),
+                "capability": capability,
+            })
+
+    for recipe_id in sorted(set(recipes) - set(recipe_entries)):
+        issues.append({
+            "code": "RECIPE_LIFECYCLE_MISSING",
+            "recipe": recipe_id,
+        })
+    for recipe_id in sorted(set(recipe_entries) - set(recipes)):
+        issues.append({
+            "code": "LIFECYCLE_RECIPE_MISSING",
+            "recipe": recipe_id,
+        })
+
+    for recipe_id, entry in recipe_entries.items():
+        if entry.get("state") != "deprecated":
+            continue
+        replacement = str(entry.get("superseded_by") or "")
+        if not replacement:
+            issues.append({
+                "code": "DEPRECATED_REPLACEMENT_MISSING",
+                "recipe": recipe_id,
+            })
+            continue
+        replacement_row = recipes.get(replacement)
+        if replacement_row is None or replacement_row.get("promotion_state") != "promoted":
+            issues.append({
+                "code": "DEPRECATED_REPLACEMENT_INVALID",
+                "recipe": recipe_id,
+                "superseded_by": replacement,
+            })
+
+    return {
+        "ok": not issues,
+        "issue_count": len(issues),
+        "issues": issues,
+        "implemented_capability_count": len(implemented),
+        "recipe_count": len(recipes),
+        "recipe_lifecycle_count": len(recipe_entries),
+    }
+
+
+def capability_search(hou, session_info: dict, query: str, limit: int = 20) -> dict:
+    from . import knowledge_registry
+
+    query = str(query or "").strip()
+    if not query:
+        raise ValueError("ARGUMENT_REQUIRED: query")
+    try:
+        limit = max(1, min(int(limit), 100))
+    except Exception:
+        limit = 20
+
+    guidance_by_capability = {
+        str(item.get("capability") or ""): item
+        for item in capability_guidance.catalog(promoted_only=False)["entries"]
+        if str(item.get("capability") or "")
+    }
+    promotion_by_target = {
+        str(item.get("target") or ""): item
+        for item in knowledge_registry.promotion_entries()
+        if str(item.get("target") or "")
+    }
+
+    results = []
+
+    for raw in session_info.get("capabilities") or []:
+        if not isinstance(raw, dict) or not str(raw.get("name") or ""):
+            continue
+        name = str(raw["name"])
+        guidance = guidance_by_capability.get(name)
+        row = {
+            "kind": "capability",
+            "name": name,
+            "availability": "implemented",
+            "routable": True,
+            "execution_policy": "subject_to_command_risk_and_execution_policy",
+            "write": bool(raw.get("write", False)),
+            "risk": raw.get("risk"),
+            "version": raw.get("version"),
+            "rollback": raw.get("rollback"),
+            "verification": raw.get("verification"),
+            "tested_host_versions": list(raw.get("tested_host_versions") or []),
+            "argument_schema": copy.deepcopy(ARGUMENT_SCHEMAS.get(name)),
+            "guidance": copy.deepcopy(guidance),
+        }
+        score = _capability_search_score(query, row, name)
+        if score is not None:
+            row["_search"] = score
+            results.append(row)
+
+    for summary in knowledge_registry.recipes():
+        recipe_id = str(summary.get("id") or "")
+        full = knowledge_registry.get_recipe(recipe_id)
+        promotion = promotion_by_target.get(f"recipe:{recipe_id}")
+        row = {
+            "kind": "recipe",
+            "name": recipe_id,
+            "availability": "knowledge_pack",
+            "promotion_state": summary.get("promotion_state"),
+            "execution_authorized": bool(summary.get("execution_authorized")),
+            "version": summary.get("version"),
+            "description": summary.get("description"),
+            "required": list(summary.get("required") or []),
+            "optional": list(summary.get("optional") or []),
+            "scope": full.get("scope"),
+            "supported_host_versions": list(full.get("supported_host_versions") or []),
+            "promotion": copy.deepcopy(promotion),
+            "superseded_by": (
+                (promotion or {}).get("superseded_by")
+                or full.get("superseded_by")
+            ),
+        }
+        score = _capability_search_score(query, row, recipe_id)
+        if score is not None:
+            row["_search"] = score
+            results.append(row)
+
+    results.sort(
+        key=lambda item: (
+            item.get("_search", {}).get("score", 0),
+            bool(item.get("execution_authorized")),
+            item.get("kind") == "capability",
+        ),
+        reverse=True,
+    )
+    selected = results[:limit]
+
+    related = knowledge_registry.search(query, limit=min(limit, 20))
+    return {
+        "query": query,
+        "count": len(selected),
+        "total_matches": len(results),
+        "matching": [
+            "exact_name",
+            "name_substring",
+            "exact_substring",
+            "partial_token_overlap",
+        ],
+        "results": selected,
+        "related_knowledge": related["results"],
+        "adapter": "houdini",
+        "adapter_version": session_info.get("adapter_version"),
+        "host_version": hou.applicationVersionString(),
+        "project_file": hou.hipFile.path(),
+        "integrity": capability_integrity(session_info),
     }
 
 
