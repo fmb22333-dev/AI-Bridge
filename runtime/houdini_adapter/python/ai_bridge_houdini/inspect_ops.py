@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 
@@ -358,4 +359,80 @@ def inspect_parm_template(hou, path: str, parameter: str):
         "menu_labels": _safe(_call0(template, "menuLabels")),
         "item_generator_script": _safe(_call0(template, "itemGeneratorScript")),
         "item_generator_script_language": _enum_name(item_generator_language),
+    }
+
+
+def inspect_session_module(hou, symbol: str | None = None, max_chars: int = 200_000):
+    getter = getattr(hou, "sessionModuleSource", None)
+    if not callable(getter):
+        raise RuntimeError("SESSION_MODULE_SOURCE_UNAVAILABLE: hou.sessionModuleSource() is not available")
+
+    source = getter()
+    if source is None:
+        source = ""
+    if not isinstance(source, str):
+        source = str(source)
+
+    selected = source
+    scope = "module"
+    normalized_symbol = None
+
+    if symbol is not None:
+        normalized_symbol = str(symbol).strip()
+        if not normalized_symbol:
+            raise ValueError("ARGUMENT_INVALID: symbol must be a non-empty string")
+        try:
+            tree = ast.parse(source)
+        except SyntaxError as exc:
+            line = exc.lineno if exc.lineno is not None else "?"
+            raise ValueError(
+                f"SESSION_MODULE_PARSE_FAILED: {exc.msg} at line {line}"
+            ) from exc
+
+        match = None
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if node.name == normalized_symbol:
+                    match = node
+                    break
+        if match is None:
+            raise ValueError(f"SESSION_SYMBOL_NOT_FOUND: {normalized_symbol}")
+
+        lines = source.splitlines(keepends=True)
+        start_line = match.lineno
+        decorators = getattr(match, "decorator_list", None) or []
+        if decorators:
+            start_line = min([start_line] + [item.lineno for item in decorators])
+
+        end_line = getattr(match, "end_lineno", None)
+        if end_line is None:
+            later = [
+                node.lineno
+                for node in tree.body
+                if getattr(node, "lineno", 0) > match.lineno
+            ]
+            end_line = (min(later) - 1) if later else len(lines)
+
+        selected = "".join(lines[start_line - 1:end_line])
+        scope = "symbol"
+
+    try:
+        max_chars = int(max_chars)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("ARGUMENT_INVALID: max_chars must be an integer") from exc
+    if max_chars < 1 or max_chars > 1_000_000:
+        raise ValueError("ARGUMENT_INVALID: max_chars must be in 1..1000000")
+
+    returned = selected[:max_chars]
+    return {
+        "scope": scope,
+        "symbol": normalized_symbol,
+        "source": returned,
+        "module_chars": len(source),
+        "selected_chars": len(selected),
+        "returned_chars": len(returned),
+        "truncated": len(returned) < len(selected),
+        "module_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
+        "source_sha256": hashlib.sha256(selected.encode("utf-8")).hexdigest(),
+        "line_count": selected.count("\n") + (1 if selected and not selected.endswith("\n") else 0),
     }
