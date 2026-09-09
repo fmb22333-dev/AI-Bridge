@@ -1,0 +1,122 @@
+{
+  "compression": {
+    "caller_arguments": 5,
+    "existing_node_rewires": 0,
+    "expanded_connections": 1,
+    "expanded_nodes": 2,
+    "expanded_parameter_writes": 2
+  },
+  "description": "Create and configure a KineFX FBX Character Import plus a FRAMEINFO Null connected to Animated Pose output 2.",
+  "id": "kinefx.import_with_frameinfo",
+  "optional": [],
+  "promotion_state": "promoted",
+  "required": [
+    "parent",
+    "import_name",
+    "frame_info_name",
+    "import_file",
+    "animation_file"
+  ],
+  "roles": {
+    "frame_info": {
+      "constructor_type": "null"
+    },
+    "import": {
+      "constructor_type": "kinefx::fbxcharacterimport"
+    }
+  },
+  "scope": "kinefx_node_type_21_0_440",
+  "steps": [
+    {
+      "arguments": {
+        "connections": [
+          {
+            "input": 0,
+            "output": 2,
+            "source": "import",
+            "target": "frame_info"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "import",
+            "name": {
+              "$arg": "import_name"
+            },
+            "parms": {
+              "animfbxfile": {
+                "$arg": "animation_file"
+              },
+              "fbxfile": {
+                "$arg": "import_file"
+              }
+            },
+            "type": "kinefx::fbxcharacterimport"
+          },
+          {
+            "id": "frame_info",
+            "name": {
+              "$arg": "frame_info_name"
+            },
+            "type": "null"
+          }
+        ],
+        "parent": {
+          "$arg": "parent"
+        }
+      },
+      "op": "network.validate",
+      "save_as": "preflight"
+    },
+    {
+      "arguments": {
+        "connections": [
+          {
+            "input": 0,
+            "output": 2,
+            "source": "import",
+            "target": "frame_info"
+          }
+        ],
+        "layout": false,
+        "nodes": [
+          {
+            "id": "import",
+            "name": {
+              "$arg": "import_name"
+            },
+            "parms": {
+              "animfbxfile": {
+                "$arg": "animation_file"
+              },
+              "fbxfile": {
+                "$arg": "import_file"
+              }
+            },
+            "type": "kinefx::fbxcharacterimport"
+          },
+          {
+            "id": "frame_info",
+            "name": {
+              "$arg": "frame_info_name"
+            },
+            "type": "null"
+          }
+        ],
+        "parent": {
+          "$arg": "parent"
+        }
+      },
+      "op": "network.apply",
+      "save_as": "apply"
+    }
+  ],
+  "supported_host_versions": [
+    "21.0.440"
+  ],
+  "supported_node_types": [
+    "kinefx::fbxcharacterimport",
+    "null"
+  ],
+  "version": "1.0"
+}
