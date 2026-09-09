@@ -86,6 +86,7 @@ def build_runtime(*, data_dir: Path, port: int):
             force_restart=bool(arguments.get("force_restart", False)),
         )
 
+
     def _host_force_recover(arguments: dict):
         host_id = str(arguments.get("host_id") or "").strip().lower()
         session_id = str(arguments.get("session_id") or "").strip() or None
@@ -188,6 +189,7 @@ def _install_remote_controller(
     )
     app.state.remote_controller = controller
 
+    # One-time migration from older environment-variable setup.
     repository = os.environ.get("AI_BRIDGE_GITHUB_REPOSITORY")
     token = os.environ.get("AI_BRIDGE_GITHUB_TOKEN")
     bridge_id = os.environ.get("AI_BRIDGE_GITHUB_BRIDGE_ID")
