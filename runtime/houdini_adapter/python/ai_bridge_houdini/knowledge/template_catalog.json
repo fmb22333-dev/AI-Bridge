@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "templates": [
+    {
+      "description": "Create and configure a KineFX FBX Character Import plus a pass-through FRAMEINFO Null on Animated Pose output 2. Does not connect into project-defined input-fix nodes.",
+      "host": "houdini",
+      "id": "kinefx.import_frameinfo_build",
+      "roles": [
+        {
+          "constructor_type": "kinefx::fbxcharacterimport",
+          "display_type": "kinefx::Sop/fbxcharacterimport",
+          "role": "import"
+        },
+        {
+          "constructor_type": "null",
+          "display_type": "Sop/null",
+          "role": "frame_info"
+        }
+      ],
+      "safety": [
+        "self-contained creation only",
+        "does not mutate existing inputFix connections",
+        "caller chooses explicit node names"
+      ],
+      "scope": "kinefx_node_type_21_0_440",
+      "semantic_parameters": [
+        {
+          "internal_name": "fbxfile",
+          "role": "import",
+          "semantic": "import_file"
+        },
+        {
+          "internal_name": "animfbxfile",
+          "role": "import",
+          "semantic": "animation_file"
+        }
+      ],
+      "state": "validated",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "syntax_sugar_recipe": "kinefx.import_with_frameinfo",
+      "wiring": [
+        {
+          "from_output": 2,
+          "from_role": "import",
+          "semantic": "Animated Pose",
+          "to_input": 0,
+          "to_role": "frame_info"
+        }
+      ]
+    }
+  ]
+}
