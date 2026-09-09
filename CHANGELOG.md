@@ -8,6 +8,14 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.50 delta audit — 2026-09-09
+- Audited the development source from migration baseline `03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e` through current `bridge-runtime` head `42b2492565a5bb3b15e0cd2df3cb216ecae297ab`: **86 commits ahead / 0 behind**.
+- Confirmed source mirror and live Bridge both report **0.2.6.50** at the audit point; V5 multi-channel transport is active and the live status reported no active Houdini sessions.
+- Added `migration/DELTA_AUDIT_2026-09-09_RUNTIME_0.2.6.50.md` with SAFE COPY / REBASE REQUIRED / KNOWLEDGE REGENERATE / DO NOT DISTRIBUTE classification.
+- Began the new generic Houdini capability slice with `runtime/houdini_adapter/python/ai_bridge_houdini/geometry_ops.py` for bounded `geometry.query` semantics.
+- Baseline intentionally remains at `03b24b41...` until the 0.2.6.50 delta is integrated and validated.
+- Clean Knowledge is intentionally not copied raw; it will be regenerated after the latest Adapter/Runtime dependency graph is reconciled.
+
 ### Semantic-completeness delta — 2026-09-09
 - Accepted development-source commit `33b467a723aa635824c744a29b638fce7b36b53e` as the current semantic-completeness source delta.
 - SAFE COPY synchronized into existing product Adapter paths: Adapter version metadata, `compat_ops.py`, `dispatcher.py`, and `inspect_ops.py`.
@@ -57,14 +65,15 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 ### Validation status
 - Product Setup update-source contract has been added as a RED regression while the full rebased `web/routes.py` is still pending. This is intentional and must not be reported as passing yet.
 - Full `compileall + pytest` remains pending until the Runtime/Web/Adapter dependency graph is complete.
+- Runtime 0.2.6.50 delta is classified but not yet fully integrated; the newly migrated `geometry.query` slice is not yet counted as product regression PASS.
 
 ### Pending
 - Rebase and migrate full `web/routes.py` to `AI-Bridge:main` + `runtime-release.json` product-update authority; finish remaining Dashboard assets.
-- Integrate the `0.1.3` shared-product update-source resolver into the full Supervisor implementation and migrate remaining bootstrap files.
-- Migrate `bridge_admin.py`, Houdini `client.py`, `knowledge_registry.py`, and remaining Adapter support files.
-- Generate the clean Knowledge Pack from the latest source Knowledge tree.
+- Integrate current Supervisor mechanics with the shared-product update-source resolver; do not inherit the development Supervisor's Bus-as-Runtime-source fallback.
+- Migrate current `bridge_admin.py`, Houdini `client.py`, `knowledge_registry.py`, `outcome.py`, `multiparm_ops.py`, `diagnostic_ops.py`, and corresponding generic tests.
+- Generate the clean Knowledge Pack from the latest reconciled source Knowledge tree.
 - Migrate installer assembly/release manifest and Blender/Unreal adapter scaffolds.
-- Perform first Baseline -> current-source Delta Sync, then advance baseline only after validation.
+- Complete Baseline -> Runtime 0.2.6.50 Delta Sync, then advance baseline only after validation.
 - Run full repository regression, build a clean installer, and validate a fresh-Windows / fresh-Bus installation.
 
 ## 2026-09-09 — Repository bootstrap
