@@ -1,0 +1,74 @@
+{
+  "description": "Transactional code patch: optimistic read/patch, Cook, collect host errors on Cook failure, with Core checkpoint rollback on failed recipe.apply.",
+  "id": "code.safe_patch_and_cook",
+  "optional": [],
+  "required": [
+    "path",
+    "parameter",
+    "old_text",
+    "new_text",
+    "cook_path"
+  ],
+  "steps": [
+    {
+      "arguments": {
+        "parameter": {
+          "$arg": "parameter"
+        },
+        "path": {
+          "$arg": "path"
+        }
+      },
+      "op": "code.read",
+      "save_as": "read"
+    },
+    {
+      "arguments": {
+        "expected_hash": {
+          "$result": "read.hash"
+        },
+        "new_text": {
+          "$arg": "new_text"
+        },
+        "old_text": {
+          "$arg": "old_text"
+        },
+        "parameter": {
+          "$arg": "parameter"
+        },
+        "path": {
+          "$arg": "path"
+        }
+      },
+      "op": "code.patch",
+      "save_as": "patch"
+    },
+    {
+      "arguments": {
+        "force": true,
+        "path": {
+          "$arg": "cook_path"
+        }
+      },
+      "op": "cook.execute",
+      "save_as": "cook",
+      "stop_on_failure": false
+    },
+    {
+      "arguments": {
+        "path": {
+          "$arg": "cook_path"
+        }
+      },
+      "op": "host.errors",
+      "save_as": "errors",
+      "when": {
+        "$result_equals": {
+          "path": "cook.cook_status",
+          "value": "FAILED"
+        }
+      }
+    }
+  ],
+  "version": "1.0"
+}
