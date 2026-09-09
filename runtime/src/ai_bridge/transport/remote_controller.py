@@ -49,6 +49,56 @@ class RemoteController:
         self._thread: threading.Thread | None = None
         self._transport = None
         self._last_presence_hash: str | None = None
+        self._activity = {
+            "last_poll_at": None,
+            "last_poll_finished_at": None,
+            "last_command_received_at": None,
+            "current_execution": None,
+        }
+
+    def _activity_snapshot(self) -> dict:
+        current = self._activity.get("current_execution")
+        return {
+            "last_poll_at": self._activity.get("last_poll_at"),
+            "last_poll_finished_at": self._activity.get("last_poll_finished_at"),
+            "last_command_received_at": self._activity.get("last_command_received_at"),
+            "current_execution": dict(current) if isinstance(current, dict) else None,
+        }
+
+    def _reset_activity_locked(self) -> None:
+        self._activity = {
+            "last_poll_at": None,
+            "last_poll_finished_at": None,
+            "last_command_received_at": None,
+            "current_execution": None,
+        }
+        remote = self.runtime_state.get("remote")
+        if isinstance(remote, dict):
+            remote["activity"] = self._activity_snapshot()
+
+    def _on_transport_activity(self, event: str, payload: dict) -> None:
+        payload = dict(payload or {})
+        at = str(payload.get("at") or datetime.now(timezone.utc).isoformat())
+        with self._lock:
+            if event == "poll_started":
+                self._activity["last_poll_at"] = at
+            elif event == "poll_finished":
+                self._activity["last_poll_finished_at"] = at
+            elif event == "command_started":
+                self._activity["last_command_received_at"] = at
+                self._activity["current_execution"] = {
+                    "command_id": payload.get("command_id"),
+                    "operation": payload.get("operation"),
+                    "adapter": payload.get("adapter"),
+                    "workspace": payload.get("workspace"),
+                    "started_at": at,
+                }
+            elif event == "command_finished":
+                current = self._activity.get("current_execution")
+                command_id = payload.get("command_id")
+                if not isinstance(current, dict) or current.get("command_id") == command_id:
+                    self._activity["current_execution"] = None
+            self.runtime_state.setdefault("remote", {})["activity"] = self._activity_snapshot()
 
     def _presence_core(self, bridge_id: str, transport=None) -> dict:
         sessions = []
@@ -70,7 +120,7 @@ class RemoteController:
         return {
             "protocol": "bridge/1",
             "bridge_id": bridge_id,
-            "bridge_version": "0.2.6.37",
+            "bridge_version": "0.2.6.50",
             "message_transport": (
                 transport.message_state()
                 if transport is not None and hasattr(transport, "message_state")
@@ -160,6 +210,7 @@ class RemoteController:
                         if self._transport is not None and hasattr(self._transport, "message_state")
                         else {"mode": "contents"}
                     ),
+                    "activity": self._activity_snapshot(),
                 }
             )
         if detail:
@@ -216,6 +267,7 @@ class RemoteController:
             except FileNotFoundError:
                 pass
             self._transport = transport
+            self._reset_activity_locked()
             self.runtime_state["remote"] = self.public_state("connected", normalized)
             self._start_github_loop_locked(normalized, transport)
         return dict(self.runtime_state["remote"])
@@ -236,7 +288,11 @@ class RemoteController:
     def _start_github_loop_locked(self, config: GitHubRemoteConfig, transport) -> None:
         stop = threading.Event()
         self._stop = stop
-        runner = TransportRunner(self.service, transport)
+        runner = TransportRunner(
+            self.service,
+            transport,
+            activity_observer=self._on_transport_activity,
+        )
 
         def loop() -> None:
             last_health = 0.0
