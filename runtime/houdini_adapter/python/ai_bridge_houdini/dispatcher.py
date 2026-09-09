@@ -4,7 +4,7 @@ import ntpath
 import os
 import threading
 
-from . import capability_guidance, checkpoint_ops, code_ops, compat_ops, cook_ops, error_ops, graph_ops, inspect_ops, knowledge_registry, node_ops, parm_ops
+from . import capability_guidance, checkpoint_ops, code_ops, compat_ops, cook_ops, diagnostic_ops, error_ops, geometry_ops, graph_ops, inspect_ops, knowledge_registry, multiparm_ops, node_ops, outcome, parm_ops
 from . import local_log
 
 
@@ -12,16 +12,7 @@ _dispatch_context = threading.local()
 
 
 def _base(command_id, session_id):
-    return {
-        "command_id": command_id,
-        "status": "success",
-        "stages": {},
-        "result": {},
-        "failure": None,
-        "rollback_available": False,
-        "last_known_state": {"host": "alive", "session": session_id},
-        "evidence_id": None,
-    }
+    return outcome.base(command_id, session_id)
 
 
 def _result(command_id, session_id, payload, *, stages=None):
@@ -115,7 +106,7 @@ def _required_arg(args: dict, *names: str):
     raise ValueError(f"ARGUMENT_REQUIRED: {primary}")
 
 
-def dispatch(hou, command: dict, session_info: dict) -> dict:
+def _dispatch_raw(hou, command: dict, session_info: dict) -> dict:
     command_id = command["command_id"]
     session_id = session_info["session_id"]
     op = command["operation"]
@@ -156,6 +147,17 @@ def dispatch(hou, command: dict, session_info: dict) -> dict:
             return _result(command_id, session_id, inspect_ops.inspect_node(hou, args["path"], args.get("mode", "normal")), stages={"READBACK": "VERIFIED"})
         if op == "inspect.parm_template":
             return _result(command_id, session_id, inspect_ops.inspect_parm_template(hou, args["path"], args["parameter"]), stages={"READBACK": "VERIFIED"})
+        if op == "inspect.session_module":
+            return _result(
+                command_id,
+                session_id,
+                inspect_ops.inspect_session_module(
+                    hou,
+                    symbol=args.get("symbol"),
+                    max_chars=args.get("max_chars", 200_000),
+                ),
+                stages={"READBACK": "VERIFIED"},
+            )
         if op == "inspect.batch_nodes":
             return _result(
                 command_id,
@@ -174,6 +176,45 @@ def dispatch(hou, command: dict, session_info: dict) -> dict:
         if op == "inspect.find":
             return _result(command_id, session_id, inspect_ops.inspect_find(hou, args.get("root", "/obj"), node_type=args.get("node_type"), name_contains=args.get("name_contains"), max_results=int(args.get("max_results", 100))), stages={"READBACK": "VERIFIED"})
 
+        if op == "geometry.query":
+            return _result(
+                command_id,
+                session_id,
+                geometry_ops.query(
+                    hou,
+                    args["path"],
+                    owner=args.get("owner", "point"),
+                    attributes=args.get("attributes"),
+                    key_attribute=args.get("key_attribute"),
+                    key_values=args.get("key_values"),
+                    mode=args.get("mode", "summary"),
+                    frames=args.get("frames"),
+                    max_rows=args.get("max_rows", 200),
+                    max_attributes=args.get("max_attributes", 32),
+                ),
+                stages={"READBACK": "VERIFIED"},
+            )
+
+        if op == "diagnostic.transaction":
+            mode = str(args.get("mode") or "run").strip().lower()
+            diagnostic_id = args.get("diagnostic_id")
+            if not diagnostic_id and mode != "cleanup":
+                diagnostic_id = command_id
+            return _result(
+                command_id,
+                session_id,
+                diagnostic_ops.transaction(
+                    hou,
+                    args["parent"],
+                    diagnostic_id=diagnostic_id,
+                    nodes=args.get("nodes"),
+                    connections=args.get("connections"),
+                    cook_ref=args.get("cook_ref"),
+                    collect=args.get("collect"),
+                    mode=mode,
+                ),
+            )
+
         if op == "parm.read":
             return _result(command_id, session_id, parm_ops.read(hou, args["path"], args["parameter"]), stages={"READBACK": "VERIFIED"})
         if op == "parm.write":
@@ -188,6 +229,20 @@ def dispatch(hou, command: dict, session_info: dict) -> dict:
             payload = compat_ops.parm_batch_write(hou, items)
             payload["input_mode"] = input_mode
             return _result(command_id, session_id, payload, stages={"READBACK": "VERIFIED"})
+
+        if op == "parm.multiparm.ensure":
+            return _result(
+                command_id,
+                session_id,
+                multiparm_ops.ensure(
+                    hou,
+                    args["path"],
+                    args["count_parameter"],
+                    args["minimum_count"],
+                    values=args.get("values"),
+                    expected_count_hash=args.get("expected_count_hash"),
+                ),
+            )
 
         if op == "code.read":
             return _result(command_id, session_id, code_ops.read(hou, args["path"], args["parameter"]), stages={"READBACK": "VERIFIED"})
@@ -395,3 +450,8 @@ def dispatch(hou, command: dict, session_info: dict) -> dict:
         out["stages"] = {"EXECUTE": "FAILED"}
         out["failure"] = error_ops.classify_exception(exc, operation=op, arguments=args)
         return out
+
+
+def dispatch(hou, command: dict, session_info: dict) -> dict:
+    """Public dispatcher boundary. Every compound/primitive path exits through one outcome contract."""
+    return outcome.normalize(_dispatch_raw(hou, command, session_info))
