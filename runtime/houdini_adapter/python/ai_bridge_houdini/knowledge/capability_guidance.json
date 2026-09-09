@@ -1,0 +1,145 @@
+{
+  "entries": [
+    {
+      "capability": "capability.search",
+      "id": "guidance.capability.search",
+      "kind": "discovery",
+      "not_for": [
+        "choosing project-specific semantics on behalf of the caller",
+        "auto-executing any returned write capability"
+      ],
+      "preferred_for": [
+        "discover implemented primitives, argument schemas, promoted recipes, lifecycle state, and supersession metadata before designing a multi-step workflow",
+        "check whether a requested semantic already exists before proposing new syntax sugar"
+      ],
+      "scope": "houdini_adapter_capability_authority",
+      "state": "promoted",
+      "suggestion": "Before composing a new multi-step workflow or proposing new syntax sugar, query capability.search for the intended semantics.",
+      "supersedes": [
+        "manual fragmented discovery across adapter.capabilities + recipe.list + knowledge.search"
+      ],
+      "triggers": {
+        "sequences": []
+      }
+    },
+    {
+      "capability": "network.ensure_transactional",
+      "id": "guidance.network.ensure_transactional",
+      "kind": "generic_orchestration",
+      "not_for": [
+        "writes that must remain conditional on hashes from an earlier external read",
+        "project-specific semantic decisions",
+        "arbitrary cleanup of nodes not owned by the declaration"
+      ],
+      "preferred_for": [
+        "reconcile declared nodes, parameters, state, and wiring as one verified transaction",
+        "create-or-update a small declared network and optionally cook it"
+      ],
+      "scope": "houdini_declarative_network",
+      "state": "promoted",
+      "suggestion": "A promoted declarative transaction may reduce round trips: consider network.ensure_transactional when the desired final node graph is already known.",
+      "supersedes": [
+        "repeated node.create_configured + node.connect + cook.execute orchestration",
+        "manual create/update/connect sequences whose desired final graph is already known declaratively"
+      ],
+      "triggers": {
+        "sequences": [
+          [
+            "node.create_configured",
+            "node.connect",
+            "cook.execute"
+          ],
+          [
+            "node.create_configured",
+            "cook.execute"
+          ]
+        ]
+      }
+    },
+    {
+      "capability": "parm.batch_read",
+      "id": "guidance.parm.batch_read",
+      "kind": "generic_sugar",
+      "not_for": [
+        "reads that depend on a value returned by the immediately preceding read"
+      ],
+      "preferred_for": [
+        "read multiple known parameters in one request"
+      ],
+      "scope": "houdini_parameters",
+      "state": "promoted",
+      "suggestion": "Multiple independent parameter reads were observed; parm.batch_read may reduce round trips.",
+      "supersedes": [
+        "multiple adjacent parm.read requests"
+      ],
+      "triggers": {
+        "repeat_operation": {
+          "count": 2,
+          "operation": "parm.read"
+        }
+      }
+    },
+    {
+      "capability": "parm.batch_write",
+      "id": "guidance.parm.batch_write",
+      "kind": "generic_sugar",
+      "not_for": [
+        "writes where each next value/hash depends on the previous write result"
+      ],
+      "preferred_for": [
+        "write multiple independently known parameters after all expected hashes are available"
+      ],
+      "scope": "houdini_parameters",
+      "state": "promoted",
+      "suggestion": "Multiple independent parameter writes were observed; parm.batch_write may reduce round trips while preserving expected-hash preflight.",
+      "supersedes": [
+        "multiple adjacent parm.write requests"
+      ],
+      "triggers": {
+        "repeat_operation": {
+          "count": 2,
+          "operation": "parm.write"
+        }
+      }
+    },
+    {
+      "capability": "node.batch_connect",
+      "id": "guidance.node.batch_connect",
+      "kind": "generic_sugar",
+      "not_for": [
+        "connections whose source/target choice depends on a previous connection result"
+      ],
+      "preferred_for": [
+        "apply multiple independently known input connections in one preflighted request"
+      ],
+      "scope": "houdini_network_connections",
+      "state": "promoted",
+      "suggestion": "Multiple independent connections were observed; node.batch_connect may reduce round trips.",
+      "supersedes": [
+        "multiple adjacent node.connect requests"
+      ],
+      "triggers": {
+        "repeat_operation": {
+          "count": 2,
+          "operation": "node.connect"
+        }
+      }
+    }
+  ],
+  "policy": {
+    "auto_execute": false,
+    "blocking": false,
+    "max_suggestions_per_result": 2,
+    "mode": "advisory_only",
+    "observation_window_operations": 8,
+    "observation_window_seconds": 120,
+    "principles": [
+      "A suggestion must never change command status, mutate the host, or block a valid low-level operation.",
+      "Only promoted, implemented, generic capabilities may be suggested for execution.",
+      "Project-specific semantics belong in recipes/project knowledge, not capability-routing rules.",
+      "A low-level fallback remains valid; callers should record why a promoted capability was not suitable when the reason is known."
+    ],
+    "suggestion_cooldown_seconds": 60
+  },
+  "schema_version": "1.0"
+}
