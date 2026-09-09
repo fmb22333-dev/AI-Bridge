@@ -6,6 +6,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from .knowledge_gate import require_source_knowledge_publishable
+
 
 PROJECT_SCOPES = {
     "project_family",
@@ -266,6 +268,11 @@ def build_distribution_knowledge(
     if not source_root.is_dir():
         raise FileNotFoundError(source_root)
 
+    source_gate = require_source_knowledge_publishable(
+        source_root,
+        require_capability_authority=False,
+    )
+
     if destination.exists():
         shutil.rmtree(destination)
     destination.mkdir(parents=True, exist_ok=True)
@@ -328,6 +335,7 @@ def build_distribution_knowledge(
         "alias_set_count": len(_read_json(destination / "alias_catalog.json").get("alias_sets") or []),
         "guidance_count": len(_read_json(destination / "capability_guidance.json").get("entries") or []),
         "content_digest": validation["content_digest"],
+        "source_gate": source_gate,
     }
     _write_json(destination / "distribution_manifest.json", manifest)
     return manifest
