@@ -14,13 +14,24 @@ STATUS_OPERATION = "command.status"
 
 
 class TransportRunner:
-    def __init__(self, service: BridgeService, transport: RemoteTransport) -> None:
+    def __init__(self, service: BridgeService, transport: RemoteTransport, activity_observer=None) -> None:
         self.service = service
         self.transport = transport
+        self.activity_observer = activity_observer
 
     @staticmethod
     def _utc_now() -> str:
         return datetime.now(timezone.utc).isoformat()
+
+    def _activity(self, event: str, **payload) -> None:
+        if self.activity_observer is None:
+            return
+        data = {"at": self._utc_now(), **payload}
+        try:
+            self.activity_observer(event, data)
+        except Exception:
+            # Observability must never break command delivery.
+            pass
 
     @staticmethod
     def _is_status_query(command) -> bool:
@@ -74,38 +85,56 @@ class TransportRunner:
 
     def poll_once(self) -> int:
         count = 0
-        commands = self.transport.fetch_commands()
-        for command in commands:
-            if self.service.db.is_published(self.transport.key, command.command_id):
-                continue
-            received_at = self._utc_now()
-            execute_started = time.perf_counter()
-            if self._is_status_query(command):
-                result = self._status_query(command)
-            else:
+        self._activity("poll_started")
+        try:
+            commands = self.transport.fetch_commands()
+            for command in commands:
+                if self.service.db.is_published(self.transport.key, command.command_id):
+                    continue
+                self._activity(
+                    "command_started",
+                    command_id=command.command_id,
+                    operation=command.operation,
+                    adapter=command.adapter,
+                    workspace=command.workspace,
+                )
                 try:
-                    result = self.service.execute(command)
-                except DuplicateCommandError:
-                    row = self.service.db.get_command(command.command_id)
-                    if row is None or "result" not in row:
-                        continue
-                    result = ExecutionResult.model_validate(row["result"])
-            execute_ms = (time.perf_counter() - execute_started) * 1000.0
-            bridge_meta = result.result.setdefault("_bridge", {})
-            bridge_meta["timing"] = {
-                "bridge_received_at": received_at,
-                "execute_ms": round(execute_ms, 3),
-                "result_publish_started_at": self._utc_now(),
-            }
-            save_result = getattr(self.service.db, "save_result", None)
-            if callable(save_result) and not self._is_status_query(command):
-                save_result(result)
-            publishable = prepare_result_delivery(
-                self.transport,
-                command,
-                result,
-            )
-            self.transport.publish_result(publishable)
-            self.service.db.mark_published(self.transport.key, command.command_id)
-            count += 1
-        return count
+                    received_at = self._utc_now()
+                    execute_started = time.perf_counter()
+                    if self._is_status_query(command):
+                        result = self._status_query(command)
+                    else:
+                        try:
+                            result = self.service.execute(command)
+                        except DuplicateCommandError:
+                            row = self.service.db.get_command(command.command_id)
+                            if row is None or "result" not in row:
+                                continue
+                            result = ExecutionResult.model_validate(row["result"])
+                    execute_ms = (time.perf_counter() - execute_started) * 1000.0
+                    bridge_meta = result.result.setdefault("_bridge", {})
+                    bridge_meta["timing"] = {
+                        "bridge_received_at": received_at,
+                        "execute_ms": round(execute_ms, 3),
+                        "result_publish_started_at": self._utc_now(),
+                    }
+                    save_result = getattr(self.service.db, "save_result", None)
+                    if callable(save_result) and not self._is_status_query(command):
+                        save_result(result)
+                    publishable = prepare_result_delivery(
+                        self.transport,
+                        command,
+                        result,
+                    )
+                    self.transport.publish_result(publishable)
+                    self.service.db.mark_published(self.transport.key, command.command_id)
+                    count += 1
+                finally:
+                    self._activity(
+                        "command_finished",
+                        command_id=command.command_id,
+                        operation=command.operation,
+                    )
+            return count
+        finally:
+            self._activity("poll_finished", accepted=count)
