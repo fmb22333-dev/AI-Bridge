@@ -1,0 +1,292 @@
+{
+  "rules": [
+    {
+      "category": "diagnostics",
+      "id": "diagnostics.first_real_error",
+      "procedure": [
+        "capture first compiler/runtime error",
+        "fix one log-proven root cause",
+        "re-cook",
+        "re-evaluate subsequent errors"
+      ],
+      "summary": "Use the first real compiler/runtime error as the initial root-cause authority; later undefined/uninitialized/ambiguous messages may be cascade."
+    },
+    {
+      "category": "validation",
+      "id": "build_test.separate_authority",
+      "summary": "Static/build PASS does not equal Houdini runtime PASS. A failed Build invalidates the generated output artifact for further authority."
+    },
+    {
+      "category": "validation",
+      "id": "network.cook_after_structural_change",
+      "summary": "After structural node changes, explicitly Cook when the network is expected to execute, and read host.errors on failure."
+    },
+    {
+      "category": "safety",
+      "id": "network.checkpoint_risky_structure",
+      "summary": "Use checkpoint=auto before structural/high-risk mutation; verify readback and rollback if validation fails."
+    },
+    {
+      "category": "geometry",
+      "id": "geometry.cross_input_name_matching",
+      "summary": "Do not assume equal point indices across inputs; prefer semantic keys such as name."
+    },
+    {
+      "category": "geometry",
+      "id": "hierarchy.descendant_aware",
+      "summary": "Hierarchy mutations must consider descendants and downstream references, not only the directly targeted element."
+    },
+    {
+      "category": "threading",
+      "id": "threading.houdini_ui_authority",
+      "summary": "Normal hou graph mutation executes on the Houdini-safe UI/main thread handoff; do not move it to arbitrary workers."
+    },
+    {
+      "category": "performance",
+      "id": "transport.result_sender_separate",
+      "summary": "Command polling and result egress remain separate; the previous shared worker caused roughly 2.3 s extra result delay."
+    },
+    {
+      "category": "safety",
+      "id": "concurrency.expected_hash",
+      "summary": "AI writes use optimistic concurrency: read -> hash -> write(expected_hash) -> readback. Hash mismatch returns CONFLICT with zero mutation."
+    },
+    {
+      "category": "kinefx",
+      "id": "kinefx.world_joint_attribute_contract",
+      "procedure": [
+        "read position from P",
+        "read rotation from transform as matrix3",
+        "keep position and rotation types separate"
+      ],
+      "promotion_state": "promoted",
+      "summary": "For the validated KineFX point representation, P is world joint position (vector), transform is world joint rotation (matrix3), and translation must not be extracted from transform.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "vex",
+      "id": "vex.generic_return_explicit_temporaries",
+      "promotion_state": "promoted",
+      "summary": "Before point()/prim()/detail() values enter overloaded functions, matrix math, quaternion, sprintf, normalize, dot/cross, or lerp, assign them to explicitly typed temporaries first.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "vex",
+      "id": "vex.function_parameters_readonly",
+      "promotion_state": "promoted",
+      "summary": "Treat ordinary VEX function input parameters as read-only. Copy to a local variable before mutation; use export only for intentional writable outputs.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "vex",
+      "id": "vex.buffer_then_commit",
+      "promotion_state": "promoted",
+      "summary": "For hierarchical or recursive algorithms, compute into temporary arrays and commit setpointattrib writes after dependency evaluation; validate final writes in a downstream node.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "vex",
+      "id": "vex.language_is_not_cpp",
+      "promotion_state": "promoted",
+      "summary": "Do not assume C++ syntax or APIs in VEX. Avoid redefining built-in macros such as PI, avoid unverified top-level const usage, and verify functions against the active Houdini VEX API.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "numerics",
+      "id": "numeric.degenerate_guard",
+      "promotion_state": "promoted",
+      "summary": "Guard normalize, division, inverse, and determinant-sensitive operations against zero/near-degenerate inputs before execution.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "hom",
+      "id": "hom.require_node_and_parameter",
+      "promotion_state": "promoted",
+      "summary": "HOM scripts must explicitly validate required nodes and required parameters. Missing critical node/parm is a hard error, not a silent skip.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "hom",
+      "id": "hom.validate_connection_indices",
+      "promotion_state": "promoted",
+      "summary": "Before setInput, validate target input index, source node existence, and source output index against the actual node types; do not infer connector counts.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "hom",
+      "id": "hom.geometry_api_versioned",
+      "promotion_state": "promoted",
+      "summary": "Do not assume collection helpers exist across HOM versions. Use APIs verified on the active Houdini version and make diagnostic-stat collection non-authoritative if an optional helper is unavailable.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "validation",
+      "id": "validation.warnings_not_automatic_pass",
+      "promotion_state": "promoted",
+      "summary": "Empty node.errors does not imply PASS. Relevant warnings, cook exceptions, missing output rows, or failed semantic checks can still invalidate the test.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "validation",
+      "id": "validation.technical_visual_separate",
+      "promotion_state": "promoted",
+      "summary": "Keep TECHNICAL_PASS and VISUAL_PASS separate. Finite/cook-valid/numerically-correct output does not automatically establish visual correctness.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "validation",
+      "id": "validation.harness_fail_on_empty_or_exception",
+      "promotion_state": "promoted",
+      "summary": "A harness must fail closed on unhandled exceptions, missing expected rows/attributes, or zero-result diagnostics; never default these cases to PASS.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "fbx",
+      "id": "fbx.output_range_mode_explicit",
+      "promotion_state": "promoted",
+      "summary": "FBX animation export must verify the range mode itself is Custom/Animation Range rather than Current Frame; setting start/end alone is insufficient.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "fbx",
+      "id": "fbx.import_animation_path_readback",
+      "promotion_state": "promoted",
+      "summary": "Batch animation import must read back the actual Animation FBX File parameter before Cook. Changing only the output filename does not prove the imported animation changed.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "execution",
+      "id": "manual_update.cook_auto_window",
+      "promotion_state": "promoted",
+      "summary": "On Houdini 21.0.440, a force Cook under Manual Update may not execute as expected in some workflows. For test harnesses, temporarily enter Auto Update around the explicit Cook and restore the prior mode.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "hip_serialization",
+      "id": "hip.no_cpio_directory_entries",
+      "promotion_state": "promoted",
+      "summary": "When constructing HIP CPIO archives, do not emit directory members such as obj/; directory entries previously caused Missing file extension load failures.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "hip_serialization",
+      "id": "hip.archive_member_order",
+      "promotion_state": "promoted",
+      "summary": "HIP archive member order for a node is significant. Preserve a validated order such as .init -> .def -> .chn -> .parm -> .userdata when generating archive members.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "hip_serialization",
+      "id": "hip.python_sop_roundtrip_compile",
+      "promotion_state": "promoted",
+      "summary": "When serializing Python SOP source into .parm, decode the serialized parameter back to the real script and compile that recovered script before accepting the build.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "performance",
+      "id": "performance.freeze_static_reference",
+      "promotion_state": "promoted",
+      "summary": "Branches intended as static references must not retain accidental $F/$T dependencies. Freeze explicit frame/time values so full-range evaluation does not recompute invariant data every frame.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "diagnostics",
+      "id": "diagnostics.detail_attributes",
+      "promotion_state": "promoted",
+      "summary": "Complex VEX algorithms should emit bounded detail diagnostics for weights, ratios, counts, residual/error metrics, and unresolved elements so tests can verify semantics without relying only on viewport inspection.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "category": "node_creation",
+      "id": "node_type.constructor_token_not_display_name",
+      "procedure": [
+        "treat inspect.node type display/name_with_category as descriptive evidence",
+        "use network.validate with a unique probe name to verify the constructor token before promotion",
+        "store validated display-to-constructor aliases by host version"
+      ],
+      "promotion_state": "promoted",
+      "summary": "Do not assume inspect.node name_with_category is a valid createNode/network.apply constructor token. Resolve and validate the constructor token against the active parent category first.",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "validated_examples": [
+        {
+          "constructor": "kinefx::fbxcharacterimport",
+          "display": "kinefx::Sop/fbxcharacterimport"
+        },
+        {
+          "constructor": "null",
+          "display": "Sop/null"
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "Ensure only owns fields and target inputs explicitly present in the declaration.",
+        "Unspecified parameters, state fields, and inputs are preserved."
+      ],
+      "category": "network_editing",
+      "id": "network.ensure_reconciliation_vs_expected_hash",
+      "promotion_state": "promoted",
+      "summary": "Use network.ensure_transactional / network.ensure_and_cook when the caller explicitly wants declared node parameters, state fields, and target inputs to converge to a desired configuration in one synchronous UI-authority transaction. Use parm.write/parm.batch_write or node.connect/node.batch_connect with expected hashes when the write must remain conditional on state observed by an earlier external read.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "assumptions": [
+        "Plan and Ensure share the same declarative node/connection contract.",
+        "plan_hash binds the declaration plus the observed declared-state diff and is independent of max_details truncation.",
+        "expected_plan_hash guards the handoff against declaration/state drift between Plan and Ensure.",
+        "Expected-hash parm/connection primitives remain the finer-grained authority for writes conditional on earlier external reads."
+      ],
+      "category": "network_editing",
+      "id": "network.ensure_plan_advisory_preview",
+      "promotion_state": "promoted",
+      "summary": "Use network.ensure_plan as a read-only advisory preview of the current Ensure diff. The compact/summary counts are authoritative for the returned snapshot even when detail rows are truncated. The plan performs no node creation, parameter/state mutation, connection mutation, or Cook. It is not a lock. For a guarded Plan -> Ensure handoff, pass plan_hash back as expected_plan_hash; mismatch fails with PLAN_CONFLICT and written=0 before mutation.",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    }
+  ]
+}
