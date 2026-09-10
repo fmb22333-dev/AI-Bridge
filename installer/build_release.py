@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import tomllib
 import zipfile
@@ -42,6 +43,26 @@ def _sha256(path: Path) -> str:
 def _runtime_version() -> str:
     data = tomllib.loads((RUNTIME / "pyproject.toml").read_text(encoding="utf-8"))
     return str(data["project"]["version"])
+
+
+def _runtime_source_commit() -> str:
+    override = os.environ.get("AI_BRIDGE_RUNTIME_SOURCE_COMMIT")
+    if override:
+        return override.strip()
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%H", "--", "runtime"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        commit = result.stdout.strip()
+        if commit:
+            return commit
+    except (OSError, subprocess.CalledProcessError):
+        pass
+    return "working-tree"
 
 
 def _adapter_version() -> str:
@@ -158,7 +179,7 @@ def main() -> None:
     knowledge = _build_clean_knowledge()
     bundle_sha256 = _build_runtime_bundle()
     installer_bundle_sha256 = _build_installer_bundle()
-    source_commit = os.environ.get("GITHUB_SHA") or "working-tree"
+    source_commit = _runtime_source_commit()
 
     runtime_manifest = {
         "schema_version": "1.1",
