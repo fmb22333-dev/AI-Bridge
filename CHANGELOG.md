@@ -8,6 +8,20 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.51 V5 transport reliability — 2026-09-11
+
+- Reconciled the generic Runtime transport delta from the private development source into the standalone public product without copying live Bus state, project documents, machine paths, credentials, Bridge IDs, sessions, or command history.
+- Changed V5 delivery to persist a durable `transport_accepted` command record before publishing ACK, closing the ACK-before-durable-state crash window.
+- V5 ACK now carries the validated command envelope so an accepted command can be reconstructed after Runtime restart.
+- Existing terminal DB results can be republished without re-executing host or external side effects.
+- Invalid V5 command envelopes now receive an explicit `AI_BRIDGE_NACK_V5` instead of being silently discarded.
+- Added Issue #1 fallback discovery when the repository-wide 100-comment window is saturated and contains no executable command.
+- Preserved nested and flat V5 sender compatibility and V2/V3/V4 compatibility paths.
+- Added public regression coverage for explicit ACK semantics, transient ACK failure, saturated discovery, durable acceptance, terminal-result replay, malformed-envelope NACK, and ACK restart recovery.
+- Updated Runtime/Dashboard/static cache version markers and the product release workflow to `0.2.6.51`.
+- Houdini Adapter, Supervisor, and distributable Knowledge source authority are unchanged by this Runtime-only delta.
+- Private source validation before synchronization: `compileall` PASS and **333/333 pytest PASS**. Public Windows product validation is required before advancing the migration baseline or merging this change.
+
 ### Public repository hygiene — 2026-09-10
 
 - Replaced private development-source, Bridge-ID, project-family, and machine-path references in public-facing migration/audit documentation with generic placeholders.
