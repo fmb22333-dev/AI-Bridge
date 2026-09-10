@@ -8,6 +8,16 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Public repository hygiene — 2026-09-10
+
+- Replaced private development-source, Bridge-ID, project-family, and machine-path references in public-facing migration/audit documentation with generic placeholders.
+- Generalized legacy Bus leak guards so product validation rejects any `ai-bridge-bus` release-source dependency rather than one owner-specific repository.
+- Replaced project-name denylisting in distributable Knowledge filtering with a positive generic scope allowlist for the current Houdini product surface.
+- Generalized Dashboard workspace examples, synchronized static cache keys to Runtime 0.2.6.50, and restored the recent-command summary to five entries.
+- Added `.gitignore` rules for local state, credentials, caches, logs, databases, and build outputs.
+- Added `SECURITY.md` with public repository hygiene/reporting guidance.
+- Moved product release validation from the historical release-assembly branch to `main`.
+
 ### Runtime 0.2.6.50 standalone product assembly — 2026-09-10
 
 #### Completed
