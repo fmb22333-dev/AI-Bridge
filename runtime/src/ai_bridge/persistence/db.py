@@ -49,26 +49,60 @@ class BridgeDB:
 
     def command_exists(self, command_id: str) -> bool:
         with self._connect() as conn:
-            row = conn.execute("SELECT 1 FROM commands WHERE command_id=?", (command_id,)).fetchone()
-            return row is not None
+            row = conn.execute(
+                "SELECT status, result_json FROM commands WHERE command_id=?",
+                (command_id,),
+            ).fetchone()
+            if row is None:
+                return False
+            return not (row["status"] == "transport_accepted" and row["result_json"] is None)
 
     def insert_command(self, command, *, status: str = "received") -> None:
         payload = command.model_dump(mode="json")
+        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True)
         with self._lock, self._connect() as conn:
-            conn.execute(
-                """INSERT INTO commands
-                (command_id, workspace_id, adapter, session_id, operation, request_json, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    command.command_id,
-                    command.workspace,
-                    command.adapter,
-                    command.session,
-                    command.operation,
-                    json.dumps(payload, ensure_ascii=False, sort_keys=True),
-                    status,
-                ),
-            )
+            try:
+                conn.execute(
+                    """INSERT INTO commands
+                    (command_id, workspace_id, adapter, session_id, operation, request_json, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        command.command_id,
+                        command.workspace,
+                        command.adapter,
+                        command.session,
+                        command.operation,
+                        encoded,
+                        status,
+                    ),
+                )
+            except sqlite3.IntegrityError:
+                row = conn.execute(
+                    "SELECT status, result_json FROM commands WHERE command_id=?",
+                    (command.command_id,),
+                ).fetchone()
+                if (
+                    row is not None
+                    and row["status"] == "transport_accepted"
+                    and row["result_json"] is None
+                    and status == "received"
+                ):
+                    conn.execute(
+                        """UPDATE commands
+                        SET workspace_id=?, adapter=?, session_id=?, operation=?, request_json=?,
+                            status='received', updated_at=CURRENT_TIMESTAMP
+                        WHERE command_id=?""",
+                        (
+                            command.workspace,
+                            command.adapter,
+                            command.session,
+                            command.operation,
+                            encoded,
+                            command.command_id,
+                        ),
+                    )
+                    return
+                raise
 
     def save_result(self, result) -> None:
         payload = result.model_dump(mode="json")
@@ -110,6 +144,7 @@ class BridgeDB:
             return [dict(row) for row in rows]
 
     def list_command_records(self, limit: int = 200) -> list[dict[str, Any]]:
+        """Return recent command rows with decoded request/result payloads."""
         limit = max(1, min(int(limit), 500))
         with self._connect() as conn:
             rows = conn.execute(

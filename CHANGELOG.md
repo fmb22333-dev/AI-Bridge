@@ -8,6 +8,23 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.51 V5 transport reliability — 2026-09-11
+
+- Reconciled the generic Runtime transport delta from the private development source into the standalone public product without copying live Bus state, project documents, machine paths, credentials, Bridge IDs, sessions, or command history.
+- Changed V5 delivery to persist a durable `transport_accepted` command record before publishing ACK, closing the ACK-before-durable-state crash window.
+- V5 ACK now carries the validated command envelope so an accepted command can be reconstructed after Runtime restart.
+- Existing terminal DB results can be republished without re-executing host or external side effects.
+- Invalid V5 command envelopes now receive an explicit `AI_BRIDGE_NACK_V5` instead of being silently discarded.
+- Added Issue #1 fallback discovery when the repository-wide 100-comment window is saturated and contains no executable command.
+- Preserved nested and flat V5 sender compatibility and V2/V3/V4 compatibility paths.
+- Added public regression coverage for explicit ACK semantics, transient ACK failure, saturated discovery, durable acceptance, terminal-result replay, malformed-envelope NACK, and ACK restart recovery.
+- Updated Runtime/Dashboard/static cache version markers and the product release workflow to `0.2.6.51`.
+- Houdini Adapter, Supervisor, and distributable Knowledge source authority are unchanged by this Runtime-only delta.
+- Private source validation before synchronization: `compileall` PASS and **333/333 pytest PASS**.
+- First public Windows product validation: **98/98 pytest PASS**, compile PASS, deterministic release build PASS, release verifier PASS, PowerShell parser PASS; run `34509886155`.
+- Validated Runtime bundle SHA-256: `dd55da82b4e332bc753d9e2ac0ef7b0f1a58fe582c621b4bba5b0207ff4f1a71`; installer bundle and clean Knowledge digest remain unchanged.
+- Migration baseline advanced from `42b2492565a5bb3b15e0cd2df3cb216ecae297ab` to `f04df88ddf29791af8c3761786cb5650e10e594a` only after the first public product validation passed. A second PR validation and final `main` push/install smoke remain required before this release sync is closed.
+
 ### Public repository hygiene — 2026-09-10
 
 - Replaced private development-source, Bridge-ID, project-family, and machine-path references in public-facing migration/audit documentation with generic placeholders.
@@ -102,8 +119,8 @@ Do not conflate the already-passed clean Windows installer smoke test with this 
 - Continuous synchronization classifies changes as SAFE COPY, REBASE REQUIRED, KNOWLEDGE REGENERATE, or DO NOT DISTRIBUTE.
 
 ### Migration baseline
-- Development source baseline: `<private-development-source>@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
-- Runtime 0.2.6.50 standalone product reconciliation and validation are complete; only explicit real-environment end-to-end acceptance remains.
+- Development source baseline: `<private-development-source>@f04df88ddf29791af8c3761786cb5650e10e594a`.
+- Runtime 0.2.6.51 public product reconciliation has passed its first Windows validation; final `main` artifact publication/install smoke remains the release-sync closeout gate. Explicit real-environment end-to-end acceptance remains separately pending.
 
 ### Safety
 - Public/distributable content excludes developer Bridge IDs, credentials, sessions, workspaces, command history, project authority documents, local paths, and project-family/candidate knowledge as generic execution authority.
