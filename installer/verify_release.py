@@ -35,6 +35,18 @@ def main() -> None:
     bundle = ROOT / str(runtime["bundle_path"])
     if sha256(bundle) != runtime.get("bundle_sha256"):
         fail("Runtime bundle SHA-256 mismatch")
+    installer_bundle_info = release.get("installer_bundle") or {}
+    installer_bundle = ROOT / str(installer_bundle_info.get("path") or "")
+    if not installer_bundle.is_file():
+        fail("Installer bundle missing")
+    if sha256(installer_bundle) != installer_bundle_info.get("sha256"):
+        fail("Installer bundle SHA-256 mismatch")
+    with zipfile.ZipFile(installer_bundle) as zf:
+        installer_names = set(zf.namelist())
+        required_installers = {"INSTALL_AI_BRIDGE.bat", "INSTALL_AI_BRIDGE.ps1"}
+        missing_installers = sorted(required_installers - installer_names)
+        if missing_installers:
+            fail("Installer bundle missing: " + ", ".join(missing_installers))
     with zipfile.ZipFile(bundle) as zf:
         names = set(zf.namelist())
         required = {
