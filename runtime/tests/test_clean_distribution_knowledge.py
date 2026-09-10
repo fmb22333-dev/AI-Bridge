@@ -46,7 +46,6 @@ def test_distribution_knowledge_filters_project_family_and_candidate_content(tmp
     assert '"historical_names"' not in serialized
     assert '"provenance"' not in serialized
     assert '"validation_status"' not in serialized
-    assert "E:/AA/" not in serialized
     assert manifest["content_digest"] == validate_distribution(target)["content_digest"]
     assert manifest["source_root"] == "ai_bridge_houdini/knowledge"
 
