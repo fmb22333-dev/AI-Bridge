@@ -30,7 +30,7 @@ Normal knowledge changes should be hot-loadable where supported. Malformed knowl
 
 ## Source versus distribution
 
-During migration, the old development repository remains the historical evidence source. This public repository will receive only sanitized/generic content produced by the clean Knowledge Pack filter; Retarget/AutoUV-specific evidence, local paths and project-family recipes must not be copied here as generic knowledge.
+During migration, the old development repository remains the historical evidence source. This public repository will receive only sanitized/generic content produced by the clean Knowledge Pack filter; ProjectFamilyA/ProjectFamilyB-specific evidence, local paths and project-family recipes must not be copied here as generic knowledge.
 
 ## Planned layout
 
