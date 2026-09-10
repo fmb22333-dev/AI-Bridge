@@ -209,6 +209,14 @@ def _canonical_text_bytes(path: Path) -> bytes:
     return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
 
 
+def _portable_source_label(source_root: Path) -> str:
+    parts = list(source_root.parts)
+    if "ai_bridge_houdini" in parts:
+        index = parts.index("ai_bridge_houdini")
+        return "/".join(parts[index:])
+    return source_root.name
+
+
 def _content_digest(root: Path) -> str:
     digest = hashlib.sha256()
     for path in sorted(p for p in root.rglob("*") if p.is_file() and p.name != "distribution_manifest.json"):
@@ -339,7 +347,7 @@ def build_distribution_knowledge(
     manifest = {
         "schema_version": "1.0",
         "mode": "clean_distribution",
-        "source_root": str(source_root),
+        "source_root": _portable_source_label(source_root),
         "included_recipes": included_recipes,
         "excluded_recipes": excluded_recipes,
         "promotion_entry_count": len(_read_json(destination / "promotion_registry.json").get("entries") or []),
