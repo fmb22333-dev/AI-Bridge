@@ -97,6 +97,11 @@ def _filter_promotion_registry(source: dict) -> dict:
             continue
         if _scope_is_project_specific(item.get("scope")):
             continue
+        if str(item.get("kind") or "") == "recipe":
+            target = str(item.get("target") or "").strip().lower()
+            recipe_id = target.split(":", 1)[1] if target.startswith("recipe:") else ""
+            if recipe_id.startswith(PROJECT_RECIPE_PREFIXES):
+                continue
         entries.append(_strip_metadata(item))
     return {
         "schema_version": str(source.get("schema_version") or "1.0"),
