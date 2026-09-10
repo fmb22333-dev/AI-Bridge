@@ -8,74 +8,47 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
-### Runtime 0.2.6.50 migration reconciliation — 2026-09-10
+### Runtime 0.2.6.50 standalone product assembly — 2026-09-10
 
-#### Added
-- Migrated current Houdini Adapter `client.py` and `knowledge_registry.py`.
-- Migrated `outcome.py`, `multiparm_ops.py`, and `diagnostic_ops.py`.
-- Synchronized the Adapter routing/inspection/compatibility slice required by `capability.search`, `inspect.parm_template`, `inspect.session_module`, `geometry.query`, `parm.multiparm.ensure`, and `diagnostic.transaction`.
-- Migrated Runtime Knowledge publish gate, detached publisher worker, Supervisor upgrade worker, and transport activity-heartbeat delta.
-- Added product-specific BridgeAdmin authority-separation regression.
-- Rebased project-resume regression to generic Project A/B fixtures and user-Bus authority.
-- Added generic regressions for geometry query, multiparm ensure, diagnostic transaction, Adapter outcome handling, capability integrity/search, parm-template/session-module inspection, publisher behavior, Supervisor upgrade, and transport activity heartbeat.
-- Generated the first current Clean Knowledge payload set in the standalone product repository.
-- Added a cross-platform Knowledge digest regression requiring LF/CRLF-independent digest behavior.
-- Added `docs/HANDOFF_2026-09-10_RUNTIME_0.2.6.50_MIGRATION.md` for continuation from the reconciled state.
+#### Completed
+- Reconciled the development source through `fmb22333-dev/ai-bridge-bus:bridge-runtime@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
+- Product Runtime is **0.2.6.50**; Houdini Adapter is **0.5.26**; Supervisor is **0.1.4**.
+- Rebased Setup backend and BridgeAdmin so shared product update authority is `fmb22333-dev/AI-Bridge:main`, while every user Bus remains separate transport/project authority.
+- Integrated Supervisor 0.1.4 monitoring/rollback with the standalone product update model and fail-closed rejection of Bus Runtime bootstrap/publication.
+- Completed Dashboard asset migration.
+- Fixed cross-platform Knowledge determinism by canonicalizing generated text/digest behavior.
+- Removed dangling project-family Retarget recipe authority from the clean product registry.
+- Generated clean distributable Knowledge with six promoted generic recipes and no candidate/deprecated/project-family execution authority.
+- Added deterministic release builder/verifier, `runtime_bundle.zip`, `runtime-release.json`, `supervisor-release.json`, `release-manifest.json`, `INSTALL_AI_BRIDGE.ps1`, `INSTALL_AI_BRIDGE.bat`, and `AI_Bridge_Installer.zip`.
+- Installer verifies SHA-256, preserves Current/Previous Runtime generations, writes standalone product update authority, and never uses the user's Bus as an implicit Runtime source.
+- Added bounded GitHub read retries and corrected PowerShell URL interpolation for private-product-repository installation.
+- Added serialized/cancel-in-progress Windows product release validation.
 
-#### Changed
-- Rebased `bridge_admin.py` so product update authority and user project/Bus authority are separate:
-  - product updates default to `fmb22333-dev/AI-Bridge:main`;
-  - `bridge.project.resume` reads the configured user Bus;
-  - legacy implicit Bus bootstrap is disabled;
-  - raw Staging/source mirroring is opt-in rather than default.
-- Synchronized product package metadata toward Runtime **0.2.6.50** and Houdini Adapter **0.5.26** migration state.
-- Clean Knowledge synchronization is now an actual generated product payload rather than only a planned filtering step.
+#### Validation evidence
+- Windows `compileall`: **PASS**
+- Full product `pytest`: **84/84 PASS**
+- Release verifier: **PASS**
+- PowerShell parser: **PASS**
+- Generated artifact publication: **PASS**
+- Fresh Windows directory install by re-downloading from the GitHub validation branch: **PASS**
+- Validation run: `34425959944`
+- Runtime bundle SHA-256: `00ee9abd2b5533667c86256b464725d7c284d5841e2a8cb8b57ad5f4f19a822e`
+- Installer bundle SHA-256: `4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c`
+- Clean Knowledge digest: `f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093`
 
-#### Clean Knowledge
-Generated clean product authority currently contains:
-- 10 promoted authority entries;
-- 1 generic template;
-- 3 alias sets;
-- 5 promoted capability-guidance entries;
-- 16 error rules;
-- 32 host rules;
-- 6 promoted generic recipes:
-  - `code.safe_patch_and_cook`
-  - `cook.checked`
-  - `fbx.character_import.set_animation_and_cook`
-  - `kinefx.import_with_frameinfo`
-  - `network.ensure_and_cook`
-  - `parm.safe_write_and_cook`
+#### Baseline
+- Migration baseline advanced from `03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e` to `42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
+- Future product synchronization compares development Delta from the new baseline.
 
-Excluded from generic product execution authority:
-- `retarget.fbx_import_to_input_fix` — project-family;
-- `network.build` — candidate;
-- `network.build_and_cook` — deprecated.
+#### Remaining acceptance only
+The code/release migration is complete. The only remaining release gate intentionally not executed in this work is real end-user environment acceptance:
+- provision a genuinely new GitHub Bus through Setup UI;
+- complete interactive GitHub authorization;
+- connect the fresh Bus to the fresh Runtime;
+- install/activate the Houdini Adapter there;
+- verify a live Houdini round-trip.
 
-#### Deterministic-build finding
-- Identified a cross-platform Knowledge digest defect: the same logical JSON payload hashes differently when stored with LF vs Windows CRLF.
-- LF digest observed: `6d1d6d67bd1601b816be3b4de2bc28df65f1dc8d225747b7f2a7be14af76c6f9`.
-- CRLF digest observed: `cdb49df281c07e67b6290fe380ef1e704d1c19ca0ee3c0a129fde40ee1e91841`.
-- The CRLF digest exactly matches the development Runtime 0.2.6.50 distribution release.
-- Root cause is platform-sensitive text serialization combined with raw-byte hashing.
-- Regression coverage has been added; implementation remains intentionally unresolved until the next code step. Do not treat Clean Knowledge manifest generation as complete yet.
-
-#### Validation status
-- Full product `compileall + pytest` is still pending.
-- Migrated tests are present but are not counted as product PASS until actually executed against the reconciled product repository.
-- Setup backend product-source regression remains intentionally RED until full `web/routes.py` REBASE.
-- New cross-platform Knowledge digest regression is intentionally RED against the current raw-byte digest implementation.
-- The migration baseline remains unchanged until reconciliation, validation, synchronization, and audit are complete.
-
-#### Pending
-- Canonicalize generated Knowledge serialization/digest across LF/CRLF and write final `distribution_manifest.json`.
-- Rebase full Setup `web/routes.py` to `AI-Bridge:main + runtime-release.json`; finish remaining Dashboard assets.
-- Integrate mature Supervisor monitoring/activation/rollback with the shared-product update-source resolver and remove Bus-as-Runtime-source fallback/publication.
-- Audit remaining Runtime 0.2.6.50 dependency/test delta.
-- Run targeted/full product regression and `compileall`.
-- Re-read development source HEAD and classify any newly accumulated Delta.
-- Advance `migration/BASELINE.json` only after successful validation and audit.
-- Add product release manifest/installer assembly and validate fresh Windows + fresh GitHub Bus installation.
+Do not conflate the already-passed clean Windows installer smoke test with this explicit real-environment acceptance.
 
 ### Runtime 0.2.6.50 delta audit — 2026-09-09
 - Audited the development source from migration baseline `03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e` through audit head `42b2492565a5bb3b15e0cd2df3cb216ecae297ab`: **86 commits ahead / 0 behind** at that audit point.
@@ -114,8 +87,8 @@ Excluded from generic product execution authority:
 - Continuous synchronization classifies changes as SAFE COPY, REBASE REQUIRED, KNOWLEDGE REGENERATE, or DO NOT DISTRIBUTE.
 
 ### Migration baseline
-- Development source baseline: `fmb22333-dev/ai-bridge-bus:bridge-runtime@03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e`.
-- Baseline remains intentionally unchanged until the reconciled Runtime 0.2.6.50 product slice passes validation and audit.
+- Development source baseline: `fmb22333-dev/ai-bridge-bus:bridge-runtime@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
+- Runtime 0.2.6.50 standalone product reconciliation and validation are complete; only explicit real-environment end-to-end acceptance remains.
 
 ### Safety
 - Public/distributable content excludes developer Bridge IDs, credentials, sessions, workspaces, command history, project authority documents, local paths, and project-family/candidate knowledge as generic execution authority.
