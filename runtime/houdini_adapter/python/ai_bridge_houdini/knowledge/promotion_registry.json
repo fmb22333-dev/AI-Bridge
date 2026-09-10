@@ -76,29 +76,6 @@
       }
     },
     {
-      "bounded_contract": {
-        "external_role_binding": "input_fix_path must reference an existing project-defined input-fix node",
-        "input_fix_inputs": {
-          "0": "Rest Geometry from FBX Character Import output 0",
-          "1": "Capture Pose from FBX Character Import output 1",
-          "2": "Animated Pose from FRAMEINFO output 0"
-        },
-        "universal": false
-      },
-      "id": "recipe.retarget.fbx_import_to_input_fix",
-      "kind": "recipe",
-      "scope": "retarget_inputfix_contract_21_0_440",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "recipe:retarget.fbx_import_to_input_fix",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
       "id": "recipe.network.ensure_and_cook",
       "kind": "recipe",
       "scope": "houdini_declarative_network_21_0_440",
