@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -26,10 +27,10 @@ METADATA_KEYS_TO_STRIP = {
     "provenance",
 }
 
-PROJECT_RECIPE_PREFIXES = (
-    "retarget.",
-    "autouv.",
-    "auto_uv.",
+DISTRIBUTABLE_SCOPE_PREFIXES = (
+    "universal_",
+    "houdini_",
+    "kinefx_",
 )
 
 
@@ -71,6 +72,11 @@ def _scope_is_project_specific(value: Any) -> bool:
     return scope.endswith("_project_family") or scope.startswith("project_family")
 
 
+def _scope_is_distribution_generic(value: Any) -> bool:
+    scope = str(value or "").strip().lower()
+    return bool(scope) and scope.startswith(DISTRIBUTABLE_SCOPE_PREFIXES)
+
+
 def _strip_metadata(value: Any) -> Any:
     if isinstance(value, dict):
         out = {}
@@ -98,9 +104,7 @@ def _filter_promotion_registry(source: dict) -> dict:
         if _scope_is_project_specific(item.get("scope")):
             continue
         if str(item.get("kind") or "") == "recipe":
-            target = str(item.get("target") or "").strip().lower()
-            recipe_id = target.split(":", 1)[1] if target.startswith("recipe:") else ""
-            if recipe_id.startswith(PROJECT_RECIPE_PREFIXES):
+            if not _scope_is_distribution_generic(item.get("scope")):
                 continue
         entries.append(_strip_metadata(item))
     return {
@@ -121,8 +125,7 @@ def _filter_templates(source: dict) -> dict:
             continue
         if _scope_is_project_specific(item.get("scope")):
             continue
-        executable_scope = str(item.get("executable_scope") or "").lower()
-        if executable_scope.startswith(("retarget_", "autouv_", "auto_uv_")):
+        if not _scope_is_distribution_generic(item.get("scope")):
             continue
         templates.append(_strip_metadata(item))
     return {
@@ -192,12 +195,9 @@ def _recipe_is_distributable(recipe: dict, promoted_recipe_ids: set[str]) -> boo
     recipe_id = str(recipe.get("id") or "").strip().lower()
     if not recipe_id or recipe_id not in promoted_recipe_ids:
         return False
-    if recipe_id.startswith(PROJECT_RECIPE_PREFIXES):
-        return False
     if _scope_is_project_specific(recipe.get("scope")):
         return False
-    scope = str(recipe.get("scope") or "").lower()
-    if scope.startswith(("retarget_", "autouv_", "auto_uv_")):
+    if not _scope_is_distribution_generic(recipe.get("scope")):
         return False
     return True
 
@@ -241,9 +241,13 @@ def validate_distribution(root: Path) -> dict:
             violations.append(f"non-promoted registry entry: {item.get('id')}")
         if _scope_is_project_specific(item.get("scope")):
             violations.append(f"project-family registry entry: {item.get('id')}")
+        if item.get("kind") == "recipe" and not _scope_is_distribution_generic(item.get("scope")):
+            violations.append(f"non-generic recipe scope: {item.get('id')}")
     for item in templates.get("templates") or []:
         if _scope_is_project_specific(item.get("scope")):
             violations.append(f"project-family template: {item.get('id')}")
+        if not _scope_is_distribution_generic(item.get("scope")):
+            violations.append(f"non-generic template scope: {item.get('id')}")
     for item in guidance.get("entries") or []:
         if item.get("state") != "promoted":
             violations.append(f"non-promoted guidance: {item.get('id')}")
@@ -260,7 +264,6 @@ def validate_distribution(root: Path) -> dict:
     )
     forbidden_literals = (
         "SOURCE_DEFAULT_GEOMETRY",
-        "AUTO_UV_CURRENT_STATE",
         '"scope": "project_family"',
         '"scope": "animation_project_family"',
         '"historical_path"',
@@ -269,6 +272,8 @@ def validate_distribution(root: Path) -> dict:
     for literal in forbidden_literals:
         if literal in serialized:
             violations.append(f"forbidden distribution literal: {literal}")
+    if re.search(r'"[A-Z0-9_]+_CURRENT_STATE"', serialized):
+        violations.append("forbidden distribution literal: project current-state key")
 
     return {
         "ok": not violations,
