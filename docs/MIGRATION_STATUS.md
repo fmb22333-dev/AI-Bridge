@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-10  
 **Product repository:** `fmb22333-dev/AI-Bridge`  
-**Development source baseline:** `fmb22333-dev/ai-bridge-bus:bridge-runtime@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`
+**Development source baseline:** `<private-development-source>@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`
 
 ## Current state
 
@@ -88,11 +88,11 @@ Distributable promoted recipes:
 
 Not distributed as generic execution authority:
 
-- `retarget.fbx_import_to_input_fix` — project-family
+- `<project-family-recipe>` — project-family
 - `network.build` — candidate
 - `network.build_and_cook` — deprecated
 
-The clean registry and recipe set are internally consistent; the prior dangling Retarget authority defect is fixed.
+The clean registry and recipe set are internally consistent; the prior dangling project-family authority defect is fixed.
 
 ## Validation evidence
 
