@@ -22,7 +22,9 @@ Validation:
 - PowerShell parser PASS
 - generated artifact publication PASS
 - clean GitHub re-download/install smoke PASS
-- validation run `34425959944`
+- final push validation run `34430874302`
+- final PR validation run `34430877409`
+- generated artifact synchronization commit `9655e8ab51ef77ec9b961fd638352b0adaeed692`
 
 ## Authority
 
@@ -31,6 +33,8 @@ Shared product/update authority: `fmb22333-dev/AI-Bridge:main`.
 Per-install user Bus remains transport/status/project authority and must never become an implicit Runtime release source.
 
 Future development Delta must start from `migration/BASELINE.json`, now advanced to `42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
+
+Runtime release `source_commit` is tied to the last `runtime/` change, so documentation-only commits do not change Runtime release identity.
 
 ## Remaining work
 

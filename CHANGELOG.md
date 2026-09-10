@@ -23,6 +23,7 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Installer verifies SHA-256, preserves Current/Previous Runtime generations, writes standalone product update authority, and never uses the user's Bus as an implicit Runtime source.
 - Added bounded GitHub read retries and corrected PowerShell URL interpolation for private-product-repository installation.
 - Added serialized/cancel-in-progress Windows product release validation.
+- Runtime release `source_commit` is now derived from the last commit touching `runtime/`, so documentation-only commits no longer churn release metadata or produce bot-head PR loops.
 
 #### Validation evidence
 - Windows `compileall`: **PASS**
@@ -31,7 +32,9 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - PowerShell parser: **PASS**
 - Generated artifact publication: **PASS**
 - Fresh Windows directory install by re-downloading from the GitHub validation branch: **PASS**
-- Validation run: `34425959944`
+- Final push validation run: `34430874302`
+- Final PR validation run: `34430877409`
+- Generated artifact synchronization commit: `9655e8ab51ef77ec9b961fd638352b0adaeed692`
 - Runtime bundle SHA-256: `00ee9abd2b5533667c86256b464725d7c284d5841e2a8cb8b57ad5f4f19a822e`
 - Installer bundle SHA-256: `4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c`
 - Clean Knowledge digest: `f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093`

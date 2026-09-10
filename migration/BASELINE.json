@@ -26,15 +26,17 @@
     "repository": "fmb22333-dev/AI-Bridge",
     "ref": "main",
     "release_candidate_branch": "release-assembly-20260910",
-    "validated_release_candidate_head": "e411bf487ae18a9682ecafa130f1e41fefaca648",
-    "validation_run_id": 34425959944,
+    "validated_release_candidate_head": "94636e7d6c88db44f6f527e306f872143a18728e",
+    "validation_run_id": 34430874302,
     "validation_result": "PASS",
     "runtime_version": "0.2.6.50",
     "supervisor_version": "0.1.4",
     "houdini_adapter_version": "0.5.26",
     "runtime_bundle_sha256": "00ee9abd2b5533667c86256b464725d7c284d5841e2a8cb8b57ad5f4f19a822e",
     "installer_bundle_sha256": "4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c",
-    "knowledge_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093"
+    "knowledge_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093",
+    "generated_artifact_commit": "9655e8ab51ef77ec9b961fd638352b0adaeed692",
+    "pr_validation_run_id": 34430877409
   },
   "validation": {
     "windows_compileall": "PASS",
@@ -42,7 +44,9 @@
     "release_verifier": "PASS",
     "powershell_parser": "PASS",
     "generated_artifact_publish": "PASS",
-    "clean_windows_github_install_smoke": "PASS"
+    "clean_windows_github_install_smoke": "PASS",
+    "final_push_product_validation": "PASS",
+    "final_pr_product_validation": "PASS"
   },
   "acceptance": {
     "state": "PENDING_EXPLICIT_REAL_ENVIRONMENT_ACCEPTANCE",
