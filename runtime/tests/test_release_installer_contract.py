@@ -16,7 +16,7 @@ def test_installer_consumes_release_authority_and_verifies_hashes():
     assert "Get-Sha256Hex" in text
     assert 'manifest_path = "runtime-release.json"' in text
     assert "bootstrap_from_bus = $false" in text
-    assert "fmb22333-dev/ai-bridge-bus" not in text
+    assert "ai-bridge-bus" not in text.lower()
 
 
 def test_release_builder_is_deterministic_and_houdini_only_for_now():
