@@ -3,7 +3,7 @@ name: Product release validation
 on:
   push:
     branches:
-      - release-assembly-20260910
+      - main
   pull_request:
     branches:
       - main
