@@ -9,7 +9,7 @@
   "product": "AI Bridge",
   "product_ref": "main",
   "product_repository": "fmb22333-dev/AI-Bridge",
-  "runtime_bundle_sha256": "00ee9abd2b5533667c86256b464725d7c284d5841e2a8cb8b57ad5f4f19a822e",
+  "runtime_bundle_sha256": "d1d0c3410c5392dbfd9fea57a1ecdb20ffa8bfd976b843358257824a15f01430",
   "runtime_manifest": "runtime-release.json",
   "runtime_version": "0.2.6.50",
   "schema_version": "1.1",
