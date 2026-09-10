@@ -21,9 +21,12 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Updated Runtime/Dashboard/static cache version markers and the product release workflow to `0.2.6.51`.
 - Houdini Adapter, Supervisor, and distributable Knowledge source authority are unchanged by this Runtime-only delta.
 - Private source validation before synchronization: `compileall` PASS and **333/333 pytest PASS**.
-- First public Windows product validation: **98/98 pytest PASS**, compile PASS, deterministic release build PASS, release verifier PASS, PowerShell parser PASS; run `34509886155`.
-- Validated Runtime bundle SHA-256: `dd55da82b4e332bc753d9e2ac0ef7b0f1a58fe582c621b4bba5b0207ff4f1a71`; installer bundle and clean Knowledge digest remain unchanged.
-- Migration baseline advanced from `42b2492565a5bb3b15e0cd2df3cb216ecae297ab` to `f04df88ddf29791af8c3761786cb5650e10e594a` only after the first public product validation passed. A second PR validation and final `main` push/install smoke remain required before this release sync is closed.
+- Public Windows product validation passed twice on PR #4; final PR run `34510120521` completed successfully with **98/98 pytest PASS**, compile PASS, deterministic release build PASS, release verifier PASS, and PowerShell parser PASS.
+- PR #4 merged to `main` at `720f70fd10bd64355dc1d12c7a06c3ec1746931c` on 2026-09-10T17:46:54Z.
+- Final `main` validation run `34510305457` passed, including generated release artifact publication and fresh Windows install from the public GitHub branch.
+- Generated artifact commit: `8c96c940d50967f31d0298a04289976d267d17d6`.
+- Published Runtime bundle SHA-256: `dd55da82b4e332bc753d9e2ac0ef7b0f1a58fe582c621b4bba5b0207ff4f1a71`; installer bundle remains `4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c`; clean Knowledge digest remains `f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093`.
+- Migration baseline advanced from `42b2492565a5bb3b15e0cd2df3cb216ecae297ab` to `f04df88ddf29791af8c3761786cb5650e10e594a`. The Runtime 0.2.6.51 public source/release synchronization is complete; explicit real end-user environment acceptance remains a separate gate.
 
 ### Public repository hygiene — 2026-09-10
 
@@ -120,7 +123,7 @@ Do not conflate the already-passed clean Windows installer smoke test with this 
 
 ### Migration baseline
 - Development source baseline: `<private-development-source>@f04df88ddf29791af8c3761786cb5650e10e594a`.
-- Runtime 0.2.6.51 public product reconciliation has passed its first Windows validation; final `main` artifact publication/install smoke remains the release-sync closeout gate. Explicit real-environment end-to-end acceptance remains separately pending.
+- Runtime 0.2.6.51 public source/release synchronization is complete: PR validation, `main` artifact publication, release verification, and fresh Windows GitHub install smoke all passed. Explicit real-environment end-to-end acceptance remains separately pending.
 
 ### Safety
 - Public/distributable content excludes developer Bridge IDs, credentials, sessions, workspaces, command history, project authority documents, local paths, and project-family/candidate knowledge as generic execution authority.
