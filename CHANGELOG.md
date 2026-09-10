@@ -21,8 +21,15 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Houdini Adapter remains `0.5.26`; Supervisor remains `0.1.4`; distributable Knowledge authority is unchanged by this Runtime-only delta.
 - Private development source merged at `<private-development-source>@1ea396efd020525ec6fe6c817c9cb2f58c027d58` after final committed-source Windows validation run `34523572329`: `compileall` PASS, fallback/V5 targeted **24/24 PASS**, full Runtime **344/344 PASS**.
 - The prior migration interval from `f04df88ddf29791af8c3761786cb5650e10e594a` to the pre-feature source head contained only project-specific documents and private generated release metadata; those items were classified `do_not_distribute` and were not copied into the product repository.
-- Initial public PR #6 product validation run `34525306816` passed with **109/109 pytest PASS**, deterministic release build PASS, compile PASS, release verifier PASS, and PowerShell parser PASS. The candidate Runtime bundle SHA-256 is `bd87f314aba70d608f762b920797d0fe48b0759513fe91420df63144c95f2b3b`.
-- After that validation gate, the migration baseline advanced from `f04df88ddf29791af8c3761786cb5650e10e594a` to `1ea396efd020525ec6fe6c817c9cb2f58c027d58`. Final PR revalidation, `main` artifact publication, and clean Windows GitHub install smoke remain pending release-closeout gates.
+- Initial public PR #6 product validation run `34525306816` passed with **109/109 pytest PASS**, deterministic release build PASS, compile PASS, release verifier PASS, and PowerShell parser PASS.
+- After that gate, the migration baseline advanced from `f04df88ddf29791af8c3761786cb5650e10e594a` to `1ea396efd020525ec6fe6c817c9cb2f58c027d58`.
+- Final public PR #6 validation run `34525705706` passed on release-candidate head `638a071f68d46db9736595dc14aa977bd389758b` with **109/109 pytest PASS**, deterministic release build PASS, compile PASS, release verifier PASS, and PowerShell parser PASS.
+- PR #6 merged to `main` at `c99058ff52633f5ba3ec66482171a96b0d8e5f5b` on `2026-09-10T20:25:21Z`.
+- Final `main` product validation run `34526280715` passed, including generated release artifact publication and fresh Windows installation from the public GitHub branch.
+- Generated artifact commit: `ca3459ce3c82a3e2783abe4aac9edf6233111fbe`.
+- Published Runtime release source commit: `638a071f68d46db9736595dc14aa977bd389758b`.
+- Published Runtime bundle SHA-256: `acf89d2be14d9dc85319938271ff6f8b441ed6cd288c8f9a26cbdcb99c889966`; installer bundle remains `4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c`; clean Knowledge digest remains `f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093`.
+- Runtime 0.2.6.52 public source/release synchronization is complete. The developer's active installed Runtime remains 0.2.6.51 because this synchronization intentionally did not switch the live installation; explicit real end-user environment acceptance remains a separate gate.
 
 ### Runtime 0.2.6.51 V5 transport reliability — 2026-09-11
 
@@ -139,7 +146,7 @@ Do not conflate the already-passed clean Windows installer smoke test with this 
 
 ### Migration baseline
 - Development source baseline: `<private-development-source>@1ea396efd020525ec6fe6c817c9cb2f58c027d58`.
-- Runtime 0.2.6.52 source candidate passed initial public PR validation. Final PR revalidation and `main` artifact/install-smoke release closeout remain pending; explicit real-environment end-to-end acceptance remains separately pending.
+- Runtime 0.2.6.52 public source/release synchronization is complete: final PR validation, `main` artifact publication, release verification, and fresh Windows GitHub install smoke all passed. The active developer Runtime remains 0.2.6.51 because this synchronization did not switch the live installation; explicit real-environment end-to-end acceptance remains separately pending.
 
 ### Safety
 - Public/distributable content excludes developer Bridge IDs, credentials, sessions, workspaces, command history, project authority documents, local paths, and project-family/candidate knowledge as generic execution authority.
