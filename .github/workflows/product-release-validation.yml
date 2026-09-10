@@ -59,7 +59,7 @@ jobs:
           $text = Get-Content -Raw ".\INSTALL_AI_BRIDGE.ps1"
           [void][scriptblock]::Create($text)
 
-      - name: Publish generated artifacts to validation branch
+      - name: Publish generated release artifacts
         if: github.event_name == 'push'
         shell: pwsh
         run: |
