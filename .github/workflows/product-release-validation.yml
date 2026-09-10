@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: product-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows-product-validation:
     runs-on: windows-latest
