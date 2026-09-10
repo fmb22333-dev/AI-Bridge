@@ -1,14 +1,18 @@
 {
   "houdini_adapter_version": "0.5.26",
   "installer": "INSTALL_AI_BRIDGE.ps1",
+  "installer_bundle": {
+    "path": "AI_Bridge_Installer.zip",
+    "sha256": "4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c"
+  },
   "knowledge_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093",
   "product": "AI Bridge",
   "product_ref": "main",
   "product_repository": "fmb22333-dev/AI-Bridge",
-  "runtime_bundle_sha256": "60c959ee39223c23a92c34529069975a02fe05aa60bb5883db1ba74e82cc7501",
+  "runtime_bundle_sha256": "00ee9abd2b5533667c86256b464725d7c284d5841e2a8cb8b57ad5f4f19a822e",
   "runtime_manifest": "runtime-release.json",
   "runtime_version": "0.2.6.50",
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "supervisor_manifest": "supervisor-release.json",
   "supervisor_version": "0.1.4",
   "supported_hosts": [
