@@ -59,7 +59,7 @@
       "target": "_System/supervisor.py"
     }
   ],
-  "min_runtime_version": "0.2.6.51",
+  "min_runtime_version": "0.2.6.52",
   "notes": "Standalone product Supervisor. User Bus is transport/state authority only and is never an implicit Runtime update source.",
   "product_ref": "main",
   "product_repository": "fmb22333-dev/AI-Bridge",
