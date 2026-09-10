@@ -1,0 +1,46 @@
+name: Stage Runtime 0.2.6.52
+
+on:
+  push:
+    branches:
+      - sync-runtime-0.2.6.52
+
+permissions:
+  contents: write
+
+jobs:
+  stage-markers:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update validated Runtime version markers
+        shell: pwsh
+        run: |
+          function Replace-Required([string]$Path, [string]$Old, [string]$New) {
+            $text = Get-Content -Raw $Path
+            if (-not $text.Contains($Old)) { throw "Expected marker not found in $Path: $Old" }
+            [System.IO.File]::WriteAllText((Resolve-Path $Path), $text.Replace($Old, $New))
+          }
+
+          Replace-Required 'runtime/pyproject.toml' 'version = "0.2.6.51"' 'version = "0.2.6.52"'
+          Replace-Required 'runtime/src/ai_bridge/transport/remote_controller.py' '"bridge_version": "0.2.6.51"' '"bridge_version": "0.2.6.52"'
+
+          $p = 'runtime/src/ai_bridge/web/templates/index.html'
+          $s = Get-Content -Raw $p
+          if (-not $s.Contains('0.2.6.51')) { throw 'Expected index Runtime marker not found' }
+          [System.IO.File]::WriteAllText((Resolve-Path $p), $s.Replace('0.2.6.51','0.2.6.52'))
+
+          $p = 'runtime/src/ai_bridge/web/templates/commands.html'
+          $s = Get-Content -Raw $p
+          if (-not $s.Contains('0.2.6.51')) { throw 'Expected commands asset marker not found' }
+          [System.IO.File]::WriteAllText((Resolve-Path $p), $s.Replace('0.2.6.51','0.2.6.52'))
+
+          Replace-Required '.github/workflows/product-release-validation.yml' 'Build Runtime 0.2.6.51 release artifacts' 'Build Runtime 0.2.6.52 release artifacts'
+
+          git rm '.github/workflows/stage-runtime-0.2.6.52.yml'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/pyproject.toml runtime/src/ai_bridge/transport/remote_controller.py runtime/src/ai_bridge/web/templates/index.html runtime/src/ai_bridge/web/templates/commands.html .github/workflows/product-release-validation.yml
+          git diff --cached --check
+          git commit -m 'release: stage Runtime 0.2.6.52 product markers'
+          git push origin HEAD:sync-runtime-0.2.6.52
