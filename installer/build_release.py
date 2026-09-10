@@ -15,7 +15,7 @@ BUNDLE = ROOT / "runtime_bundle.zip"
 PRODUCT_REPOSITORY = "fmb22333-dev/AI-Bridge"
 PRODUCT_REF = "main"
 SUPERVISOR_VERSION = "0.1.4"
-TEXT_SUFFIXES = {".py", ".json", ".toml", ".html", ".css", ".js", ".md", ".txt"}
+TEXT_SUFFIXES = {".py", ".json", ".toml", ".html", ".css", ".js", ".md", ".txt", ".bat", ".ps1"}
 
 
 def _write_json(path: Path, data: dict) -> None:
