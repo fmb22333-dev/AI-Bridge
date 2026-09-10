@@ -20,7 +20,7 @@
   "min_supervisor_version": "0.1.4",
   "runtime_path": "runtime",
   "schema_version": "1.1",
-  "source_commit": "a956dd59a38fbd16542529f8c2fc14bf13c3c538",
+  "source_commit": "ae9ed61ccbf2dda1d4ba1fc8456a753046268550",
   "source_ref": "main",
   "source_repository": "fmb22333-dev/AI-Bridge",
   "version": "0.2.6.50"
