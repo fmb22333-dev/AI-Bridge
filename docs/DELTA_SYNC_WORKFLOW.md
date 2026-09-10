@@ -69,7 +69,7 @@ Never synchronize into the product repository or a clean installer:
 - credentials/secrets;
 - developer Bridge IDs;
 - developer sessions/workspaces/PIDs/local paths;
-- AutoUV/Retarget/Subdiv/Locomotion authority or handoff files;
+- ProjectFamilyA/ProjectFamilyB/Subdiv/Locomotion authority or handoff files;
 - project-family/candidate evidence presented as generic execution authority;
 - caches, generated package metadata, local staging/recovery state.
 
