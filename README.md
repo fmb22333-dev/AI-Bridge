@@ -80,8 +80,14 @@ It must not contain:
 - project-specific HIP/FBX paths
 - private project-family execution recipes
 
-## Current migration status
+## Current product status
 
-The independent product repository is initialized and the public protocol/audit layer plus an initial Runtime source slice are present. See [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md) for the exact current boundary.
+Runtime **0.2.6.50**, Houdini Adapter **0.5.26**, Supervisor **0.1.4**, clean Knowledge, release manifests, deterministic Runtime/installer bundles, Setup backend, and the Windows installer are assembled and product-validated.
 
-The old development Bus remains the live developer/runtime authority until Runtime/installer source migration and clean-distribution validation are completed. This migration does not activate or replace the developer's running Runtime or Houdini Adapter.
+Windows product validation passes `compileall`, **84/84** tests, release verification, PowerShell parsing, artifact publication, and a clean GitHub re-download/install smoke test.
+
+The only remaining gate is explicit real-environment acceptance: provision a genuinely new user Bus through Setup UI, authorize/connect it, activate the Houdini Adapter, and verify a live Houdini round-trip.
+
+See [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md).
+
+The existing developer Runtime/Bus is intentionally not switched by repository migration or release assembly.
