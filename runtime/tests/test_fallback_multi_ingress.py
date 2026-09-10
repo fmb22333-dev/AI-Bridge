@@ -48,7 +48,7 @@ def test_same_command_id_with_divergent_payload_fails_closed(tmp_path):
 
     with pytest.raises(CommandIdentityConflict):
         db.accept_transport_command(
-            _command(operation="bridge.project.resume", arguments={"project": "auto_uv"})
+            _command(operation="bridge.project.resume", arguments={"project": "sample_project"})
         )
 
 
@@ -217,7 +217,7 @@ def test_v5_same_command_id_with_divergent_comment_and_contents_payload_fails_cl
     contents_command = _command(
         "cmd-conflict",
         operation="bridge.project.resume",
-        arguments={"project": "auto_uv"},
+        arguments={"project": "sample_project"},
     )
     transport = _hybrid_transport([comment_command], [contents_command])
 
