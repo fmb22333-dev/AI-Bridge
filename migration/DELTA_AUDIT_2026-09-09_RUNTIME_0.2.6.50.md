@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-09  
 **Product repository:** `fmb22333-dev/AI-Bridge:main`  
-**Development source:** `fmb22333-dev/ai-bridge-bus:bridge-runtime`
+**Development source:** `<private-development-source>:bridge-runtime`
 
 ## Authority snapshot
 
@@ -65,7 +65,7 @@ Rules for this sync:
 
 ### DO NOT DISTRIBUTE
 
-The delta also contains large project-specific state changes, especially Retarget V19 authority/history. These remain development evidence only and must not enter the standalone product repository as generic Bridge authority.
+The delta also contains large project-specific state changes, especially ProjectFamily V19 authority/history. These remain development evidence only and must not enter the standalone product repository as generic Bridge authority.
 
 Excluded examples:
 
