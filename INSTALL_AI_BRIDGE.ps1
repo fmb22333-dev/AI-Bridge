@@ -46,7 +46,7 @@ if ($Token) {
 function Get-RepoBytes([string]$Path) {
     $escaped = ($Path -split "/" | ForEach-Object { [uri]::EscapeDataString($_) }) -join "/"
     $encodedRef = [uri]::EscapeDataString($Ref)
-    $url = "https://api.github.com/repos/$ProductRepository/contents/$escaped?ref=$encodedRef"
+    $url = "https://api.github.com/repos/${ProductRepository}/contents/${escaped}?ref=${encodedRef}"
     $lastError = $null
     for ($attempt = 1; $attempt -le 6; $attempt++) {
         try {
