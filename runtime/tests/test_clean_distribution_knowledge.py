@@ -25,6 +25,10 @@ def test_distribution_knowledge_filters_project_family_and_candidate_content(tmp
 
     assert promotion["entries"]
     assert all(item["state"] == "promoted" for item in promotion["entries"])
+    assert all(
+        item.get("target") != "recipe:retarget.fbx_import_to_input_fix"
+        for item in promotion["entries"]
+    )
     assert all(item.get("scope") not in {"project_family", "animation_project_family"} for item in promotion["entries"])
     assert all(item.get("scope") not in {"project_family", "animation_project_family"} for item in templates["templates"])
     assert all(item["state"] == "promoted" for item in guidance["entries"])
