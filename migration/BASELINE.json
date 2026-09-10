@@ -1,33 +1,62 @@
 {
-  "schema_version": "1.0",
-  "captured_date": "2026-09-09",
-  "purpose": "Anchor ongoing migration from the continuously changing development source into the distributable AI-Bridge product repository.",
+  "schema_version": "1.1",
+  "captured_date": "2026-09-10",
+  "purpose": "Anchor completed Runtime 0.2.6.50 migration from the development source into the standalone distributable AI-Bridge product repository. Future synchronization compares from this reconciled source commit.",
   "source": {
     "repository": "fmb22333-dev/ai-bridge-bus",
     "ref": "bridge-runtime",
-    "commit": "03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e",
-    "root_tree": "f15122f94bd9ccbc3b5aa93a19f279bbff7fe0ba",
-    "runtime_source_tree": "7ff7c780ba910bf96220b5d7c80e5f830f71cc2e",
-    "houdini_adapter_tree": "99adcc76e443867574b3b345a1a2965e08e056b8",
-    "houdini_adapter_version": "0.5.21",
-    "knowledge_tree": "a1a2e26e15c29e67860e375b1fdc194e27763ea6",
-    "promotion_registry_blob": "8993f527074169a106326079fe48f911a869c9f6",
-    "recipes_tree": "6db974be24446efc7ea06f798ea50355dca92bb0"
+    "commit": "42b2492565a5bb3b15e0cd2df3cb216ecae297ab",
+    "root_tree": "694b9c4ca23e4a1faba8660fb9673e1c9b2b1869",
+    "runtime_source_tree": "922923168063549e032c9b4cd054c2d0f034a3ef",
+    "houdini_adapter_tree": "306519206af06c4304e407454f98c0478875b4cb",
+    "houdini_adapter_version": "0.5.26",
+    "knowledge_tree": "b877e254beb5126f3abad0db9bc48d5b8acee8bb",
+    "promotion_registry_blob": "a41d58ec9fa32309ac492c87d05973d6569054ec",
+    "recipes_tree": "dfe41286c1ee65642fc8e52602bfbcae4fd0c7da"
   },
   "live_runtime_at_capture": {
-    "version": "0.2.6.40",
+    "version": "0.2.6.50",
     "status_source": "fmb22333-dev/ai-bridge-bus:main:.ai-bridge/status/FMB-6f5f1b.json",
-    "status_published_at": "2026-09-08T19:53:18.384011+00:00",
+    "status_published_at": "2026-09-10T00:55:54.002297+00:00",
     "transport": "issue_channel_v5",
-    "multi_channel": true
+    "multi_channel": true,
+    "sessions": []
   },
   "product_repository": {
     "repository": "fmb22333-dev/AI-Bridge",
     "ref": "main",
-    "head_before_baseline_record": "ae7b1fea45807eabf8af6d9b061cc5dc79da0271"
+    "release_candidate_branch": "release-assembly-20260910",
+    "validated_release_candidate_head": "e411bf487ae18a9682ecafa130f1e41fefaca648",
+    "validation_run_id": 34425959944,
+    "validation_result": "PASS",
+    "runtime_version": "0.2.6.50",
+    "supervisor_version": "0.1.4",
+    "houdini_adapter_version": "0.5.26",
+    "runtime_bundle_sha256": "00ee9abd2b5533667c86256b464725d7c284d5841e2a8cb8b57ad5f4f19a822e",
+    "installer_bundle_sha256": "4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c",
+    "knowledge_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093"
+  },
+  "validation": {
+    "windows_compileall": "PASS",
+    "full_pytest": "84/84 PASS",
+    "release_verifier": "PASS",
+    "powershell_parser": "PASS",
+    "generated_artifact_publish": "PASS",
+    "clean_windows_github_install_smoke": "PASS"
+  },
+  "acceptance": {
+    "state": "PENDING_EXPLICIT_REAL_ENVIRONMENT_ACCEPTANCE",
+    "excluded_from_this_completion": [
+      "create a genuinely new per-install GitHub Bus through Setup UI",
+      "interactive GitHub authorization in the end-user flow",
+      "connect the newly provisioned Bus to the installed Runtime",
+      "install/activate Houdini Adapter in that fresh end-user installation",
+      "verify live Houdini round-trip through the fresh installation"
+    ],
+    "rule": "Do not call the standalone product fully end-to-end accepted until these explicit real-environment checks pass."
   },
   "delta_policy": {
-    "compare_source_from_commit": "03b24b41c03d2358afc89e91ed3d4b0cf6e1da4e",
+    "compare_source_from_commit": "42b2492565a5bb3b15e0cd2df3cb216ecae297ab",
     "safe_copy": [
       "ordinary Runtime bug fixes whose product path has not diverged",
       "Houdini Adapter kernel fixes whose distributable semantics are unchanged",
@@ -38,6 +67,7 @@
       "GitHub Bus provisioning/default product authority",
       "Setup UI repository initialization flow",
       "installer/release-source logic",
+      "BridgeAdmin/product authority files",
       "any file already productized differently in AI-Bridge"
     ],
     "do_not_distribute": [
@@ -48,7 +78,7 @@
       "candidate or project-family knowledge as generic execution authority",
       "generated caches/package metadata"
     ],
-    "knowledge_rule": "Never incrementally copy a stale clean Knowledge Pack. Regenerate distributable knowledge from the latest source Knowledge tree using the clean filter after each delta synchronization.",
-    "post_sync_rule": "After a successful delta sync and validation, advance this baseline to the reconciled source commit and record the old/new baseline in CHANGELOG.md."
+    "knowledge_rule": "Never incrementally copy development Knowledge. Regenerate distributable Knowledge from the latest source Knowledge tree using the clean filter and canonical digest contract after each accepted delta synchronization.",
+    "post_sync_rule": "After a successful delta sync and validation, advance this baseline to the reconciled source commit and record old/new baseline plus validation evidence in CHANGELOG.md."
   }
 }
