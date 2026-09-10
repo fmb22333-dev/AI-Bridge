@@ -26,6 +26,7 @@ def test_release_builder_is_deterministic_and_houdini_only_for_now():
     assert 'unimplemented_hosts": ["unreal", "blender"]' in text
     assert "bundle_sha256" in text
     assert "knowledge_digest" in text
+    assert "AI_Bridge_Installer.zip" in text
 
 
 def test_release_verifier_checks_product_authority_boundaries():
