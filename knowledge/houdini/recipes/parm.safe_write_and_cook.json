@@ -1,0 +1,67 @@
+{
+  "description": "Read a parameter hash, write with optimistic concurrency, force-cook a target, then return host errors/warnings.",
+  "id": "parm.safe_write_and_cook",
+  "optional": [],
+  "promotion_state": "promoted",
+  "required": [
+    "path",
+    "parameter",
+    "value",
+    "cook_path"
+  ],
+  "steps": [
+    {
+      "arguments": {
+        "parameter": {
+          "$arg": "parameter"
+        },
+        "path": {
+          "$arg": "path"
+        }
+      },
+      "op": "parm.read",
+      "save_as": "read"
+    },
+    {
+      "arguments": {
+        "expected_hash": {
+          "$result": "read.hash"
+        },
+        "parameter": {
+          "$arg": "parameter"
+        },
+        "path": {
+          "$arg": "path"
+        },
+        "value": {
+          "$arg": "value"
+        }
+      },
+      "op": "parm.write",
+      "save_as": "write"
+    },
+    {
+      "arguments": {
+        "force": true,
+        "path": {
+          "$arg": "cook_path"
+        }
+      },
+      "op": "cook.execute",
+      "save_as": "cook"
+    },
+    {
+      "arguments": {
+        "path": {
+          "$arg": "cook_path"
+        }
+      },
+      "op": "host.errors",
+      "save_as": "errors"
+    }
+  ],
+  "supported_host_versions": [
+    "21.0.440"
+  ],
+  "version": "1.0"
+}

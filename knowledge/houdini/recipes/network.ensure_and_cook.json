@@ -1,0 +1,64 @@
+{
+  "assumptions": [
+    "Existing nodes are matched by explicit child name under parent and must retain the declared constructor type.",
+    "Only explicitly declared parms, node-state fields, and target inputs are authoritative for this call."
+  ],
+  "compression": {
+    "caller_operations": 1,
+    "expanded_phases": [
+      "preflight",
+      "snapshot",
+      "create_or_update",
+      "connect",
+      "cook",
+      "readback",
+      "rollback_on_failure"
+    ]
+  },
+  "description": "Idempotently reconcile a declarative Houdini network, optionally guard a prior Ensure Plan with expected_plan_hash, then Cook inside the same rollback boundary.",
+  "heuristics": [
+    "Use this recipe for installer/reconciliation style graph edits that should be safe to run repeatedly.",
+    "Use expected-hash parm/connection operations instead when a write must remain conditional on an earlier external read.",
+    "When a separate network.ensure_plan was used for review/preflight, pass its plan_hash as expected_plan_hash to guard the Plan -> Ensure handoff."
+  ],
+  "id": "network.ensure_and_cook",
+  "optional": [
+    "expected_plan_hash"
+  ],
+  "promotion_state": "promoted",
+  "required": [
+    "parent",
+    "nodes",
+    "connections",
+    "cook_path"
+  ],
+  "scope": "houdini_declarative_network_21_0_440",
+  "steps": [
+    {
+      "arguments": {
+        "connections": {
+          "$arg": "connections"
+        },
+        "cook_path": {
+          "$arg": "cook_path"
+        },
+        "expected_plan_hash": {
+          "$arg_optional": "expected_plan_hash"
+        },
+        "layout": false,
+        "nodes": {
+          "$arg": "nodes"
+        },
+        "parent": {
+          "$arg": "parent"
+        }
+      },
+      "op": "network.ensure_transactional",
+      "save_as": "ensure"
+    }
+  ],
+  "supported_host_versions": [
+    "21.0.440"
+  ],
+  "version": "1.1"
+}

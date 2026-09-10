@@ -3,6 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 ADAPTER_PY = ROOT / "houdini_adapter" / "python"
 if str(ADAPTER_PY) not in sys.path:
@@ -53,11 +55,11 @@ def test_recipe_primitives_are_registered_adapter_capabilities():
             assert step["op"] in implemented, (summary["id"], step["op"])
 
 
-def test_recipe_get_uses_registry_authority():
-    old = knowledge_registry.get_recipe("network.build_and_cook")
-    assert old["promotion_state"] == "deprecated"
-    assert old["execution_authorized"] is False
-    assert old["superseded_by"] == "network.ensure_and_cook"
+def test_recipe_get_uses_clean_product_registry_authority():
+    with pytest.raises(knowledge_registry.KnowledgeError):
+        knowledge_registry.get_recipe("network.build_and_cook")
+    with pytest.raises(knowledge_registry.KnowledgeError):
+        knowledge_registry.get_recipe("network.build")
 
     current = knowledge_registry.get_recipe("network.ensure_and_cook")
     assert current["promotion_state"] == "promoted"

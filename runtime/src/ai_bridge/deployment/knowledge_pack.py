@@ -56,10 +56,10 @@ def _read_json(path: Path) -> dict:
 
 def _write_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    serialized = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    # Distribution artifacts are byte-stable across platforms. Path.write_text()
+    # may translate LF to CRLF on Windows, which previously changed release digests.
+    path.write_bytes(serialized.encode("utf-8"))
 
 
 def _scope_is_project_specific(value: Any) -> bool:
@@ -97,6 +97,11 @@ def _filter_promotion_registry(source: dict) -> dict:
             continue
         if _scope_is_project_specific(item.get("scope")):
             continue
+        if str(item.get("kind") or "") == "recipe":
+            target = str(item.get("target") or "").strip().lower()
+            recipe_id = target.split(":", 1)[1] if target.startswith("recipe:") else ""
+            if recipe_id.startswith(PROJECT_RECIPE_PREFIXES):
+                continue
         entries.append(_strip_metadata(item))
     return {
         "schema_version": str(source.get("schema_version") or "1.0"),
@@ -197,13 +202,28 @@ def _recipe_is_distributable(recipe: dict, promoted_recipe_ids: set[str]) -> boo
     return True
 
 
+def _canonical_text_bytes(path: Path) -> bytes:
+    # Clean Knowledge is UTF-8 JSON. Normalize legacy/worktree newline variants
+    # before hashing so LF/CRLF checkout policy cannot change release identity.
+    text = path.read_text(encoding="utf-8")
+    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+
+
+def _portable_source_label(source_root: Path) -> str:
+    parts = list(source_root.parts)
+    if "ai_bridge_houdini" in parts:
+        index = parts.index("ai_bridge_houdini")
+        return "/".join(parts[index:])
+    return source_root.name
+
+
 def _content_digest(root: Path) -> str:
     digest = hashlib.sha256()
     for path in sorted(p for p in root.rglob("*") if p.is_file() and p.name != "distribution_manifest.json"):
         relative = path.relative_to(root).as_posix()
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        digest.update(_canonical_text_bytes(path))
         digest.update(b"\0")
     return digest.hexdigest()
 
@@ -327,7 +347,7 @@ def build_distribution_knowledge(
     manifest = {
         "schema_version": "1.0",
         "mode": "clean_distribution",
-        "source_root": str(source_root),
+        "source_root": _portable_source_label(source_root),
         "included_recipes": included_recipes,
         "excluded_recipes": excluded_recipes,
         "promotion_entry_count": len(_read_json(destination / "promotion_registry.json").get("entries") or []),
