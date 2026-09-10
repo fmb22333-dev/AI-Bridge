@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-MODULE_PATH = ROOT / "bootstrap" / "supervisor" / "0.1.3" / "supervisor_update_source.py"
+MODULE_PATH = ROOT / "bootstrap" / "supervisor" / "0.1.4" / "supervisor_update_source.py"
 
 
 def _load_module():
