@@ -8,16 +8,26 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Public repository hygiene — 2026-09-10
+
+- Replaced private development-source, Bridge-ID, project-family, and machine-path references in public-facing migration/audit documentation with generic placeholders.
+- Generalized legacy Bus leak guards so product validation rejects any `ai-bridge-bus` release-source dependency rather than one owner-specific repository.
+- Replaced project-name denylisting in distributable Knowledge filtering with a positive generic scope allowlist for the current Houdini product surface.
+- Generalized Dashboard workspace examples, synchronized static cache keys to Runtime 0.2.6.50, and restored the recent-command summary to five entries.
+- Added `.gitignore` rules for local state, credentials, caches, logs, databases, and build outputs.
+- Added `SECURITY.md` with public repository hygiene/reporting guidance.
+- Moved product release validation from the historical release-assembly branch to `main`.
+
 ### Runtime 0.2.6.50 standalone product assembly — 2026-09-10
 
 #### Completed
-- Reconciled the development source through `fmb22333-dev/ai-bridge-bus:bridge-runtime@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
+- Reconciled the development source through `<private-development-source>@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
 - Product Runtime is **0.2.6.50**; Houdini Adapter is **0.5.26**; Supervisor is **0.1.4**.
 - Rebased Setup backend and BridgeAdmin so shared product update authority is `fmb22333-dev/AI-Bridge:main`, while every user Bus remains separate transport/project authority.
 - Integrated Supervisor 0.1.4 monitoring/rollback with the standalone product update model and fail-closed rejection of Bus Runtime bootstrap/publication.
 - Completed Dashboard asset migration.
 - Fixed cross-platform Knowledge determinism by canonicalizing generated text/digest behavior.
-- Removed dangling project-family Retarget recipe authority from the clean product registry.
+- Removed dangling project-family recipe authority from the clean product registry.
 - Generated clean distributable Knowledge with six promoted generic recipes and no candidate/deprecated/project-family execution authority.
 - Added deterministic release builder/verifier, `runtime_bundle.zip`, `runtime-release.json`, `supervisor-release.json`, `release-manifest.json`, `INSTALL_AI_BRIDGE.ps1`, `INSTALL_AI_BRIDGE.bat`, and `AI_Bridge_Installer.zip`.
 - Installer verifies SHA-256, preserves Current/Previous Runtime generations, writes standalone product update authority, and never uses the user's Bus as an implicit Runtime source.
@@ -84,7 +94,7 @@ Do not conflate the already-passed clean Windows installer smoke test with this 
 - Supervisor product update-source resolver.
 
 ### Changed
-- Product/runtime/protocol authority is being migrated from `ai-bridge-bus:bridge-runtime` into this repository.
+- Product/runtime/protocol authority is being migrated from `private development source` into this repository.
 - New per-install Bus templates reference `fmb22333-dev/AI-Bridge:main` for shared product/protocol authority.
 - AI maintenance workflow requires changelog review/update, migration-baseline reconciliation, and remote pre/post checks.
 - Supervisor update-source semantics are explicit: the user Bus is never an implicit Runtime release source.
@@ -92,7 +102,7 @@ Do not conflate the already-passed clean Windows installer smoke test with this 
 - Continuous synchronization classifies changes as SAFE COPY, REBASE REQUIRED, KNOWLEDGE REGENERATE, or DO NOT DISTRIBUTE.
 
 ### Migration baseline
-- Development source baseline: `fmb22333-dev/ai-bridge-bus:bridge-runtime@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
+- Development source baseline: `<private-development-source>@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`.
 - Runtime 0.2.6.50 standalone product reconciliation and validation are complete; only explicit real-environment end-to-end acceptance remains.
 
 ### Safety
@@ -102,6 +112,6 @@ Do not conflate the already-passed clean Windows installer smoke test with this 
 - Productized files are not blindly overwritten during Delta Sync; architecture-sensitive changes require reconciliation.
 
 ## 2026-09-09 — Repository bootstrap
-- Created the dedicated private `fmb22333-dev/AI-Bridge` product repository.
+- Created the dedicated `fmb22333-dev/AI-Bridge` product repository.
 - Established the two-repository product model: shared product repository + per-install user Bus.
 - Began source migration without switching or modifying the developer's live Bridge Runtime.

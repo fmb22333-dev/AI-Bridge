@@ -12,7 +12,7 @@ def test_supervisor_014_uses_shared_product_authority_and_forbids_bus_bootstrap(
     assert '"manifest_path": "runtime-release.json"' in source
     assert 'config["bootstrap_from_bus"] = False' in source
     assert "BUS_RUNTIME_BOOTSTRAP_FORBIDDEN" in source
-    assert "fmb22333-dev/ai-bridge-bus" not in source
+    assert "ai-bridge-bus" not in source.lower()
     assert '"branch": "bridge-runtime"' not in source
     assert '"manifest_path": "distribution-release.json"' not in source
 

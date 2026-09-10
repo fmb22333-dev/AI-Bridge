@@ -9,7 +9,12 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ai_bridge.deployment.knowledge_pack import build_distribution_knowledge, validate_distribution
+from ai_bridge.deployment.knowledge_pack import (
+    DISTRIBUTABLE_SCOPE_PREFIXES,
+    _scope_is_distribution_generic,
+    build_distribution_knowledge,
+    validate_distribution,
+)
 
 
 def test_distribution_knowledge_filters_project_family_and_candidate_content(tmp_path):
@@ -26,15 +31,15 @@ def test_distribution_knowledge_filters_project_family_and_candidate_content(tmp
     assert promotion["entries"]
     assert all(item["state"] == "promoted" for item in promotion["entries"])
     assert all(
-        item.get("target") != "recipe:retarget.fbx_import_to_input_fix"
+        _scope_is_distribution_generic(item.get("scope"))
         for item in promotion["entries"]
+        if item.get("kind") == "recipe"
     )
     assert all(item.get("scope") not in {"project_family", "animation_project_family"} for item in promotion["entries"])
     assert all(item.get("scope") not in {"project_family", "animation_project_family"} for item in templates["templates"])
     assert all(item["state"] == "promoted" for item in guidance["entries"])
 
     recipes = {path.stem for path in (target / "recipes").glob("*.json")}
-    assert "retarget.fbx_import_to_input_fix" not in recipes
     assert "cook.checked" in recipes
     assert "parm.safe_write_and_cook" in recipes
     assert "network.ensure_and_cook" in recipes
@@ -46,7 +51,6 @@ def test_distribution_knowledge_filters_project_family_and_candidate_content(tmp
     assert '"historical_names"' not in serialized
     assert '"provenance"' not in serialized
     assert '"validation_status"' not in serialized
-    assert "E:/AA/" not in serialized
     assert manifest["content_digest"] == validate_distribution(target)["content_digest"]
     assert manifest["source_root"] == "ai_bridge_houdini/knowledge"
 
@@ -91,3 +95,11 @@ def test_distribution_recipe_execution_authority_matches_promoted_registry(tmp_p
     included = set(manifest["included_recipes"])
     assert included <= promoted
     assert "code.safe_patch_and_cook" in included
+
+
+def test_distribution_scope_allowlist_rejects_project_specific_contracts():
+    assert DISTRIBUTABLE_SCOPE_PREFIXES == ("universal_", "houdini_", "kinefx_")
+    assert _scope_is_distribution_generic("houdini_declarative_network_21_0_440")
+    assert _scope_is_distribution_generic("kinefx_point_skeleton")
+    assert not _scope_is_distribution_generic("custom_project_contract_21_0_440")
+    assert not _scope_is_distribution_generic("project_family")

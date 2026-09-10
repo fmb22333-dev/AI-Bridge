@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>AI Bridge</title>
-  <link rel="stylesheet" href="/control/app.css?v=0.2.6.14">
+  <link rel="stylesheet" href="/control/app.css?v=0.2.6.50">
 </head>
 <body>
 <main class="shell">
@@ -48,9 +48,9 @@
       <h2>Workspace</h2>
       <div id="workspaces"></div>
       <form id="workspaceForm">
-        <input id="wsName" placeholder="名称，例如 Houdini Test" required>
+        <input id="wsName" placeholder="名称，例如 My Houdini Project" required>
         <div class="pathInput">
-          <input id="wsRoot" placeholder="工程根目录，例如 E:\\AA" required>
+          <input id="wsRoot" placeholder="工程根目录，例如 C:\\Projects\\Example" required>
           <button id="pickWorkspace" type="button">选择目录</button>
         </div>
         <button>添加 Workspace</button>
@@ -109,7 +109,7 @@
     <div class="sectionTitleRow commandsTitle">
       <div>
         <h2>最近命令</h2>
-        <small>最近 10 条；时间来自 Bridge 本地记录，并按本机时区显示。</small>
+        <small>最近 5 条；时间来自 Bridge 本地记录，并按本机时区显示。</small>
       </div>
       <button id="openCommandHistory" class="tiny">打开完整命令历史</button>
     </div>
@@ -122,9 +122,9 @@
     <div style="display:none"><table><tbody id="commands"></tbody></table></div>
   </article>
 </main>
-<script src="/control/app.js?v=0.2.6.14"></script>
+<script src="/control/app.js?v=0.2.6.50"></script>
 <script>
-const RECENT_COMMAND_LIMIT=10;
+const RECENT_COMMAND_LIMIT=5;
 const commandBudgets=new Map();
 const TERMINAL_COMMAND_STATUSES=new Set(["success","failed","denied","conflict","cancelled","canceled","timeout","timed_out","rolled_back"]);
 function commandDate(value){if(!value)return null;const raw=String(value);const normalized=/[zZ]$|[+-]\d\d:\d\d$/.test(raw)?raw:raw.replace(" ","T")+"Z";const date=new Date(normalized);return Number.isNaN(date.getTime())?null:date;}

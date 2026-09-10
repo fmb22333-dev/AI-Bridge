@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-09-10  
 **Product:** `fmb22333-dev/AI-Bridge`  
-**Development baseline:** `fmb22333-dev/ai-bridge-bus:bridge-runtime@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`
+**Development baseline:** `<private-development-source>@42b2492565a5bb3b15e0cd2df3cb216ecae297ab`
 
 ## State
 

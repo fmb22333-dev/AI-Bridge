@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Local Bridge runtime/state
+.ai-bridge/
+.ai_bridge/
+Runtime/Current/
+Runtime/Previous/
+Runtime/Staging/
+*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# Local credentials / secrets
+.env
+.env.*
+!.env.example
+*.dpapi
+*.pem
+*.p12
+*.pfx
+.secrets/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
