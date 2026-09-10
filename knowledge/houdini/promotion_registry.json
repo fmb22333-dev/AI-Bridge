@@ -1,0 +1,191 @@
+{
+  "allowed_transitions": {
+    "candidate": [
+      "validated",
+      "deprecated"
+    ],
+    "deprecated": [],
+    "observed": [
+      "candidate",
+      "deprecated"
+    ],
+    "promoted": [
+      "deprecated"
+    ],
+    "validated": [
+      "promoted",
+      "candidate",
+      "deprecated"
+    ]
+  },
+  "entries": [
+    {
+      "id": "recipe.cook.checked",
+      "kind": "recipe",
+      "scope": "universal_houdini_workflow",
+      "state": "promoted",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "recipe:cook.checked",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "regression_pass": true
+      }
+    },
+    {
+      "id": "hostrule.kinefx.world_joint_attribute_contract",
+      "kind": "host_rule",
+      "scope": "kinefx_point_skeleton",
+      "state": "promoted",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "host_rule:kinefx.world_joint_attribute_contract",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "regression_pass": true
+      }
+    },
+    {
+      "id": "recipe.fbx.character_import.set_animation_and_cook",
+      "kind": "recipe",
+      "scope": "kinefx_fbxcharacterimport_21_0_440",
+      "state": "promoted",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "recipe:fbx.character_import.set_animation_and_cook",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "regression_pass": true
+      }
+    },
+    {
+      "id": "recipe.kinefx.import_with_frameinfo",
+      "kind": "recipe",
+      "scope": "kinefx_node_type_21_0_440",
+      "state": "promoted",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "recipe:kinefx.import_with_frameinfo",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "regression_pass": true
+      }
+    },
+    {
+      "id": "recipe.network.ensure_and_cook",
+      "kind": "recipe",
+      "scope": "houdini_declarative_network_21_0_440",
+      "semantic_contract": {
+        "guarded_plan_handoff": "network.ensure_plan.plan_hash may be passed as expected_plan_hash; mismatch fails before mutation"
+      },
+      "state": "promoted",
+      "supersedes": [
+        "network.build_and_cook for ordinary desired-state reconciliation + Cook",
+        "manual find/create/update/connect/cook orchestration when the final declared graph is known"
+      ],
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "recipe:network.ensure_and_cook",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "regression_pass": true
+      }
+    },
+    {
+      "id": "hostrule.network.ensure_reconciliation_vs_expected_hash",
+      "kind": "host_rule",
+      "scope": "houdini_declarative_network_21_0_440",
+      "state": "promoted",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "host_rule:network.ensure_reconciliation_vs_expected_hash",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "regression_pass": true
+      }
+    },
+    {
+      "id": "hostrule.network.ensure_plan_advisory_preview",
+      "kind": "host_rule",
+      "scope": "houdini_declarative_network_21_0_440",
+      "state": "promoted",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "host_rule:network.ensure_plan_advisory_preview",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "plan_guard_pass": true,
+        "regression_pass": true
+      }
+    },
+    {
+      "id": "recipe.parm.safe_write_and_cook",
+      "kind": "recipe",
+      "scope": "houdini_parameters_21_0_440",
+      "state": "promoted",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "recipe:parm.safe_write_and_cook",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "regression_pass": true
+      }
+    },
+    {
+      "bounded_contract": {
+        "concurrency": "no implicit retry; callers must re-read on stale hash conflict",
+        "failure_transaction": "normal recipe.apply is L2 with Core rollback_on_failure; terminal FAILED restores the verified pre-command checkpoint while preserving the original recipe failure",
+        "scope_limit": "Houdini code-parameter patch + Cook workflow validated on Houdini 21.0.440; no cross-host claim",
+        "sequence": [
+          "code.read",
+          "code.patch(expected_hash=read.hash)",
+          "cook.execute",
+          "conditional host.errors"
+        ],
+        "validation_mode": "recipe.apply_validation may execute unpromoted candidates but always restores its checkpoint after every non-budget terminal outcome"
+      },
+      "id": "recipe.code.safe_patch_and_cook",
+      "kind": "recipe",
+      "scope": "houdini_code_patch_and_cook_21_0_440",
+      "state": "promoted",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "target": "recipe:code.safe_patch_and_cook",
+      "validation": {
+        "live_or_baseline_pass": true,
+        "regression_pass": true
+      }
+    }
+  ],
+  "lifecycle": [
+    "observed",
+    "candidate",
+    "validated",
+    "promoted",
+    "deprecated"
+  ],
+  "promotion_gate": {
+    "promoted_requires": [
+      "validated_state",
+      "regression_pass",
+      "live_or_project_baseline_evidence",
+      "scope_not_silently_broadened"
+    ],
+    "validated_requires": [
+      "machine_readable_definition",
+      "bounded_scope",
+      "evidence",
+      "regression_or_live_validation"
+    ]
+  },
+  "schema_version": "1.0"
+}

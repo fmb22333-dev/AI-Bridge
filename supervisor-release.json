@@ -1,0 +1,69 @@
+{
+  "channel": "stable",
+  "files": [
+    {
+      "sha256": "e823f58b2e8aa964f78a74038721efa0fbf9fa543a102edec7376245d1448141",
+      "source_path": "bootstrap/supervisor/0.1.4/_System/supervisor.py",
+      "target": "_System/supervisor.py"
+    },
+    {
+      "sha256": "2d7d6aa7f3a0243d1fe0d52bedcb183e52e053793728aa14c5bba24efd5c70ae",
+      "source_path": "bootstrap/supervisor/0.1.4/_System/VERSION.txt",
+      "target": "_System/VERSION.txt"
+    }
+  ],
+  "install_files": [
+    {
+      "sha256": "8626e70a85ef2d5f29cd59924be620a19c3dc57a31625c9f60cae16fe91b352c",
+      "source_path": "bootstrap/supervisor/0.1.4/AI_Bridge.bat",
+      "target": "AI_Bridge.bat"
+    },
+    {
+      "sha256": "b83677e28523b4c7b00b7f5788cd980da86d4559148244c0c72d0e9de8aebeb0",
+      "source_path": "bootstrap/supervisor/0.1.4/OPEN_AI_BRIDGE.bat",
+      "target": "OPEN_AI_BRIDGE.bat"
+    },
+    {
+      "sha256": "1029b4809f7bd701ca79dd05c8bce73f034a7e62f05963b168be6daed185a1b7",
+      "source_path": "bootstrap/supervisor/0.1.4/README_FIRST.txt",
+      "target": "README_FIRST.txt"
+    },
+    {
+      "sha256": "47366bb5cb337e17f84f570bea5ee68334efe199954aa66351d0f25f100a7c04",
+      "source_path": "bootstrap/supervisor/0.1.4/START_AI_BRIDGE.bat",
+      "target": "START_AI_BRIDGE.bat"
+    },
+    {
+      "sha256": "19f8ae241f9dbdb557fe8ff7f6932ed06867c34a14559eab4f62e581f4e11cc1",
+      "source_path": "bootstrap/supervisor/0.1.4/STOP_AI_BRIDGE.bat",
+      "target": "STOP_AI_BRIDGE.bat"
+    },
+    {
+      "sha256": "5c0d9b0394e46d7e3a8c2237356869cf2c46346c91a50bf6d7b4af486f2ea6ad",
+      "source_path": "bootstrap/supervisor/0.1.4/supervisor_update_source.py",
+      "target": "supervisor_update_source.py"
+    },
+    {
+      "sha256": "2d7d6aa7f3a0243d1fe0d52bedcb183e52e053793728aa14c5bba24efd5c70ae",
+      "source_path": "bootstrap/supervisor/0.1.4/_System/VERSION.txt",
+      "target": "_System/VERSION.txt"
+    },
+    {
+      "sha256": "bab01b255dc1a8debe498c1fadfa07d2ebfc26e2efb6a8969bbdce66de20fc1b",
+      "source_path": "bootstrap/supervisor/0.1.4/_System/bootstrap.bat",
+      "target": "_System/bootstrap.bat"
+    },
+    {
+      "sha256": "e823f58b2e8aa964f78a74038721efa0fbf9fa543a102edec7376245d1448141",
+      "source_path": "bootstrap/supervisor/0.1.4/_System/supervisor.py",
+      "target": "_System/supervisor.py"
+    }
+  ],
+  "min_runtime_version": "0.2.6.50",
+  "notes": "Standalone product Supervisor. User Bus is transport/state authority only and is never an implicit Runtime update source.",
+  "product_ref": "main",
+  "product_repository": "fmb22333-dev/AI-Bridge",
+  "schema_version": "1.1",
+  "upgrade_protocol": "runtime_detached_worker_v1",
+  "version": "0.1.4"
+}

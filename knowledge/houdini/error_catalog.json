@@ -1,0 +1,187 @@
+{
+  "rules": [
+    {
+      "category": "invalid_argument",
+      "code": "ARGUMENT_INVALID",
+      "contains_all": [
+        "ARGUMENT_INVALID:"
+      ],
+      "id": "bridge.argument_invalid",
+      "retryable": false,
+      "suggestion": "Correct the operation argument shape using adapter.capabilities argument_schemas, then retry."
+    },
+    {
+      "category": "vex_parameter_semantics",
+      "code": "VEX_FUNCTION_PARAMETER_READ_ONLY",
+      "contains_all": [
+        "read-only expression",
+        "read/write parameter"
+      ],
+      "id": "vex.function_parameter_readwrite",
+      "retryable": false,
+      "suggestion": "Copy the input parameter to a local variable before modifying it; use export only for intentional writable outputs."
+    },
+    {
+      "category": "vex_language_mismatch",
+      "code": "VEX_BUILTIN_MACRO_REDEFINED",
+      "contains_any": [
+        "macro \"PI\" redefined",
+        "PI redefined",
+        "macro redefined"
+      ],
+      "id": "vex.macro_redefined",
+      "retryable": false,
+      "suggestion": "Remove the redefinition of built-in/common macros or use a project-unique prefixed name."
+    },
+    {
+      "category": "vex_language_mismatch",
+      "code": "VEX_TOP_LEVEL_CONST_UNSUPPORTED",
+      "contains_all": [
+        "unexpected const"
+      ],
+      "id": "vex.unexpected_const",
+      "retryable": false,
+      "suggestion": "Use an ordinary typed variable unless this exact const context has been validated in the active Houdini VEX version."
+    },
+    {
+      "category": "vex_api_compatibility",
+      "code": "VEX_FUNCTION_NOT_AVAILABLE",
+      "contains_any": [
+        "call to undefined function",
+        "undefined function"
+      ],
+      "id": "vex.undefined_function",
+      "retryable": false,
+      "suggestion": "Verify the function against the active Houdini VEX API and replace it with a validated equivalent."
+    },
+    {
+      "category": "hom_connection",
+      "code": "HOUDINI_INVALID_INPUT_CONNECTION",
+      "contains_any": [
+        "invalid input",
+        "Node_setInput"
+      ],
+      "id": "hom.invalid_input",
+      "retryable": false,
+      "suggestion": "Inspect the actual target input count and source output index before reconnecting; do not infer connector indices."
+    },
+    {
+      "category": "hom_attribute",
+      "code": "HOUDINI_ATTRIBUTE_NAME_REQUIRED",
+      "contains_all": [
+        "attrib_name",
+        "cannot be none"
+      ],
+      "id": "hom.attribute_name_none",
+      "retryable": false,
+      "suggestion": "Verify the attribute exists and pass its explicit name before reading point/prim attribute values."
+    },
+    {
+      "category": "python_io",
+      "code": "PYTHON_ILLEGAL_NEWLINE_ARGUMENT",
+      "contains_all": [
+        "illegal newline value"
+      ],
+      "id": "python.illegal_newline",
+      "retryable": false,
+      "suggestion": "Do not pass an invalid literal newline value; normally omit newline= and write UTF-8 text directly."
+    },
+    {
+      "category": "hip_serialization",
+      "code": "HOUDINI_HIP_UNKNOWN_OPERATOR",
+      "contains_any": [
+        "unknown operator on load",
+        "unknown operator"
+      ],
+      "id": "hip.unknown_operator_load",
+      "retryable": false,
+      "suggestion": "Inspect the first unknown archive member/operator, CPIO member order, and serialized node definition before treating later load errors as independent."
+    },
+    {
+      "category": "hip_serialization",
+      "code": "HOUDINI_HIP_CPIO_DIRECTORY_ENTRY",
+      "contains_all": [
+        "missing file extension"
+      ],
+      "id": "hip.cpio_directory_entry",
+      "retryable": false,
+      "suggestion": "Do not emit directory entries such as obj/ into the HIP CPIO archive."
+    },
+    {
+      "category": "hom_api_compatibility",
+      "code": "HOUDINI_HOM_API_UNAVAILABLE",
+      "contains_all": [
+        "geometry",
+        "itervertices"
+      ],
+      "id": "hom.geometry_itervertices_unavailable",
+      "retryable": false,
+      "suggestion": "Use a geometry iteration API verified on the active Houdini version; optional diagnostics must not crash the harness."
+    },
+    {
+      "category": "geometry_topology",
+      "code": "HOUDINI_DEGENERATE_TOPOLOGY",
+      "contains_all": [
+        "degenerate topology"
+      ],
+      "id": "geometry.degenerate_topology",
+      "retryable": false,
+      "suggestion": "Treat the warning as a topology diagnostic and verify whether downstream parameterization/flattening remains semantically valid before declaring PASS."
+    },
+    {
+      "category": "vex_type_resolution",
+      "code": "VEX_AMBIGUOUS_OVERLOAD_GENERIC_RETURN",
+      "contains_any": [
+        "ambiguous call",
+        "ambiguous function"
+      ],
+      "id": "vex.ambiguous.generic_return",
+      "retryable": false,
+      "suggestion": "Store point()/prim()/detail() return values in explicitly typed temporaries before calling overloaded functions."
+    },
+    {
+      "category": "vex_type_resolution",
+      "code": "VEX_POSITION_MATRIX_TYPE_MIX",
+      "contains_all": [
+        "matrix3",
+        "vector"
+      ],
+      "contains_any": [
+        "cannot convert",
+        "invalid type",
+        "ambiguous"
+      ],
+      "id": "vex.position_matrix_mix",
+      "retryable": false,
+      "suggestion": "Keep position/vector values and matrix3 transforms explicitly separated; do not rely on implicit conversion."
+    },
+    {
+      "category": "vex_language_mismatch",
+      "code": "VEX_CPP_STYLE_UNSUPPORTED",
+      "contains_any": [
+        "PI redefined",
+        "redefinition of 'PI'",
+        "unexpected const",
+        "unsupported function"
+      ],
+      "id": "vex.cpp_style",
+      "retryable": false,
+      "suggestion": "Treat the code as VEX rather than C++; remove C++-style top-level constants/macros/helpers that VEX does not support."
+    },
+    {
+      "category": "vex_dataflow",
+      "code": "VEX_ATTRIBUTE_READ_AFTER_WRITE_CAUTION",
+      "contains_all": [
+        "setpointattrib"
+      ],
+      "contains_any": [
+        "uninitialized",
+        "undefined",
+        "unexpected value"
+      ],
+      "id": "vex.read_after_write",
+      "retryable": false,
+      "suggestion": "Do not assume an immediate point() read is authoritative for a value just written with setpointattrib in the same algorithmic step."
+    }
+  ]
+}

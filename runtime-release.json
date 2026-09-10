@@ -1,0 +1,27 @@
+{
+  "bundle_path": "runtime_bundle.zip",
+  "bundle_sha256": "60c959ee39223c23a92c34529069975a02fe05aa60bb5883db1ba74e82cc7501",
+  "channel": "stable",
+  "houdini_adapter_version": "0.5.26",
+  "knowledge": {
+    "content_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093",
+    "excluded_recipes": [],
+    "included_recipes": [
+      "code.safe_patch_and_cook",
+      "cook.checked",
+      "fbx.character_import.set_animation_and_cook",
+      "kinefx.import_with_frameinfo",
+      "network.ensure_and_cook",
+      "parm.safe_write_and_cook"
+    ],
+    "manifest_path": "knowledge/houdini/distribution_manifest.json",
+    "mode": "clean_distribution"
+  },
+  "min_supervisor_version": "0.1.4",
+  "runtime_path": "runtime",
+  "schema_version": "1.1",
+  "source_commit": "d05fc7e21ad13e2969fbd65c97645af48a0b9554",
+  "source_ref": "main",
+  "source_repository": "fmb22333-dev/AI-Bridge",
+  "version": "0.2.6.50"
+}

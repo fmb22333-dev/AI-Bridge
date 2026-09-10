@@ -1,0 +1,38 @@
+{
+  "alias_set_count": 3,
+  "content_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093",
+  "excluded_recipes": [],
+  "guidance_count": 5,
+  "included_recipes": [
+    "code.safe_patch_and_cook",
+    "cook.checked",
+    "fbx.character_import.set_animation_and_cook",
+    "kinefx.import_with_frameinfo",
+    "network.ensure_and_cook",
+    "parm.safe_write_and_cook"
+  ],
+  "mode": "clean_distribution",
+  "promotion_entry_count": 9,
+  "schema_version": "1.0",
+  "source_gate": {
+    "capability_authority_available": true,
+    "distributable_promoted_recipes": [
+      "code.safe_patch_and_cook",
+      "cook.checked",
+      "fbx.character_import.set_animation_and_cook",
+      "kinefx.import_with_frameinfo",
+      "network.ensure_and_cook",
+      "parm.safe_write_and_cook"
+    ],
+    "implemented_capability_count": 50,
+    "issue_count": 0,
+    "issues": [],
+    "ok": true,
+    "project_scoped_promoted_recipes": [],
+    "promoted_guidance_count": 5,
+    "recipe_count": 6,
+    "recipe_lifecycle_count": 6
+  },
+  "source_root": "ai_bridge_houdini/knowledge",
+  "template_count": 1
+}

@@ -1,0 +1,64 @@
+{
+  "description": "Safely set a KineFX FBX Character Import Animation FBX File, force-cook the same node, and return host diagnostics.",
+  "id": "fbx.character_import.set_animation_and_cook",
+  "optional": [],
+  "promotion_state": "promoted",
+  "required": [
+    "path",
+    "animation_file"
+  ],
+  "steps": [
+    {
+      "arguments": {
+        "parameter": "animfbxfile",
+        "path": {
+          "$arg": "path"
+        }
+      },
+      "op": "parm.read",
+      "save_as": "read"
+    },
+    {
+      "arguments": {
+        "expected_hash": {
+          "$result": "read.hash"
+        },
+        "parameter": "animfbxfile",
+        "path": {
+          "$arg": "path"
+        },
+        "value": {
+          "$arg": "animation_file"
+        }
+      },
+      "op": "parm.write",
+      "save_as": "write"
+    },
+    {
+      "arguments": {
+        "force": true,
+        "path": {
+          "$arg": "path"
+        }
+      },
+      "op": "cook.execute",
+      "save_as": "cook"
+    },
+    {
+      "arguments": {
+        "path": {
+          "$arg": "path"
+        }
+      },
+      "op": "host.errors",
+      "save_as": "errors"
+    }
+  ],
+  "supported_host_versions": [
+    "21.0.440"
+  ],
+  "supported_node_types": [
+    "kinefx::Sop/fbxcharacterimport"
+  ],
+  "version": "1.0"
+}

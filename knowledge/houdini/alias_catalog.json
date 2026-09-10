@@ -1,0 +1,103 @@
+{
+  "alias_sets": [
+    {
+      "aliases": [
+        {
+          "internal_name": "fbxfile",
+          "semantic": "import_file",
+          "ui_label": "Import File"
+        },
+        {
+          "internal_name": "animfbxfile",
+          "semantic": "animation_fbx_file",
+          "ui_label": "Animation FBX File"
+        }
+      ],
+      "id": "fbx_character_import.file_parameters",
+      "node_type": "kinefx::Sop/fbxcharacterimport",
+      "scope": "node_type_version_sensitive",
+      "state": "validated",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "validation_contract": [
+        "inspect parm templates on the live node",
+        "after changing animation input, read back the actual Animation FBX File value before Cook"
+      ]
+    },
+    {
+      "aliases": [
+        {
+          "internal_name": "cliprangemode",
+          "semantic": "frame_range_mode",
+          "type": "Menu"
+        },
+        {
+          "internal_name": "f1",
+          "semantic": "frame_start",
+          "type": "Float"
+        },
+        {
+          "internal_name": "f2",
+          "semantic": "frame_end",
+          "type": "Float"
+        },
+        {
+          "internal_name": "f3",
+          "semantic": "frame_increment",
+          "type": "Float"
+        },
+        {
+          "internal_name": "inputfilepath",
+          "semantic": "input_fbx_file",
+          "type": "String"
+        },
+        {
+          "internal_name": "outputfilepath",
+          "semantic": "output_fbx_file",
+          "type": "String"
+        },
+        {
+          "internal_name": "clipname",
+          "semantic": "clip_name",
+          "type": "String"
+        }
+      ],
+      "id": "fbx_output.ui_semantics",
+      "node_family": "ROP FBX Animation/Character Output",
+      "node_type": "kinefx::Sop/rop_fbxcharacteroutput",
+      "scope": "node_type_version_sensitive",
+      "state": "validated",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    },
+    {
+      "aliases": [
+        {
+          "category": "Sop",
+          "constructor_token": "kinefx::fbxcharacterimport",
+          "inspect_display": "kinefx::Sop/fbxcharacterimport",
+          "semantic": "fbx_character_import"
+        },
+        {
+          "category": "Sop",
+          "constructor_token": "null",
+          "inspect_display": "Sop/null",
+          "semantic": "null"
+        }
+      ],
+      "id": "houdini.node_type.constructor_tokens",
+      "safety": [
+        "mapping is host-version scoped",
+        "new node types require independent constructor-token validation before adding aliases"
+      ],
+      "scope": "host_version_node_type",
+      "state": "validated",
+      "supported_host_versions": [
+        "21.0.440"
+      ]
+    }
+  ],
+  "schema_version": "1.0"
+}
