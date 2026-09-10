@@ -19,6 +19,12 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def canonical_text_sha256(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    payload = text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def main() -> None:
     runtime = json.loads((ROOT / "runtime-release.json").read_text(encoding="utf-8"))
     supervisor = json.loads((ROOT / "supervisor-release.json").read_text(encoding="utf-8"))
@@ -46,7 +52,7 @@ def main() -> None:
         path = ROOT / item["source_path"]
         if not path.is_file():
             fail(f"Supervisor install file missing: {path}")
-        if sha256(path) != item.get("sha256"):
+        if canonical_text_sha256(path) != item.get("sha256"):
             fail(f"Supervisor install file digest mismatch: {path}")
     routes = (RUNTIME / "src" / "ai_bridge" / "web" / "routes.py").read_text(encoding="utf-8")
     supervisor_py = (ROOT / "bootstrap" / "supervisor" / "0.1.4" / "_System" / "supervisor.py").read_text(encoding="utf-8")
