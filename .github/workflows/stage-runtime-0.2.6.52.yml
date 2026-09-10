@@ -18,7 +18,7 @@ jobs:
         run: |
           function Replace-Required([string]$Path, [string]$Old, [string]$New) {
             $text = Get-Content -Raw $Path
-            if (-not $text.Contains($Old)) { throw "Expected marker not found in $Path: $Old" }
+            if (-not $text.Contains($Old)) { throw "Expected marker not found in ${Path}: $Old" }
             [System.IO.File]::WriteAllText((Resolve-Path $Path), $text.Replace($Old, $New))
           }
 
