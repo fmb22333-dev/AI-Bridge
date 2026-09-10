@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import sqlite3
 import time
 from datetime import datetime, timezone
 
 from ai_bridge.core.service import BridgeService, DuplicateCommandError
+from ai_bridge.protocol.command import CommandEnvelope
 from ai_bridge.protocol.result import ExecutionResult, ExecutionStatus, FailureInfo, FailureOrigin
 from .base import RemoteTransport
 from .result_delivery import prepare_result_delivery
@@ -65,6 +67,116 @@ class TransportRunner:
                 return False
         return callable(getattr(self.transport, "ack_command", None))
 
+    def _command_receipts(self, command) -> list[dict]:
+        getter = getattr(self.transport, "command_receipts", None)
+        if not callable(getter):
+            return []
+        try:
+            receipts = getter(command.command_id)
+        except Exception:
+            return []
+        return [dict(item) for item in receipts if isinstance(item, dict)]
+
+    def _record_receipts(self, command, receipts: list[dict]) -> None:
+        recorder = getattr(self.service.db, "record_ingress_receipt", None)
+        if not callable(recorder):
+            return
+        for receipt in receipts:
+            receipt_id = str(receipt.get("receipt_id") or "").strip()
+            ingress_kind = str(receipt.get("ingress_kind") or "").strip()
+            routing = receipt.get("routing") if isinstance(receipt.get("routing"), dict) else {}
+            if not receipt_id or not ingress_kind:
+                continue
+            recorder(
+                self.transport.key,
+                command.command_id,
+                receipt_id,
+                ingress_kind,
+                routing,
+            )
+
+    def _all_current_receipts_published(self, command, receipts: list[dict]) -> bool:
+        if not receipts:
+            return False
+        lister = getattr(self.service.db, "list_ingress_receipts", None)
+        if not callable(lister):
+            return False
+        persisted = {
+            str(item.get("receipt_id") or ""): item
+            for item in lister(self.transport.key, command.command_id)
+        }
+        receipt_ids = [str(item.get("receipt_id") or "") for item in receipts]
+        return bool(receipt_ids) and all(
+            receipt_id in persisted and persisted[receipt_id].get("published_at") is not None
+            for receipt_id in receipt_ids
+        )
+
+    def _publish_receipts(
+        self,
+        command,
+        result: ExecutionResult,
+        receipts: list[dict],
+    ) -> bool:
+        publisher = getattr(self.transport, "publish_result_for_receipt", None)
+        marker = getattr(self.service.db, "mark_ingress_receipt_published", None)
+        lister = getattr(self.service.db, "list_ingress_receipts", None)
+        if not receipts or not callable(publisher) or not callable(marker) or not callable(lister):
+            return False
+
+        persisted = {
+            str(item.get("receipt_id") or ""): item
+            for item in lister(self.transport.key, command.command_id)
+        }
+        publishable = prepare_result_delivery(self.transport, command, result)
+        for receipt in receipts:
+            receipt_id = str(receipt.get("receipt_id") or "").strip()
+            if not receipt_id:
+                continue
+            prior = persisted.get(receipt_id)
+            if prior is not None and prior.get("published_at") is not None:
+                continue
+            try:
+                publisher(publishable, receipt)
+                marker(self.transport.key, receipt_id)
+            except Exception as exc:
+                self._activity(
+                    "result_publication_deferred",
+                    command_id=command.command_id,
+                    receipt_id=receipt_id,
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+        return True
+
+    def _retry_pending_receipts(self) -> None:
+        lister = getattr(self.service.db, "list_pending_terminal_receipts", None)
+        marker = getattr(self.service.db, "mark_ingress_receipt_published", None)
+        publisher = getattr(self.transport, "publish_result_for_receipt", None)
+        if not callable(lister) or not callable(marker) or not callable(publisher):
+            return
+        try:
+            pending = lister(self.transport.key, limit=100)
+        except Exception:
+            return
+        for item in pending:
+            try:
+                command = CommandEnvelope.model_validate(item["request"])
+                result = ExecutionResult.model_validate(item["result"])
+                receipt = {
+                    "receipt_id": item["receipt_id"],
+                    "ingress_kind": item["ingress_kind"],
+                    "routing": item.get("routing") or {},
+                }
+                publishable = prepare_result_delivery(self.transport, command, result)
+                publisher(publishable, receipt)
+                marker(self.transport.key, str(item["receipt_id"]))
+            except Exception as exc:
+                self._activity(
+                    "result_publication_retry_deferred",
+                    command_id=item.get("command_id"),
+                    receipt_id=item.get("receipt_id"),
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+
     def _publish(self, command, result: ExecutionResult, *, received_at: str, execute_ms: float) -> None:
         bridge_meta = result.result.setdefault("_bridge", {})
         timing = bridge_meta.setdefault("timing", {})
@@ -74,6 +186,11 @@ class TransportRunner:
         save_result = getattr(self.service.db, "save_result", None)
         if callable(save_result):
             save_result(result)
+
+        receipts = self._command_receipts(command)
+        if receipts and self._publish_receipts(command, result, receipts):
+            return
+
         publishable = prepare_result_delivery(self.transport, command, result)
         self.transport.publish_result(publishable)
         self.service.db.mark_published(self.transport.key, command.command_id)
@@ -82,10 +199,17 @@ class TransportRunner:
         count = 0
         self._activity("poll_started")
         try:
+            self._retry_pending_receipts()
             commands = self.transport.fetch_commands()
             for command in commands:
-                if self.service.db.is_published(self.transport.key, command.command_id):
+                receipts = self._command_receipts(command)
+                self._record_receipts(command, receipts)
+                if receipts:
+                    if self._all_current_receipts_published(command, receipts):
+                        continue
+                elif self.service.db.is_published(self.transport.key, command.command_id):
                     continue
+
                 self._activity("command_started", command_id=command.command_id, operation=command.operation, adapter=command.adapter, workspace=command.workspace)
                 try:
                     received_at = self._utc_now()
@@ -93,7 +217,10 @@ class TransportRunner:
                     durable_ack = self._requires_durable_ack(command)
                     row = self.service.db.get_command(command.command_id) if durable_ack else None
                     if durable_ack:
-                        if row is None:
+                        accept = getattr(self.service.db, "accept_transport_command", None)
+                        if callable(accept):
+                            row = accept(command)
+                        elif row is None:
                             self.service.db.insert_command(command, status=TRANSPORT_ACCEPTED)
                             row = self.service.db.get_command(command.command_id)
                         ack = getattr(self.transport, "ack_command", None)
@@ -112,7 +239,7 @@ class TransportRunner:
                     else:
                         try:
                             result = self.service.execute(command)
-                        except DuplicateCommandError:
+                        except (DuplicateCommandError, sqlite3.IntegrityError):
                             existing = self.service.db.get_command(command.command_id)
                             if existing is None or not isinstance(existing.get("result"), dict):
                                 continue
