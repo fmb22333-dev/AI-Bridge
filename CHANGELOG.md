@@ -21,7 +21,8 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Houdini Adapter remains `0.5.26`; Supervisor remains `0.1.4`; distributable Knowledge authority is unchanged by this Runtime-only delta.
 - Private development source merged at `<private-development-source>@1ea396efd020525ec6fe6c817c9cb2f58c027d58` after final committed-source Windows validation run `34523572329`: `compileall` PASS, fallback/V5 targeted **24/24 PASS**, full Runtime **344/344 PASS**.
 - The prior migration interval from `f04df88ddf29791af8c3761786cb5650e10e594a` to the pre-feature source head contained only project-specific documents and private generated release metadata; those items were classified `do_not_distribute` and were not copied into the product repository.
-- Public product validation and migration-baseline advancement are pending this release candidate's PR gates; the baseline intentionally remains at `f04df88ddf29791af8c3761786cb5650e10e594a` until those gates pass.
+- Initial public PR #6 product validation run `34525306816` passed with **109/109 pytest PASS**, deterministic release build PASS, compile PASS, release verifier PASS, and PowerShell parser PASS. The candidate Runtime bundle SHA-256 is `bd87f314aba70d608f762b920797d0fe48b0759513fe91420df63144c95f2b3b`.
+- After that validation gate, the migration baseline advanced from `f04df88ddf29791af8c3761786cb5650e10e594a` to `1ea396efd020525ec6fe6c817c9cb2f58c027d58`. Final PR revalidation, `main` artifact publication, and clean Windows GitHub install smoke remain pending release-closeout gates.
 
 ### Runtime 0.2.6.51 V5 transport reliability — 2026-09-11
 
@@ -137,8 +138,8 @@ Do not conflate the already-passed clean Windows installer smoke test with this 
 - Continuous synchronization classifies changes as SAFE COPY, REBASE REQUIRED, KNOWLEDGE REGENERATE, or DO NOT DISTRIBUTE.
 
 ### Migration baseline
-- Development source baseline: `<private-development-source>@f04df88ddf29791af8c3761786cb5650e10e594a`.
-- Runtime 0.2.6.51 public source/release synchronization is complete: PR validation, `main` artifact publication, release verification, and fresh Windows GitHub install smoke all passed. Explicit real-environment end-to-end acceptance remains separately pending.
+- Development source baseline: `<private-development-source>@1ea396efd020525ec6fe6c817c9cb2f58c027d58`.
+- Runtime 0.2.6.52 source candidate passed initial public PR validation. Final PR revalidation and `main` artifact/install-smoke release closeout remain pending; explicit real-environment end-to-end acceptance remains separately pending.
 
 ### Safety
 - Public/distributable content excludes developer Bridge IDs, credentials, sessions, workspaces, command history, project authority documents, local paths, and project-family/candidate knowledge as generic execution authority.
