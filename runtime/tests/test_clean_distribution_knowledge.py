@@ -55,6 +55,20 @@ def test_distribution_knowledge_is_deterministic(tmp_path):
     assert first["excluded_recipes"] == second["excluded_recipes"]
 
 
+def test_distribution_digest_is_newline_independent(tmp_path):
+    source = ROOT / "houdini_adapter" / "python" / "ai_bridge_houdini" / "knowledge"
+    target = tmp_path / "knowledge-newlines"
+    manifest = build_distribution_knowledge(target, source_root=source)
+
+    for path in sorted(target.rglob("*.json")):
+        if path.name == "distribution_manifest.json":
+            continue
+        text = path.read_text(encoding="utf-8")
+        path.write_bytes(text.replace("\r\n", "\n").replace("\n", "\r\n").encode("utf-8"))
+
+    assert validate_distribution(target)["content_digest"] == manifest["content_digest"]
+
+
 def test_distribution_recipe_execution_authority_matches_promoted_registry(tmp_path):
     target = tmp_path / "knowledge-authority"
     manifest = build_distribution_knowledge(
