@@ -36,7 +36,13 @@
     "installer_bundle_sha256": "4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c",
     "knowledge_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093",
     "generated_artifact_commit": "9655e8ab51ef77ec9b961fd638352b0adaeed692",
-    "pr_validation_run_id": 34430877409
+    "pr_validation_run_id": 34430877409,
+    "final_release_candidate_head": "3ace65d300b4de459f8dec2215a0379d6b7abdc6",
+    "final_push_validation_run_id": 34431007029,
+    "final_pr_validation_run_id": 34431009451,
+    "merged_main_commit": "35a3bce81adcb1a68906304c025bc40db9f6dadb",
+    "merged_pr": 2,
+    "merged_at": "2026-09-10T02:51:55Z"
   },
   "validation": {
     "windows_compileall": "PASS",

@@ -32,9 +32,11 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - PowerShell parser: **PASS**
 - Generated artifact publication: **PASS**
 - Fresh Windows directory install by re-downloading from the GitHub validation branch: **PASS**
-- Final push validation run: `34430874302`
-- Final PR validation run: `34430877409`
+- Final push validation run: `34431007029`
+- Final PR validation run: `34431009451`
 - Generated artifact synchronization commit: `9655e8ab51ef77ec9b961fd638352b0adaeed692`
+- Final release-candidate head: `3ace65d300b4de459f8dec2215a0379d6b7abdc6`
+- Merged to `main` by PR #2 at merge commit `35a3bce81adcb1a68906304c025bc40db9f6dadb`.
 - Runtime bundle SHA-256: `00ee9abd2b5533667c86256b464725d7c284d5841e2a8cb8b57ad5f4f19a822e`
 - Installer bundle SHA-256: `4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c`
 - Clean Knowledge digest: `f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093`

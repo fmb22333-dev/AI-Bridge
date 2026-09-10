@@ -22,9 +22,11 @@ Validation:
 - PowerShell parser PASS
 - generated artifact publication PASS
 - clean GitHub re-download/install smoke PASS
-- final push validation run `34430874302`
-- final PR validation run `34430877409`
+- final push validation run `34431007029`
+- final PR validation run `34431009451`
 - generated artifact synchronization commit `9655e8ab51ef77ec9b961fd638352b0adaeed692`
+- final release-candidate head `3ace65d300b4de459f8dec2215a0379d6b7abdc6`
+- merged main commit `35a3bce81adcb1a68906304c025bc40db9f6dadb` via PR #2
 
 ## Authority
 
