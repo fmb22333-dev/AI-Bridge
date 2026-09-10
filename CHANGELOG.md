@@ -8,6 +8,21 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.52 fallback multi-ingress transport — 2026-09-11
+
+- Kept Issue Comment V5 as the primary GitHub command ingress and promoted the existing GitHub Contents command directory into a simultaneously polled fallback ingress, without adding a new relay service, daemon, credential type, or external dependency.
+- Multiple ingress observations for the same canonical command are persisted as independent receipts while `command_id` remains the single execution identity.
+- The same `command_id` with divergent canonical payloads now fails closed with `COMMAND_IDENTITY_CONFLICT` rather than risking ambiguous execution.
+- Durable transport acceptance is shared across Comment and Contents ingress. Pure Contents fallback after Comment discovery is unavailable retains the same pre-accept/receipt reliability semantics.
+- A single terminal `ExecutionResult` is fanned out independently to all observed receipts. Failed receipt publication remains pending and is retried on later polls without re-executing host-side effects.
+- Transport status reporting is mode-accurate: V5 reports multi-ingress Comment + Contents; Contents-only and legacy V2/V3/V4 paths do not falsely report simultaneous ingress.
+- Added public regression coverage for atomic command claims, divergent-payload conflicts, dual ingress merge, pure Contents fallback, per-receipt fanout/retry, terminal-result replay, and transport-state reporting.
+- Runtime package, Presence, Dashboard/static cache, and release artifact labels are updated to `0.2.6.52`.
+- Houdini Adapter remains `0.5.26`; Supervisor remains `0.1.4`; distributable Knowledge authority is unchanged by this Runtime-only delta.
+- Private development source merged at `<private-development-source>@1ea396efd020525ec6fe6c817c9cb2f58c027d58` after final committed-source Windows validation run `34523572329`: `compileall` PASS, fallback/V5 targeted **24/24 PASS**, full Runtime **344/344 PASS**.
+- The prior migration interval from `f04df88ddf29791af8c3761786cb5650e10e594a` to the pre-feature source head contained only project-specific documents and private generated release metadata; those items were classified `do_not_distribute` and were not copied into the product repository.
+- Public product validation and migration-baseline advancement are pending this release candidate's PR gates; the baseline intentionally remains at `f04df88ddf29791af8c3761786cb5650e10e594a` until those gates pass.
+
 ### Runtime 0.2.6.51 V5 transport reliability — 2026-09-11
 
 - Reconciled the generic Runtime transport delta from the private development source into the standalone public product without copying live Bus state, project documents, machine paths, credentials, Bridge IDs, sessions, or command history.
