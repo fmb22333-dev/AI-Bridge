@@ -95,7 +95,7 @@ A third-party AI can only modify what its authorized GitHub identity is allowed 
 
 A clean installation starts with `projects={}`.
 
-Project authority documents and project entries are created only when the user explicitly registers/starts a project. Installing AI Bridge must never import the maintainer's AutoUV, Retarget, local HIP paths, command history, or other project state.
+Project authority documents and project entries are created only when the user explicitly registers/starts a project. Installing AI Bridge must never import the maintainer's ProjectFamilyA, ProjectFamilyB, local HIP paths, command history, or other project state.
 
 ## Implementation / validation status — 2026-09-10
 
