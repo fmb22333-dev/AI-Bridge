@@ -69,7 +69,7 @@ def main() -> None:
     routes = (RUNTIME / "src" / "ai_bridge" / "web" / "routes.py").read_text(encoding="utf-8")
     supervisor_py = (ROOT / "bootstrap" / "supervisor" / "0.1.4" / "_System" / "supervisor.py").read_text(encoding="utf-8")
     combined = routes + supervisor_py
-    if "fmb22333-dev/ai-bridge-bus" in combined:
+    if "ai-bridge-bus" in combined.lower():
         fail("Developer Bus leaked into product update authority")
     if '"branch": "bridge-runtime"' in combined:
         fail("Legacy bridge-runtime branch leaked into product defaults")
