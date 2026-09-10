@@ -178,8 +178,8 @@ def _filter_rule_document(source: dict) -> dict:
     }
 
 
-def _promoted_recipe_ids(promotion: dict) -> set[str]:
-    out = set()
+def _promoted_recipe_scopes(promotion: dict) -> dict[str, str]:
+    out = {}
     for item in promotion.get("entries") or []:
         if not isinstance(item, dict) or str(item.get("kind") or "") != "recipe":
             continue
@@ -187,17 +187,23 @@ def _promoted_recipe_ids(promotion: dict) -> set[str]:
             continue
         target = str(item.get("target") or "").strip()
         if target.startswith("recipe:"):
-            out.add(target.split(":", 1)[1].strip().lower())
+            recipe_id = target.split(":", 1)[1].strip().lower()
+            out[recipe_id] = str(item.get("scope") or "").strip().lower()
     return out
 
 
-def _recipe_is_distributable(recipe: dict, promoted_recipe_ids: set[str]) -> bool:
+def _promoted_recipe_ids(promotion: dict) -> set[str]:
+    return set(_promoted_recipe_scopes(promotion))
+
+
+def _recipe_is_distributable(recipe: dict, promoted_recipe_scopes: dict[str, str]) -> bool:
     recipe_id = str(recipe.get("id") or "").strip().lower()
-    if not recipe_id or recipe_id not in promoted_recipe_ids:
+    if not recipe_id or recipe_id not in promoted_recipe_scopes:
         return False
-    if _scope_is_project_specific(recipe.get("scope")):
+    scope = recipe.get("scope") or promoted_recipe_scopes.get(recipe_id)
+    if _scope_is_project_specific(scope):
         return False
-    if not _scope_is_distribution_generic(recipe.get("scope")):
+    if not _scope_is_distribution_generic(scope):
         return False
     return True
 
@@ -233,7 +239,8 @@ def validate_distribution(root: Path) -> dict:
     promotion = _read_json(root / "promotion_registry.json")
     templates = _read_json(root / "template_catalog.json")
     guidance = _read_json(root / "capability_guidance.json")
-    promoted_recipe_ids = _promoted_recipe_ids(promotion)
+    promoted_recipe_scopes = _promoted_recipe_scopes(promotion)
+    promoted_recipe_ids = set(promoted_recipe_scopes)
 
     violations = []
     for item in promotion.get("entries") or []:
@@ -254,7 +261,7 @@ def validate_distribution(root: Path) -> dict:
 
     for path in sorted((root / "recipes").glob("*.json")):
         recipe = _read_json(path)
-        if not _recipe_is_distributable(recipe, promoted_recipe_ids):
+        if not _recipe_is_distributable(recipe, promoted_recipe_scopes):
             violations.append(f"unpromoted/project recipe: {recipe.get('id') or path.name}")
 
     serialized = "\n".join(
@@ -313,7 +320,8 @@ def build_distribution_knowledge(
         _filter_rule_document(_read_json(source_root / "host_rules.json")),
     )
     promotion_source = _read_json(source_root / "promotion_registry.json")
-    promoted_recipe_ids = _promoted_recipe_ids(promotion_source)
+    promoted_recipe_scopes = _promoted_recipe_scopes(promotion_source)
+    promoted_recipe_ids = set(promoted_recipe_scopes)
     _write_json(
         destination / "promotion_registry.json",
         _filter_promotion_registry(promotion_source),
@@ -335,7 +343,7 @@ def build_distribution_knowledge(
     excluded_recipes = []
     for source_path in sorted((source_root / "recipes").glob("*.json")):
         recipe = _read_json(source_path)
-        if not _recipe_is_distributable(recipe, promoted_recipe_ids):
+        if not _recipe_is_distributable(recipe, promoted_recipe_scopes):
             excluded_recipes.append(str(recipe.get("id") or source_path.stem))
             continue
         cleaned = _strip_metadata(recipe)
