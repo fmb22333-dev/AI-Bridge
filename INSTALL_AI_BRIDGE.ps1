@@ -47,15 +47,22 @@ function Get-RepoBytes([string]$Path) {
     $escaped = ($Path -split "/" | ForEach-Object { [uri]::EscapeDataString($_) }) -join "/"
     $encodedRef = [uri]::EscapeDataString($Ref)
     $url = "https://api.github.com/repos/$ProductRepository/contents/$escaped?ref=$encodedRef"
-    try {
-        $response = Invoke-RestMethod -Uri $url -Headers $Headers -Method Get
-    } catch {
-        throw "Unable to download '$Path' from $ProductRepository@$Ref. If the product repository is private, sign in with GitHub CLI or set AI_BRIDGE_PRODUCT_TOKEN/GH_TOKEN. $($_.Exception.Message)"
+    $lastError = $null
+    for ($attempt = 1; $attempt -le 6; $attempt++) {
+        try {
+            $response = Invoke-RestMethod -Uri $url -Headers $Headers -Method Get
+            if (-not $response.content) {
+                throw "GitHub returned no content for '$Path'."
+            }
+            return [Convert]::FromBase64String(($response.content -replace "\s", ""))
+        } catch {
+            $lastError = $_
+            if ($attempt -lt 6) {
+                Start-Sleep -Seconds ([Math]::Min(5, $attempt))
+            }
+        }
     }
-    if (-not $response.content) {
-        throw "GitHub returned no content for '$Path'."
-    }
-    return [Convert]::FromBase64String(($response.content -replace "\s", ""))
+    throw "Unable to download '$Path' from $ProductRepository@$Ref after bounded retries. If the product repository is private, sign in with GitHub CLI or set AI_BRIDGE_PRODUCT_TOKEN/GH_TOKEN. $($lastError.Exception.Message)"
 }
 
 function Get-RepoJson([string]$Path) {
