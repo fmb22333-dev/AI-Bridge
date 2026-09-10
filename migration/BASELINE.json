@@ -3,8 +3,8 @@
   "captured_date": "2026-09-10",
   "purpose": "Anchor completed Runtime 0.2.6.50 migration from the development source into the standalone distributable AI-Bridge product repository. Future synchronization compares from this reconciled source commit.",
   "source": {
-    "repository": "fmb22333-dev/ai-bridge-bus",
-    "ref": "bridge-runtime",
+    "repository": "<private-development-source>",
+    "ref": "<development-ref>",
     "commit": "42b2492565a5bb3b15e0cd2df3cb216ecae297ab",
     "root_tree": "694b9c4ca23e4a1faba8660fb9673e1c9b2b1869",
     "runtime_source_tree": "922923168063549e032c9b4cd054c2d0f034a3ef",
@@ -16,7 +16,7 @@
   },
   "live_runtime_at_capture": {
     "version": "0.2.6.50",
-    "status_source": "fmb22333-dev/ai-bridge-bus:main:.ai-bridge/status/FMB-6f5f1b.json",
+    "status_source": "<private-development-source>:main:.ai-bridge/status/<bridge-id>.json",
     "status_published_at": "2026-09-10T00:55:54.002297+00:00",
     "transport": "issue_channel_v5",
     "multi_channel": true,
@@ -25,7 +25,7 @@
   "product_repository": {
     "repository": "fmb22333-dev/AI-Bridge",
     "ref": "main",
-    "release_candidate_branch": "release-assembly-20260910",
+    "release_candidate_branch": "<release-candidate>",
     "validated_release_candidate_head": "94636e7d6c88db44f6f527e306f872143a18728e",
     "validation_run_id": 34430874302,
     "validation_result": "PASS",
