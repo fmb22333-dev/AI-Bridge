@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "runtime"
 BUNDLE = ROOT / "runtime_bundle.zip"
+INSTALLER_BUNDLE = ROOT / "AI_Bridge_Installer.zip"
 PRODUCT_REPOSITORY = "fmb22333-dev/AI-Bridge"
 PRODUCT_REF = "main"
 SUPERVISOR_VERSION = "0.1.4"
@@ -96,6 +97,22 @@ def _build_runtime_bundle() -> str:
     return _sha256(BUNDLE)
 
 
+def _build_installer_bundle() -> str:
+    temp = INSTALLER_BUNDLE.with_suffix(".zip.tmp")
+    if temp.exists():
+        temp.unlink()
+    with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as archive:
+        for name in ("INSTALL_AI_BRIDGE.bat", "INSTALL_AI_BRIDGE.ps1"):
+            path = ROOT / name
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_STORED
+            info.create_system = 3
+            info.external_attr = (0o100644 & 0xFFFF) << 16
+            archive.writestr(info, _canonical_payload(path))
+    temp.replace(INSTALLER_BUNDLE)
+    return _sha256(INSTALLER_BUNDLE)
+
+
 def _file_manifest(root: Path, relative: str) -> dict:
     path = root / relative
     return {
@@ -140,6 +157,7 @@ def main() -> None:
     adapter_version = _adapter_version()
     knowledge = _build_clean_knowledge()
     bundle_sha256 = _build_runtime_bundle()
+    installer_bundle_sha256 = _build_installer_bundle()
     source_commit = os.environ.get("GITHUB_SHA") or "working-tree"
 
     runtime_manifest = {
@@ -166,7 +184,7 @@ def main() -> None:
     supervisor_manifest = _build_supervisor_manifest(version)
 
     release = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "product": "AI Bridge",
         "product_repository": PRODUCT_REPOSITORY,
         "product_ref": PRODUCT_REF,
@@ -176,6 +194,10 @@ def main() -> None:
         "runtime_manifest": "runtime-release.json",
         "supervisor_manifest": "supervisor-release.json",
         "installer": "INSTALL_AI_BRIDGE.ps1",
+        "installer_bundle": {
+            "path": "AI_Bridge_Installer.zip",
+            "sha256": installer_bundle_sha256,
+        },
         "supported_hosts": ["houdini"],
         "unimplemented_hosts": ["unreal", "blender"],
         "runtime_bundle_sha256": bundle_sha256,
@@ -189,6 +211,7 @@ def main() -> None:
                 "adapter_version": adapter_version,
                 "supervisor_version": supervisor_manifest["version"],
                 "bundle_sha256": bundle_sha256,
+                "installer_bundle_sha256": installer_bundle_sha256,
                 "knowledge_digest": knowledge["content_digest"],
             },
             indent=2,
