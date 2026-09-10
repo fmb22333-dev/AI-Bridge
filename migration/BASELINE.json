@@ -1,13 +1,13 @@
 {
   "schema_version": "1.1",
-  "captured_date": "2026-09-10",
-  "purpose": "Anchor completed Runtime 0.2.6.50 migration from the development source into the standalone distributable AI-Bridge product repository. Future synchronization compares from this reconciled source commit.",
+  "captured_date": "2026-09-11",
+  "purpose": "Anchor the validated Runtime 0.2.6.51 V5 transport reliability synchronization from the development source into the standalone distributable AI-Bridge product repository. Future synchronization compares from this reconciled source commit.",
   "source": {
     "repository": "<private-development-source>",
     "ref": "<development-ref>",
-    "commit": "42b2492565a5bb3b15e0cd2df3cb216ecae297ab",
-    "root_tree": "694b9c4ca23e4a1faba8660fb9673e1c9b2b1869",
-    "runtime_source_tree": "922923168063549e032c9b4cd054c2d0f034a3ef",
+    "commit": "f04df88ddf29791af8c3761786cb5650e10e594a",
+    "root_tree": "12909a84baf08ff5772402deca008c46932a0b65",
+    "runtime_source_tree": "bf09f5d22bade7f6a7a64e1bd6ee76949bf49d80",
     "houdini_adapter_tree": "306519206af06c4304e407454f98c0478875b4cb",
     "houdini_adapter_version": "0.5.26",
     "knowledge_tree": "b877e254beb5126f3abad0db9bc48d5b8acee8bb",
@@ -15,9 +15,8 @@
     "recipes_tree": "dfe41286c1ee65642fc8e52602bfbcae4fd0c7da"
   },
   "live_runtime_at_capture": {
-    "version": "0.2.6.50",
+    "version": "0.2.6.51",
     "status_source": "<private-development-source>:main:.ai-bridge/status/<bridge-id>.json",
-    "status_published_at": "2026-09-10T00:55:54.002297+00:00",
     "transport": "issue_channel_v5",
     "multi_channel": true,
     "sessions": []
@@ -25,34 +24,34 @@
   "product_repository": {
     "repository": "fmb22333-dev/AI-Bridge",
     "ref": "main",
-    "release_candidate_branch": "<release-candidate>",
-    "validated_release_candidate_head": "94636e7d6c88db44f6f527e306f872143a18728e",
-    "validation_run_id": 34430874302,
+    "release_candidate_branch": "sync-runtime-0.2.6.51",
+    "validated_release_candidate_head": "d2f07618d4f10c99ea07e4c82c54d6cf7f6c5a04",
+    "validated_merge_commit": "1ff856e8a5038b1913af8d8beb0e9625172c6a34",
+    "validation_run_id": 34509886155,
     "validation_result": "PASS",
-    "runtime_version": "0.2.6.50",
+    "runtime_version": "0.2.6.51",
     "supervisor_version": "0.1.4",
     "houdini_adapter_version": "0.5.26",
-    "runtime_bundle_sha256": "00ee9abd2b5533667c86256b464725d7c284d5841e2a8cb8b57ad5f4f19a822e",
+    "runtime_bundle_sha256": "dd55da82b4e332bc753d9e2ac0ef7b0f1a58fe582c621b4bba5b0207ff4f1a71",
     "installer_bundle_sha256": "4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c",
     "knowledge_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093",
-    "generated_artifact_commit": "9655e8ab51ef77ec9b961fd638352b0adaeed692",
-    "pr_validation_run_id": 34430877409,
-    "final_release_candidate_head": "3ace65d300b4de459f8dec2215a0379d6b7abdc6",
-    "final_push_validation_run_id": 34431007029,
-    "final_pr_validation_run_id": 34431009451,
-    "merged_main_commit": "35a3bce81adcb1a68906304c025bc40db9f6dadb",
-    "merged_pr": 2,
-    "merged_at": "2026-09-10T02:51:55Z"
+    "generated_artifact_commit": null,
+    "pr_validation_run_id": 34509886155,
+    "final_release_candidate_head": null,
+    "final_push_validation_run_id": null,
+    "final_pr_validation_run_id": null,
+    "merged_main_commit": null,
+    "merged_pr": 4,
+    "merged_at": null
   },
   "validation": {
     "windows_compileall": "PASS",
-    "full_pytest": "84/84 PASS",
+    "full_pytest": "98/98 PASS",
     "release_verifier": "PASS",
     "powershell_parser": "PASS",
-    "generated_artifact_publish": "PASS",
-    "clean_windows_github_install_smoke": "PASS",
-    "final_push_product_validation": "PASS",
-    "final_pr_product_validation": "PASS"
+    "generated_artifact_publication": "PENDING_MAIN_PUSH",
+    "clean_windows_github_install_smoke": "PENDING_MAIN_PUSH",
+    "pr_product_validation": "PASS"
   },
   "acceptance": {
     "state": "PENDING_EXPLICIT_REAL_ENVIRONMENT_ACCEPTANCE",
@@ -66,7 +65,7 @@
     "rule": "Do not call the standalone product fully end-to-end accepted until these explicit real-environment checks pass."
   },
   "delta_policy": {
-    "compare_source_from_commit": "42b2492565a5bb3b15e0cd2df3cb216ecae297ab",
+    "compare_source_from_commit": "f04df88ddf29791af8c3761786cb5650e10e594a",
     "safe_copy": [
       "ordinary Runtime bug fixes whose product path has not diverged",
       "Houdini Adapter kernel fixes whose distributable semantics are unchanged",
