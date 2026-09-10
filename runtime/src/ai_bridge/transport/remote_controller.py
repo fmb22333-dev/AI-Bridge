@@ -120,7 +120,7 @@ class RemoteController:
         return {
             "protocol": "bridge/1",
             "bridge_id": bridge_id,
-            "bridge_version": "0.2.6.50",
+            "bridge_version": "0.2.6.51",
             "message_transport": (
                 transport.message_state()
                 if transport is not None and hasattr(transport, "message_state")
