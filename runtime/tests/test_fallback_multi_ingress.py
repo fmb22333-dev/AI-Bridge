@@ -196,6 +196,7 @@ def test_v5_healthy_comment_mode_also_polls_contents_and_merges_same_command():
     shared = _command("cmd-shared")
     contents_only = _command("cmd-contents")
     transport = _hybrid_transport([shared], [shared, contents_only])
+    transport.restore_contents_command_index({})
 
     assert transport.initialize_message_mode() == "issue_channel_v5"
     commands = transport.fetch_commands()
@@ -220,6 +221,7 @@ def test_v5_same_command_id_with_divergent_comment_and_contents_payload_fails_cl
         arguments={"project": "sample_project"},
     )
     transport = _hybrid_transport([comment_command], [contents_command])
+    transport.restore_contents_command_index({})
 
     assert transport.initialize_message_mode() == "issue_channel_v5"
     with pytest.raises(RuntimeError, match="COMMAND_IDENTITY_CONFLICT"):
