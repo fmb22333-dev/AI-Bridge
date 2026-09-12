@@ -268,10 +268,34 @@ def _v5_recent_issue_items(transport) -> list[dict]:
     return items
 
 
+def _restore_contents_command_index(transport, index) -> None:
+    if index is None:
+        transport._v53_contents_index_restored = False
+        return
+    transport._known_command_shas = {str(name): str(sha) for name, sha in index.items()}
+    transport._command_index_initialized = True
+    transport._v53_contents_index_restored = True
+
+
+def _contents_command_index_snapshot(transport):
+    if not transport._command_index_initialized:
+        return None
+    return dict(transport._known_command_shas)
+
+
 def _contents_commands_with_receipts(transport) -> list[CommandEnvelope]:
+    hybrid_bootstrap = (
+        str(getattr(transport, "_message_mode", "")) == "issue_channel_v5"
+        and not bool(getattr(transport, "_command_index_initialized", False))
+        and not bool(getattr(transport, "_v53_contents_index_restored", False))
+    )
     try:
         commands = _original_fetch_contents_commands(transport)
-        transport._v52_contents_ingress_detail = "available"
+        if hybrid_bootstrap:
+            commands = []
+            transport._v52_contents_ingress_detail = "available: baseline_seeded"
+        else:
+            transport._v52_contents_ingress_detail = "available"
     except ValidationError:
         transport._v52_contents_ingress_detail = "invalid_command"
         raise
@@ -462,6 +486,8 @@ _github_bus._v5_ack_channel_item = _v5_deferred_channel_item
 _github_bus._v5_comments_to_commands = _v5_reliable_comments_to_commands
 _github_bus._v5_fetch_channel_commands = _v5_reliable_fetch_channel_commands
 _github_bus.GitHubBusTransport._fetch_contents_commands = _contents_commands_with_receipts
+_github_bus.GitHubBusTransport.restore_contents_command_index = _restore_contents_command_index
+_github_bus.GitHubBusTransport.contents_command_index_snapshot = _contents_command_index_snapshot
 _github_bus.GitHubBusTransport.requires_durable_ack = _v5_requires_durable_ack
 _github_bus.GitHubBusTransport.ack_command = _v5_ack_command
 _github_bus.GitHubBusTransport.command_receipts = _command_receipts
