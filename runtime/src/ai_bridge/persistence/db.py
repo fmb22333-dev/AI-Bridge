@@ -86,6 +86,43 @@ class BridgeDB:
                 ON transport_ingress_receipts (transport_key, command_id)
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS transport_contents_indexes (
+                    transport_key TEXT PRIMARY KEY,
+                    index_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+
+    def get_transport_contents_index(self, transport_key: str) -> dict[str, str] | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT index_json FROM transport_contents_indexes WHERE transport_key=?",
+                (transport_key,),
+            ).fetchone()
+        if row is None:
+            return None
+        payload = json.loads(str(row["index_json"]))
+        if not isinstance(payload, dict):
+            return None
+        return {str(name): str(sha) for name, sha in payload.items()}
+
+    def set_transport_contents_index(self, transport_key: str, index: dict[str, str]) -> None:
+        encoded = json.dumps(
+            {str(name): str(sha) for name, sha in index.items()},
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """INSERT INTO transport_contents_indexes (transport_key, index_json, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(transport_key) DO UPDATE SET
+                    index_json=excluded.index_json, updated_at=CURRENT_TIMESTAMP""",
+                (transport_key, encoded),
+            )
 
     def command_exists(self, command_id: str) -> bool:
         with self._connect() as conn:
