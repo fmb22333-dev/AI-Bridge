@@ -69,7 +69,7 @@ jobs:
           if (git diff --cached --quiet) {
             Write-Host "Generated release artifacts are already synchronized."
           } else {
-            git commit -m "Build Runtime 0.2.6.52 release artifacts"
+            git commit -m "Build Runtime 0.2.6.53 release artifacts"
             git push origin "HEAD:${{ github.ref_name }}"
           }
 

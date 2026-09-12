@@ -195,12 +195,34 @@ class TransportRunner:
         self.transport.publish_result(publishable)
         self.service.db.mark_published(self.transport.key, command.command_id)
 
+    def _restore_contents_index(self) -> None:
+        if getattr(self, "_contents_index_restored", False):
+            return
+        restorer = getattr(self.transport, "restore_contents_command_index", None)
+        getter = getattr(self.service.db, "get_transport_contents_index", None)
+        if not callable(restorer) or not callable(getter):
+            self._contents_index_restored = True
+            return
+        restorer(getter(self.transport.key))
+        self._contents_index_restored = True
+
+    def _persist_contents_index(self) -> None:
+        snapshotter = getattr(self.transport, "contents_command_index_snapshot", None)
+        setter = getattr(self.service.db, "set_transport_contents_index", None)
+        if not callable(snapshotter) or not callable(setter):
+            return
+        snapshot = snapshotter()
+        if snapshot is not None:
+            setter(self.transport.key, snapshot)
+
     def poll_once(self) -> int:
         count = 0
         self._activity("poll_started")
         try:
             self._retry_pending_receipts()
+            self._restore_contents_index()
             commands = self.transport.fetch_commands()
+            self._persist_contents_index()
             for command in commands:
                 receipts = self._command_receipts(command)
                 self._record_receipts(command, receipts)

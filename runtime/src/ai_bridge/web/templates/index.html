@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>AI Bridge</title>
-  <link rel="stylesheet" href="/control/app.css?v=0.2.6.52">
+  <link rel="stylesheet" href="/control/app.css?v=0.2.6.53">
 </head>
 <body>
 <main class="shell">
   <header class="topbar">
     <div>
-      <h1>AI Bridge <small>V0.2.6.52</small></h1>
+      <h1>AI Bridge <small>V0.2.6.53</small></h1>
       <p>GitHub Bus · Local Core · Host Adapters</p>
     </div>
     <div id="coreBadge" class="badge">...</div>
@@ -122,7 +122,7 @@
     <div style="display:none"><table><tbody id="commands"></tbody></table></div>
   </article>
 </main>
-<script src="/control/app.js?v=0.2.6.52"></script>
+<script src="/control/app.js?v=0.2.6.53"></script>
 <script>
 const RECENT_COMMAND_LIMIT=5;
 const commandBudgets=new Map();
@@ -138,8 +138,8 @@ function commandProgress(item){const status=String(item.status||"unknown").toLow
 async function loadCommandBudget(item){const status=String(item.status||"unknown").toLowerCase();if(TERMINAL_COMMAND_STATUSES.has(status)||commandBudgets.has(item.command_id))return;try{const detail=await api(`/control/commands/${encodeURIComponent(item.command_id)}`);const budget=detail?.request?.execution?.budget_seconds;if(budget!=null)commandBudgets.set(item.command_id,Number(budget));}catch{commandBudgets.set(item.command_id,NaN);}}
 function renderActivityHeartbeat(remote){const target=document.querySelector("#activityHeartbeat");if(!target)return;const activity=remote?.activity||{};const current=activity.current_execution;const pollAge=commandElapsed(activity.last_poll_at,new Date().toISOString());const pollInterval=Number(remote?.poll_interval_seconds||0.5);const staleLimit=Math.max(5,pollInterval*4);const stale=Boolean(remote?.configured)&&!current&&pollAge!=null&&pollAge>staleLimit;const abnormal=remote?.status==="error"||stale;let stateText="未连接";if(current){const elapsed=commandElapsed(current.started_at,new Date().toISOString());stateText=`执行中 ${commandDurationText(elapsed)} · ${current.operation||"命令"}`;}else if(abnormal){stateText="Bridge 通讯异常";}else if(remote?.configured){stateText=activity.last_poll_at?"空闲":"等待首次轮询";}target.classList.toggle("errorText",abnormal);target.innerHTML=`<small>最后轮询 <b>${esc(activityAgeText(activity.last_poll_at))}</b> · 最后收到命令 <b>${esc(activityAgeText(activity.last_command_received_at))}</b> · 当前状态 <b>${esc(stateText)}</b></small>`;}
 async function refreshActivityHeartbeat(){try{const state=await api("/control/status");renderActivityHeartbeat(state.remote||{});}catch(error){const target=document.querySelector("#activityHeartbeat");if(target){target.classList.add("errorText");target.innerHTML=`<small>最后轮询 <b>—</b> · 最后收到命令 <b>—</b> · 当前状态 <b>Bridge 通讯异常</b></small>`;}}}
-function recentCommandRow(item){const progress=commandProgress(item);const status=String(item.status||"unknown").toLowerCase();return `<tr${progress.stuck?' class="warningRow"':''}><td>${esc(commandTimeText(item.created_at))}</td><td><b>${esc(commandPurpose(item))}</b></td><td><code>${esc(item.operation||"—")}</code></td><td><span class="status ${esc(status)}">${esc(commandStatusText(status))}</span></td><td>${esc(progress.text)}</td><td>${item.evidence_id?`<a href="/control/commands/${encodeURIComponent(item.command_id)}" target="_blank">查看</a>`:"—"}</td></tr>`;}
 async function refreshRecentCommands(){try{const payload=await api("/control/commands?limit="+RECENT_COMMAND_LIMIT);const items=(payload.commands||[]).slice(0,RECENT_COMMAND_LIMIT);await Promise.all(items.map(loadCommandBudget));const body=document.querySelector("#recentCommands");if(!body)return;body.innerHTML=items.length?items.map(recentCommandRow).join(""):'<tr><td colspan="6" class="muted">暂无命令</td></tr>';}catch(error){const body=document.querySelector("#recentCommands");if(body){body.innerHTML=`<tr><td colspan="6" class="errorText">${esc(error.message)}</td></tr>`;}}}
+function recentCommandRow(item){const progress=commandProgress(item);const status=String(item.status||"unknown").toLowerCase();return `<tr${progress.stuck?' class="warningRow"':''}><td>${esc(commandTimeText(item.created_at))}</td><td><b>${esc(commandPurpose(item))}</b></td><td><code>${esc(item.operation||"—")}</code></td><td><span class="status ${esc(status)}">${esc(commandStatusText(status))}</span></td><td>${esc(progress.text)}</td><td>${item.evidence_id?`<a href="/control/commands/${encodeURIComponent(item.command_id)}" target="_blank">查看</a>`:"—"}</td></tr>`;}
 refreshActivityHeartbeat();setInterval(refreshActivityHeartbeat,1000);
 refreshRecentCommands();setInterval(refreshRecentCommands,2000);
 </script>
