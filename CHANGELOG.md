@@ -8,6 +8,22 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.53 fallback bootstrap persistence — 2026-09-12
+
+- Persisted the GitHub Contents command-index baseline in the Runtime database so a Runtime restart no longer forgets which fallback command files were already present.
+- In V5 hybrid Comment + Contents mode, the first poll without a persisted Contents baseline now seeds the current file index without executing historical files; later polls execute only genuine SHA changes/new files.
+- `TransportRunner` restores the persisted Contents index before polling and persists the refreshed snapshot immediately after ingress collection.
+- Added public regression coverage for first-poll baseline seeding, restored-index delta detection, database round-trip, Runtime restart recovery, and existing multi-ingress conflict/merge semantics.
+- Rebased public Dashboard/command-history cache keys to `0.2.6.53` while intentionally rejecting the development-source `0.2.6.14` static-cache regression; public product UI behavior otherwise remains unchanged.
+- Houdini Adapter remains `0.5.26`; Supervisor remains `0.1.4`; distributable Knowledge authority/digest is unchanged because the accepted source Adapter/Knowledge trees did not change.
+- Development source target: `<private-development-source>@c9be86a58899e581621d30f82a1c5783d30a76f9`; private Runtime pre-publish validation was **348/348 PASS**.
+- Public PR #8 validation run `34661225082` passed deterministic release build, `compileall`, full product tests, release verifier, and PowerShell parser.
+- PR #8 merged to `main` at `10b9ab650d3b3457a93c664ac7b463954ad5e0d0` on `2026-09-12T00:21:07Z`.
+- Final `main` product validation run `34661336612` passed, including generated release artifact publication and fresh Windows installation from the public GitHub branch.
+- Generated artifact commit: `3943a716378166964f2af93bedb1e7ae2b0f8617`; published Runtime release source commit: `10b9ab650d3b3457a93c664ac7b463954ad5e0d0`.
+- Published Runtime bundle SHA-256: `76654d312641b0037b981cc063012300a1e48e22de48e29550241845c482caa5`; installer bundle remains `4db513b7976c1eccd9e08418454a6404f267896ee33f1fea81a6fa3121de1a5c`; clean Knowledge digest remains `f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093`.
+- Migration baseline advanced from `1ea396efd020525ec6fe6c817c9cb2f58c027d58` to `c9be86a58899e581621d30f82a1c5783d30a76f9`. Runtime 0.2.6.53 public source/release synchronization is complete; explicit real-environment end-to-end acceptance remains separately pending.
+
 ### Runtime 0.2.6.52 fallback multi-ingress transport — 2026-09-11
 
 - Kept Issue Comment V5 as the primary GitHub command ingress and promoted the existing GitHub Contents command directory into a simultaneously polled fallback ingress, without adding a new relay service, daemon, credential type, or external dependency.
@@ -145,8 +161,8 @@ Do not conflate the already-passed clean Windows installer smoke test with this 
 - Continuous synchronization classifies changes as SAFE COPY, REBASE REQUIRED, KNOWLEDGE REGENERATE, or DO NOT DISTRIBUTE.
 
 ### Migration baseline
-- Development source baseline: `<private-development-source>@1ea396efd020525ec6fe6c817c9cb2f58c027d58`.
-- Runtime 0.2.6.52 public source/release synchronization is complete: final PR validation, `main` artifact publication, release verification, and fresh Windows GitHub install smoke all passed. The active developer Runtime remains 0.2.6.51 because this synchronization did not switch the live installation; explicit real-environment end-to-end acceptance remains separately pending.
+- Development source baseline: `<private-development-source>@c9be86a58899e581621d30f82a1c5783d30a76f9`.
+- Runtime 0.2.6.53 public source/release synchronization is complete: PR validation, `main` artifact publication, release verification, and fresh Windows GitHub install smoke all passed. The active developer Runtime and public product are aligned at 0.2.6.53; explicit real-environment end-to-end acceptance remains separately pending.
 
 ### Safety
 - Public/distributable content excludes developer Bridge IDs, credentials, sessions, workspaces, command history, project authority documents, local paths, and project-family/candidate knowledge as generic execution authority.
