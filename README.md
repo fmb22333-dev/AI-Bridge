@@ -8,11 +8,13 @@ AI Bridge is a distributable local bridge/runtime for AI-assisted control of hos
 
 AI Bridge is organized around these requirements:
 
-1. **GitHub primary binding** — each installation connects to GitHub through the user's own authorization.
-2. **Independent Knowledge Pack** — generic validated knowledge is distributed independently from private project history.
-3. **Automatic Bus initialization** — first-run setup creates or connects a clean per-install GitHub Bus repository automatically.
-4. **AI self-onboarding** — an authorized AI reads `PROJECT_STATE_INDEX.json` first and can discover the protocol/state without relying on prior chat memory.
-5. **Transport redundancy** — GitHub V5 remains primary, while an optional Supabase Data API transport can run in parallel as an independent emergency ingress/result path.
+1. **GitHub authority binding** — each installation connects to GitHub through the user's own authorization for durable Presence, project authority, Runtime/release metadata, documentation, Knowledge and audit/recovery.
+2. **Supabase primary realtime transport** — normal interactive command/result traffic uses Supabase when configured and connected.
+3. **GitHub V5 fallback command transport** — GitHub remains a fully supported command path when Supabase is unavailable.
+4. **Independent Knowledge Pack** — generic validated knowledge is distributed independently from private project history.
+5. **Automatic Bus initialization** — first-run setup creates or connects a clean per-install GitHub Bus repository automatically.
+6. **AI self-onboarding** — an authorized AI reads `PROJECT_STATE_INDEX.json` and Presence first, then follows `command_transport_policy` instead of relying on chat memory.
+7. **Cross-transport idempotency** — failover preserves the same canonical `command_id`; BridgeDB remains the execution authority.
 
 ## Repository role
 
@@ -20,39 +22,59 @@ This repository is the shared **Runtime / Adapter / Installer / Generic Knowledg
 
 It is intentionally separate from each user's per-install **Bus repository**.
 
-A user installation creates its own Bus repository containing runtime presence, transport resources, project authority documents, and the machine entrypoint `PROJECT_STATE_INDEX.json`.
+A user installation creates its own Bus repository containing runtime Presence, transport discovery resources, project authority documents, and the machine entrypoint `PROJECT_STATE_INDEX.json`.
 
 ## Changelog / audit
 
-Meaningful product changes are recorded in [`CHANGELOG.md`](CHANGELOG.md). Maintainers and AI agents should read it before material Bridge/Knowledge work.
+Meaningful product changes are recorded in [`CHANGELOG.md`](CHANGELOG.md) and release-specific documents under `docs/`.
 
 Logging rules are defined in [`docs/CHANGE_POLICY.md`](docs/CHANGE_POLICY.md).
 
 ## Target first-run flow
 
-`download -> install -> Setup UI -> authorize GitHub -> Create & Connect Bus -> install host adapters -> ready`
+`download -> install -> Setup UI -> authorize GitHub authority/fallback Bus -> configure Supabase Primary Bus -> install host adapters -> ready`
 
 The user should not manually create Bridge JSON files, issues/comments, status folders, Bridge IDs, project index records, or AI onboarding instructions.
 
-Every provisioned Bus receives a root README that tells AI agents to read `PROJECT_STATE_INDEX.json` before searching the repository.
+Every provisioned Bus receives a root README that tells AI agents to read `PROJECT_STATE_INDEX.json` and Presence before searching the repository or sending commands.
 
 See [`docs/FIRST_INSTALL_FLOW.md`](docs/FIRST_INSTALL_FLOW.md).
 
 ## Transport model
 
-GitHub V5 Issue Comment + Contents remains the canonical primary transport.
+Runtime **0.2.6.56+** uses this role split:
 
-Runtime **0.2.6.54** adds an optional **Supabase fallback transport**. It is deliberately polled in parallel instead of activating only after GitHub failure. This solves the case where an AI client loses GitHub write capability while Bridge and GitHub remain otherwise healthy.
+```text
+GitHub Presence / PROJECT_STATE_INDEX  -> discovery + durable authority
+                    |
+                    v
+Supabase PRIMARY_FAST                 -> normal command/result traffic
+                    |
+          unavailable / degraded
+                    v
+GitHub V5 FALLBACK                    -> fallback command/result traffic
+```
 
-Both transports carry the same canonical `CommandEnvelope` and converge on the same local Bridge command database. `command_id` remains the single execution identity, so the same command observed through both transports reuses durable state/result instead of authorizing a second host-side mutation.
+Both transports carry the same canonical `CommandEnvelope` and converge on the same local Bridge command database. `command_id` remains the single execution identity, so transport failover never authorizes a second Host mutation merely because a different bus was used.
 
-See [`docs/SUPABASE_FALLBACK_TRANSPORT.md`](docs/SUPABASE_FALLBACK_TRANSPORT.md).
+Supabase uses one row per command, which allows independent AI conversations to submit without sharing a comment/mailbox. The Runtime uses bounded execution lanes: same Host Session is FIFO/serialized; different Host Sessions or unrelated Runtime adapter lanes may progress concurrently; result publication remains serialized at the transport boundary.
+
+Runtime 0.2.6.x retains historical fallback-named configuration/API surfaces for compatibility. New integrations should discover roles from `supabase_transport` and `command_transport_policy`, not from legacy names.
+
+See [`docs/SUPABASE_PRIMARY_TRANSPORT.md`](docs/SUPABASE_PRIMARY_TRANSPORT.md). The older [`docs/SUPABASE_FALLBACK_TRANSPORT.md`](docs/SUPABASE_FALLBACK_TRANSPORT.md) is retained as implementation history and compatibility documentation.
 
 ## AI integration
 
 AI agents working on this product repository should read `AGENTS.md` first.
 
-AI agents entering a generated user Bus repository must read that Bus repository's `PROJECT_STATE_INDEX.json` before any project or Bridge operation.
+AI agents entering a generated user Bus repository must read that Bus repository's `PROJECT_STATE_INDEX.json` and current Presence before any project or Bridge operation.
+
+Normal routing is:
+
+1. discover through GitHub authority;
+2. use Supabase for commands when Presence reports it connected and primary;
+3. use GitHub V5 only as fallback or for explicit GitHub transport testing;
+4. preserve the same `command_id` across failover.
 
 The public integration contract is [`specs/AI_AGENT_PROTOCOL.md`](specs/AI_AGENT_PROTOCOL.md).
 
@@ -62,7 +84,7 @@ Bridge Runtime, Adapter, Installer, protocol, and promoted generic Knowledge Pac
 
 Required sequence:
 
-`read changelog -> remote preflight -> reconcile -> modify -> validate -> update changelog -> remote recheck -> synchronize/publish`
+`read changelog -> remote preflight -> reconcile -> modify -> validate -> update docs/changelog -> remote recheck -> synchronize/publish`
 
 See [`docs/UPDATE_WORKFLOW.md`](docs/UPDATE_WORKFLOW.md).
 
@@ -92,12 +114,10 @@ It must not contain:
 
 ## Current product status
 
-Runtime **0.2.6.54**, Houdini Adapter **0.5.26**, Supervisor **0.1.4**.
+Runtime **0.2.6.56**, Houdini Adapter **0.5.26**, Supervisor **0.1.4**.
 
-GitHub remains the default transport. Supabase fallback support is shipped but remains inert until a project/table and local secret credential are configured. The fallback credential is stored through the existing local SecretStore/Windows DPAPI path and is never committed.
+Supabase is the default realtime command/result transport when configured. GitHub V5 remains connected as fallback command transport and remains the durable authority. Supabase credentials are stored through the existing local SecretStore/Windows DPAPI path and are never committed.
 
-The release workflow rebuilds and verifies deterministic Runtime/installer artifacts on `main`.
+The release workflow rebuilds and verifies deterministic Runtime/installer artifacts on `main`, including a fresh-install smoke test.
 
-See [`docs/SUPABASE_FALLBACK_TRANSPORT.md`](docs/SUPABASE_FALLBACK_TRANSPORT.md) and [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md).
-
-The existing developer Runtime/Bus is intentionally not switched merely by repository migration or release assembly.
+See [`docs/SUPABASE_PRIMARY_TRANSPORT.md`](docs/SUPABASE_PRIMARY_TRANSPORT.md), [`docs/RELEASE_0.2.6.56.md`](docs/RELEASE_0.2.6.56.md), and [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md).
