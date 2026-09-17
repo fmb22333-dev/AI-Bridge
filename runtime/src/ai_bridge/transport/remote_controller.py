@@ -12,11 +12,13 @@ from ai_bridge.security.secret_store import SecretStore
 from ai_bridge.transport.github_bus import GitHubBusConfig, GitHubBusTransport
 from ai_bridge.transport.remote_config import (
     GitHubRemoteConfig,
+    default_bridge_id,
     delete_remote_config,
     load_remote_config,
     save_remote_config,
 )
 from ai_bridge.transport.runner import TransportRunner
+from ai_bridge.transport.fallback_controller import SupabaseFallbackController
 
 
 class RemoteConfigurationError(RuntimeError):
@@ -55,6 +57,25 @@ class RemoteController:
             "last_command_received_at": None,
             "current_execution": None,
         }
+
+        # Supabase is an independent, always-on secondary transport. It starts
+        # even while GitHub is healthy so an AI client can switch ingress
+        # immediately if its GitHub write action is unavailable.
+        try:
+            saved_primary = load_remote_config(self.config_path)
+        except Exception:
+            saved_primary = None
+        bridge_hint = (
+            saved_primary.bridge_id if saved_primary is not None else default_bridge_id()
+        )
+        self.fallback_controller = SupabaseFallbackController(
+            service=self.service,
+            data_dir=self.data_dir,
+            runtime_state=self.runtime_state,
+            secret_store=self.secret_store,
+            bridge_id_hint=bridge_hint,
+        )
+        self.fallback_controller.start_saved_or_environment()
 
     def _activity_snapshot(self) -> dict:
         current = self._activity.get("current_execution")
@@ -120,16 +141,21 @@ class RemoteController:
         return {
             "protocol": "bridge/1",
             "bridge_id": bridge_id,
-            "bridge_version": "0.2.6.53",
+            "bridge_version": "0.2.6.54",
             "message_transport": (
                 transport.message_state()
                 if transport is not None and hasattr(transport, "message_state")
                 else {"mode": "contents"}
             ),
+            "fallback_transport": dict(
+                self.runtime_state.get("fallback_transport") or {}
+            ),
             "write_blocked": self.service.emergency_stop.write_blocked,
             "workspaces": [
                 workspace.workspace_id
-                for workspace in sorted(self.service.workspaces.list(), key=lambda item: item.workspace_id)
+                for workspace in sorted(
+                    self.service.workspaces.list(), key=lambda item: item.workspace_id
+                )
                 if not workspace.workspace_id.startswith("__")
             ],
             "sessions": sessions,
@@ -179,7 +205,12 @@ class RemoteController:
             return max(base, 1.0)
         return base
 
-    def public_state(self, status: str, config: GitHubRemoteConfig | None = None, detail: str | None = None) -> dict:
+    def public_state(
+        self,
+        status: str,
+        config: GitHubRemoteConfig | None = None,
+        detail: str | None = None,
+    ) -> dict:
         state = {
             "configured": config is not None,
             "status": status,
@@ -191,23 +222,30 @@ class RemoteController:
                     "repository": config.repository,
                     "branch": config.branch,
                     "bridge_id": config.bridge_id,
-                    "credential_saved": bool(self.secret_store.get(self.GITHUB_SECRET)),
+                    "credential_saved": bool(
+                        self.secret_store.get(self.GITHUB_SECRET)
+                    ),
                     "poll_floor_seconds": (
                         0.25
                         if self._transport is not None
                         and hasattr(self._transport, "message_state")
-                        and self._transport.message_state().get("mode") == "issue_mailbox_v3"
+                        and self._transport.message_state().get("mode")
+                        == "issue_mailbox_v3"
                         else self.poll_interval
                     ),
-                    "poll_interval_seconds": self._effective_poll_interval(self._transport),
+                    "poll_interval_seconds": self._effective_poll_interval(
+                        self._transport
+                    ),
                     "github_rate": (
                         self._transport.rate_snapshot()
-                        if self._transport is not None and hasattr(self._transport, "rate_snapshot")
+                        if self._transport is not None
+                        and hasattr(self._transport, "rate_snapshot")
                         else {}
                     ),
                     "message_transport": (
                         self._transport.message_state()
-                        if self._transport is not None and hasattr(self._transport, "message_state")
+                        if self._transport is not None
+                        and hasattr(self._transport, "message_state")
                         else {"mode": "contents"}
                     ),
                     "activity": self._activity_snapshot(),
@@ -235,7 +273,9 @@ class RemoteController:
         branch = config.branch.strip()
         bridge_id = config.bridge_id.strip()
         token = token.strip()
-        if repository.count("/") != 1 or any(not part for part in repository.split("/")):
+        if repository.count("/") != 1 or any(
+            not part for part in repository.split("/")
+        ):
             raise RemoteConfigurationError("Repository must be owner/name")
         if not branch:
             raise RemoteConfigurationError("Branch is required")
@@ -244,11 +284,15 @@ class RemoteController:
         if not token:
             raise RemoteConfigurationError("GitHub token is required")
 
-        normalized = GitHubRemoteConfig(repository=repository, branch=branch, bridge_id=bridge_id)
+        normalized = GitHubRemoteConfig(
+            repository=repository, branch=branch, bridge_id=bridge_id
+        )
         transport = self._make_transport(normalized, token)
         health = transport.health()
         if not health.ok:
-            raise RemoteConfigurationError("GitHub connection failed: " + health.detail)
+            raise RemoteConfigurationError(
+                "GitHub connection failed: " + health.detail
+            )
         try:
             if hasattr(transport, "initialize_message_mode"):
                 transport.initialize_message_mode()
@@ -268,13 +312,17 @@ class RemoteController:
                 pass
             self._transport = transport
             self._reset_activity_locked()
-            self.runtime_state["remote"] = self.public_state("connected", normalized)
+            self.runtime_state["remote"] = self.public_state(
+                "connected", normalized
+            )
             self._start_github_loop_locked(normalized, transport)
         return dict(self.runtime_state["remote"])
 
     configure = configure_github
 
-    def _publish_presence_if_changed(self, transport, config: GitHubRemoteConfig, force: bool = False) -> None:
+    def _publish_presence_if_changed(
+        self, transport, config: GitHubRemoteConfig, force: bool = False
+    ) -> None:
         core = self._presence_core(config.bridge_id, transport)
         raw = json.dumps(core, sort_keys=True, ensure_ascii=False).encode("utf-8")
         fingerprint = hashlib.sha256(raw).hexdigest()
@@ -285,7 +333,9 @@ class RemoteController:
         transport.publish_presence(payload)
         self._last_presence_hash = fingerprint
 
-    def _start_github_loop_locked(self, config: GitHubRemoteConfig, transport) -> None:
+    def _start_github_loop_locked(
+        self, config: GitHubRemoteConfig, transport
+    ) -> None:
         stop = threading.Event()
         self._stop = stop
         runner = TransportRunner(
@@ -303,22 +353,30 @@ class RemoteController:
                         health = transport.health()
                         last_health = now
                         if not health.ok:
-                            self.runtime_state["remote"] = self.public_state("error", config, health.detail)
+                            self.runtime_state["remote"] = self.public_state(
+                                "error", config, health.detail
+                            )
                             stop.wait(self._effective_poll_interval(transport))
                             continue
                     runner.poll_once()
                     self._publish_presence_if_changed(transport, config)
-                    self.runtime_state["remote"] = self.public_state("connected", config)
+                    self.runtime_state["remote"] = self.public_state(
+                        "connected", config
+                    )
                 except Exception as exc:
                     detail = f"{type(exc).__name__}: {exc}"
-                    self.runtime_state["remote"] = self.public_state("error", config, detail)
+                    self.runtime_state["remote"] = self.public_state(
+                        "error", config, detail
+                    )
                     if "403" in detail or "429" in detail:
                         if stop.wait(60.0):
                             break
                         continue
                 stop.wait(self._effective_poll_interval(transport))
 
-        self._thread = threading.Thread(target=loop, name="AI-Bridge-GitHubBus", daemon=True)
+        self._thread = threading.Thread(
+            target=loop, name="AI-Bridge-GitHubBus", daemon=True
+        )
         self._thread.start()
 
     def start_saved(self) -> bool:
@@ -339,7 +397,9 @@ class RemoteController:
             return False
         token = self.secret_store.get(self.GITHUB_SECRET)
         if not token:
-            self.runtime_state["remote"] = self.public_state("credential_missing", config)
+            self.runtime_state["remote"] = self.public_state(
+                "credential_missing", config
+            )
             return False
         try:
             self.configure_github(config, token)
@@ -355,7 +415,9 @@ class RemoteController:
             self._stop_current_locked()
             delete_remote_config(self.config_path)
             self.secret_store.delete(self.GITHUB_SECRET)
-            self.disabled_path.write_text("disabled by user", encoding="utf-8")
+            self.disabled_path.write_text(
+                "disabled by user", encoding="utf-8"
+            )
             self.runtime_state["remote"] = {
                 "configured": False,
                 "status": "disabled",

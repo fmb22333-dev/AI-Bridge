@@ -49,17 +49,32 @@ Unless the generated index declares a newer compatible policy, use:
 
 Static documentation must not override volatile live fields such as Runtime version, session IDs, workspaces, transport state, or write-block state.
 
-## 5. GitHub authorization model
+## 5. Authorization model
 
-The AI must operate through an authorized GitHub identity, application, connector, or token. GitHub repository permissions remain the security boundary.
+GitHub is the primary transport and GitHub repository permissions remain its security boundary.
 
-Never ask users to share a personal GitHub token in chat. Credentials are stored locally by Bridge setup and are not committed to either repository.
+The optional Supabase fallback uses a separate Supabase backend credential and table. The Bridge-side credential is a backend `sb_secret_*` key (or legacy service-role key during migration), stored locally through Bridge SecretStore/Windows DPAPI. Never commit or paste that key into either GitHub repository.
 
-## 6. Transport discovery
+An AI sender with an authorized Supabase connector may enqueue through the Supabase management/API surface without receiving the Bridge machine's secret key.
 
-Before sending a remote Bridge command, read live runtime status. Use the transport mode advertised there. Do not assume a fixed mailbox/channel protocol from static documentation.
+## 6. Transport discovery and failover
 
-When multi-channel transport is advertised, independent AI conversations must use independent channels and must not overwrite one another's command slot.
+Before sending a remote Bridge command, read live runtime status. Use the transport modes advertised there.
+
+GitHub V5 remains primary. If live presence advertises `fallback_transport.kind = "supabase_fallback"` and `fallback_transport.status = "connected"`, the Supabase transport is an authorized secondary ingress.
+
+If GitHub **write** capability is unavailable while GitHub reads still work:
+
+1. do not mutate the command or allocate a replacement identity;
+2. preserve the same canonical `CommandEnvelope` and `command_id`;
+3. insert it into the configured Supabase command table with `state = "queued"`;
+4. read the same row for `accepted` and terminal state/result.
+
+The same `command_id` may be observed through GitHub and Supabase. It is still one execution identity. Divergent payloads under one identity are invalid.
+
+When multi-channel GitHub transport is advertised, independent AI conversations must still use independent GitHub channels and must not overwrite one another's command slot.
+
+Detailed Supabase schema, row contract and activation procedure: `docs/SUPABASE_FALLBACK_TRANSPORT.md`.
 
 ## 7. Command recovery
 
@@ -69,6 +84,7 @@ Before repeating a command:
 
 - recover its durable transport state/result when possible;
 - if the prior command is known accepted but non-terminal, do not duplicate it;
+- if switching transports, keep the original `command_id`;
 - if project state is stale, recover project state before mutation.
 
 ## 8. Project targeting
@@ -97,7 +113,10 @@ Only generic validated/promoted knowledge may enter the public distributable Kno
 - Do not silently bypass a promoted capability; record a fallback reason when fallback is required.
 - Do not infer success from a missing error.
 - Do not expose or commit secrets, local Bridge IDs from another installation, current sessions, command history, or project-specific evidence.
+- Never use a Supabase publishable/anon key as a substitute for the Bridge backend credential.
 
 ## 11. First-run result
 
 A correctly initialized user installation must leave enough GitHub state that a new authorized AI can recover solely by being told the Bus repository location and the rule: **read `PROJECT_STATE_INDEX.json` first**.
+
+Supabase fallback is optional and does not replace the GitHub bootstrap/authority model.
