@@ -78,6 +78,12 @@ class SupabaseFallbackController:
             state["detail"] = detail
         return state
 
+    def public_state(self) -> dict:
+        return dict(
+            self.runtime_state.get("fallback_transport")
+            or {"configured": False, "status": "unconfigured", "kind": "none"}
+        )
+
     @staticmethod
     def _normalize(config: SupabaseFallbackConfig) -> SupabaseFallbackConfig:
         return SupabaseFallbackConfig(
@@ -147,6 +153,41 @@ class SupabaseFallbackController:
         self.runtime_state["fallback_transport"] = self._state("connected", config)
         self._start_loop(config, transport)
         return dict(self.runtime_state["fallback_transport"])
+
+    def test_saved_connection(self) -> dict:
+        config = self._load_config()
+        if config is None:
+            raise ValueError("Supabase fallback is not configured")
+        secret_key = self.secret_store.get(self.SECRET_NAME)
+        if not secret_key:
+            raise ValueError("Supabase fallback credential is missing")
+        transport = self._make_transport(config, secret_key)
+        health = transport.health()
+        result = {
+            "ok": bool(health.ok),
+            "detail": health.detail,
+            "project_url": config.project_url,
+            "bridge_id": config.bridge_id,
+            "table": config.table,
+            "poll_interval_seconds": config.poll_interval_seconds,
+            "credential_saved": True,
+        }
+        if not health.ok:
+            raise RuntimeError("Supabase fallback connection failed: " + health.detail)
+        return result
+
+    def disconnect(self) -> None:
+        self.stop()
+        try:
+            self.config_path.unlink()
+        except FileNotFoundError:
+            pass
+        self.secret_store.delete(self.SECRET_NAME)
+        self.runtime_state["fallback_transport"] = {
+            "configured": False,
+            "status": "disabled",
+            "kind": "none",
+        }
 
     def _start_loop(self, config: SupabaseFallbackConfig, transport) -> None:
         stop = threading.Event()
