@@ -8,6 +8,20 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.54 independent Supabase fallback transport — 2026-09-17
+
+- Added an optional Supabase/PostgREST secondary command transport while keeping GitHub V5 Issue Comment + Contents as the canonical primary transport and product/project authority path.
+- The Supabase runner is independent and polls in parallel with GitHub instead of waiting for a GitHub outage. This specifically covers AI-client GitHub write-tool failure while GitHub reads and the local Bridge remain healthy.
+- Both transports preserve the same canonical `bridge/1` `CommandEnvelope` and `command_id`; BridgeDB/TransportRunner remain the execution authority, so cross-transport observations converge on one durable command identity/result rather than authorizing a second host-side mutation.
+- Supabase rows use durable `queued -> accepted -> terminal` state transitions; malformed envelopes are marked `rejected`, accepted rows are re-polled after Runtime restart, and terminal receipt publication remains retryable without host re-execution.
+- Added backend-key handling for current `sb_secret_*` keys via `apikey` only and compatibility handling for legacy JWT-style service-role keys; `sb_publishable_*` keys are rejected for the Bridge backend path.
+- Added a separate `SupabaseFallbackController`; fallback configuration/credential failures do not stop the GitHub runner. Non-secret fallback settings persist to `fallback_transport.json`; the backend secret uses the existing SecretStore/Windows DPAPI path.
+- GitHub Presence now advertises `fallback_transport` state so an authorized AI can discover whether Supabase failover is actually connected before attempting it.
+- Added `docs/SUPABASE_FALLBACK_TRANSPORT.md`, `docs/supabase_fallback_schema.sql`, and failover rules to `specs/AI_AGENT_PROTOCOL.md`. GitHub remains the bootstrap authority; Supabase is an optional emergency ingress/result path only.
+- Added regression coverage for Supabase queue/ACK/result round-trip, malformed-envelope rejection, current secret-key header behavior, legacy service-role compatibility, and publishable-key rejection. Isolated targeted validation: **4/4 PASS** before publication; full public Windows product validation is required before merge.
+- Runtime version target is `0.2.6.54`; Houdini Adapter remains `0.5.26`; Supervisor remains `0.1.4`; distributable Knowledge authority is unchanged by this Runtime-only transport delta.
+- Live Supabase activation remains an external deployment step: this change ships transport/schema/configuration support but does not create a user Supabase project or store any project credential in GitHub.
+
 ### Runtime 0.2.6.53 fallback bootstrap persistence — 2026-09-12
 
 - Persisted the GitHub Contents command-index baseline in the Runtime database so a Runtime restart no longer forgets which fallback command files were already present.
