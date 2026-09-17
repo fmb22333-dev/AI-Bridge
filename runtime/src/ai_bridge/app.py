@@ -19,6 +19,7 @@ from ai_bridge.security.secret_store import default_secret_store
 from ai_bridge.transport.local_api import create_app
 from ai_bridge.transport.remote_config import GitHubRemoteConfig, default_bridge_id
 from ai_bridge.transport.remote_controller import RemoteController
+from ai_bridge.web.fallback_routes import install_fallback_routes
 from ai_bridge.web.routes import install_control_routes
 
 
@@ -85,7 +86,6 @@ def build_runtime(*, data_dir: Path, port: int):
             workspace=workspace,
             force_restart=bool(arguments.get("force_restart", False)),
         )
-
 
     def _host_force_recover(arguments: dict):
         host_id = str(arguments.get("host_id") or "").strip().lower()
@@ -164,6 +164,13 @@ def build_runtime(*, data_dir: Path, port: int):
     }
     app.state.remote_controller = None
     web_root = Path(__file__).parent / "web"
+    # Install optional fallback routes first so they can compose Setup and
+    # Dashboard assets without expanding the legacy monolithic web module.
+    install_fallback_routes(
+        app,
+        auth_token=connection["token"],
+        web_root=web_root,
+    )
     install_control_routes(
         app,
         service,

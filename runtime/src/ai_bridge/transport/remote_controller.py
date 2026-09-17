@@ -18,7 +18,10 @@ from ai_bridge.transport.remote_config import (
     save_remote_config,
 )
 from ai_bridge.transport.runner import TransportRunner
-from ai_bridge.transport.fallback_controller import SupabaseFallbackController
+from ai_bridge.transport.fallback_controller import (
+    SupabaseFallbackConfig,
+    SupabaseFallbackController,
+)
 
 
 class RemoteConfigurationError(RuntimeError):
@@ -141,7 +144,7 @@ class RemoteController:
         return {
             "protocol": "bridge/1",
             "bridge_id": bridge_id,
-            "bridge_version": "0.2.6.54",
+            "bridge_version": "0.2.6.55",
             "message_transport": (
                 transport.message_state()
                 if transport is not None and hasattr(transport, "message_state")
@@ -255,6 +258,80 @@ class RemoteController:
             state["detail"] = detail
         return state
 
+    def _primary_bridge_id(self) -> str:
+        try:
+            config = load_remote_config(self.config_path)
+        except Exception:
+            config = None
+        if config is not None and config.bridge_id.strip():
+            return config.bridge_id.strip()
+        remote = self.runtime_state.get("remote")
+        if isinstance(remote, dict) and remote.get("configured"):
+            bridge_id = str(remote.get("bridge_id") or "").strip()
+            if bridge_id:
+                return bridge_id
+        raise RemoteConfigurationError(
+            "Connect the primary GitHub Bus before configuring the Supabase backup transport"
+        )
+
+    def configure_supabase(
+        self,
+        *,
+        project_url: str,
+        secret_key: str = "",
+        poll_interval_seconds: float = 0.5,
+        table: str = "ai_bridge_commands",
+    ) -> dict:
+        bridge_id = self._primary_bridge_id()
+        secret_key = str(secret_key or "").strip()
+        if not secret_key:
+            secret_key = str(
+                self.secret_store.get(self.fallback_controller.SECRET_NAME) or ""
+            ).strip()
+        if not secret_key:
+            raise RemoteConfigurationError("Supabase secret key is required")
+        try:
+            result = self.fallback_controller.configure(
+                SupabaseFallbackConfig(
+                    project_url=project_url,
+                    bridge_id=bridge_id,
+                    table=table,
+                    poll_interval_seconds=poll_interval_seconds,
+                ),
+                secret_key,
+            )
+        except (ValueError, RuntimeError) as exc:
+            raise RemoteConfigurationError(str(exc)) from exc
+        self.fallback_controller.bridge_id_hint = bridge_id
+        self._refresh_presence_after_fallback_change()
+        return result
+
+    def supabase_state(self) -> dict:
+        return self.fallback_controller.public_state()
+
+    def test_supabase(self) -> dict:
+        try:
+            return self.fallback_controller.test_saved_connection()
+        except (ValueError, RuntimeError) as exc:
+            raise RemoteConfigurationError(str(exc)) from exc
+
+    def disconnect_supabase(self) -> dict:
+        self.fallback_controller.disconnect()
+        self._refresh_presence_after_fallback_change()
+        return self.fallback_controller.public_state()
+
+    def _refresh_presence_after_fallback_change(self) -> None:
+        if self._transport is None:
+            return
+        try:
+            config = load_remote_config(self.config_path)
+            if config is not None:
+                self._last_presence_hash = None
+                self._publish_presence_if_changed(self._transport, config, force=True)
+        except Exception:
+            # Fallback configuration must not take the primary transport down.
+            pass
+
     def _make_transport(self, config: GitHubRemoteConfig, token: str):
         if self.transport_factory:
             return self.transport_factory(config, token)
@@ -310,6 +387,7 @@ class RemoteController:
                 self.disabled_path.unlink()
             except FileNotFoundError:
                 pass
+            self.fallback_controller.bridge_id_hint = bridge_id
             self._transport = transport
             self._reset_activity_locked()
             self.runtime_state["remote"] = self.public_state(
