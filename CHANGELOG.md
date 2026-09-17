@@ -8,6 +8,17 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.55 Supabase Backup Bus UI — 2026-09-17
+
+- Promoted Supabase fallback configuration from headless environment bootstrap to a first-class **Supabase Backup Bus** in AI Bridge Setup and Dashboard while keeping GitHub Bus as primary transport.
+- Setup now accepts Project URL, password-masked Secret Key and poll interval, automatically inherits the connected GitHub Bus Bridge ID, performs a live Data API health test before persistence, and allows a blank Secret Key on later edits to reuse the DPAPI-saved credential.
+- Dashboard now exposes backup transport status plus Modify, Test Connection, and Disconnect & Clear Credential actions. Disconnect removes both `fallback_transport.json` and the locally encrypted Supabase credential without touching GitHub or the Supabase project.
+- Secret material is never returned by status/test APIs and remains stored through the existing SecretStore / Windows DPAPI path. Environment variables remain supported only for headless/recovery bootstrap.
+- Isolated the UI/API integration in `fallback_routes.py`, `fallback_setup.js`, and `fallback_dashboard.js` instead of expanding the existing monolithic web modules.
+- TDD RED gate: all **117 pre-existing tests passed** while the four new lifecycle/UI contract tests failed only for the intentionally missing feature surface. GREEN gate: public Windows product validation passed deterministic release build, compileall, full pytest, release verifier and PowerShell parsing; latest validated PR run before closeout was Run #69 (`35193802549`).
+- The developer live Runtime was already newer than the public product, so it was not downgraded. This feature was forward-ported onto live Runtime `0.2.6.75` as `0.2.6.76`; targeted Supabase regression was **5/5 PASS**, full live validation was **470/470 PASS**, Knowledge publish gate passed, and Supervisor activated `0.2.6.76` with rollback available and no update error.
+- Runtime public product target is `0.2.6.55`; Houdini Adapter and distributable Knowledge authority are unchanged by this UI/lifecycle delta.
+
 ### Runtime 0.2.6.54 independent Supabase fallback transport — 2026-09-17
 
 - Added an optional Supabase/PostgREST secondary command transport while keeping GitHub V5 Issue Comment + Contents as the canonical primary transport and product/project authority path.
