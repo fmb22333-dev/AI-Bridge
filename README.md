@@ -4,14 +4,15 @@
 
 AI Bridge is a distributable local bridge/runtime for AI-assisted control of host applications such as Houdini, Unreal Engine, and Blender.
 
-## The four product requirements
+## Product requirements
 
-AI Bridge is organized around four non-negotiable requirements:
+AI Bridge is organized around these requirements:
 
-1. **GitHub binding** — each installation connects to GitHub through the user's own authorization.
+1. **GitHub primary binding** — each installation connects to GitHub through the user's own authorization.
 2. **Independent Knowledge Pack** — generic validated knowledge is distributed independently from private project history.
 3. **Automatic Bus initialization** — first-run setup creates or connects a clean per-install GitHub Bus repository automatically.
 4. **AI self-onboarding** — an authorized AI reads `PROJECT_STATE_INDEX.json` first and can discover the protocol/state without relying on prior chat memory.
+5. **Transport redundancy** — GitHub V5 remains primary, while an optional Supabase Data API transport can run in parallel as an independent emergency ingress/result path.
 
 ## Repository role
 
@@ -23,7 +24,7 @@ A user installation creates its own Bus repository containing runtime presence, 
 
 ## Changelog / audit
 
-Meaningful product changes are recorded in [`CHANGELOG.md`](CHANGELOG.md). Maintainers and AI agents should read it before material Bridge/Knowledge work so they can see what changed, what remains pending, and whether an installation/release may need updating.
+Meaningful product changes are recorded in [`CHANGELOG.md`](CHANGELOG.md). Maintainers and AI agents should read it before material Bridge/Knowledge work.
 
 Logging rules are defined in [`docs/CHANGE_POLICY.md`](docs/CHANGE_POLICY.md).
 
@@ -37,6 +38,16 @@ Every provisioned Bus receives a root README that tells AI agents to read `PROJE
 
 See [`docs/FIRST_INSTALL_FLOW.md`](docs/FIRST_INSTALL_FLOW.md).
 
+## Transport model
+
+GitHub V5 Issue Comment + Contents remains the canonical primary transport.
+
+Runtime **0.2.6.54** adds an optional **Supabase fallback transport**. It is deliberately polled in parallel instead of activating only after GitHub failure. This solves the case where an AI client loses GitHub write capability while Bridge and GitHub remain otherwise healthy.
+
+Both transports carry the same canonical `CommandEnvelope` and converge on the same local Bridge command database. `command_id` remains the single execution identity, so the same command observed through both transports reuses durable state/result instead of authorizing a second host-side mutation.
+
+See [`docs/SUPABASE_FALLBACK_TRANSPORT.md`](docs/SUPABASE_FALLBACK_TRANSPORT.md).
+
 ## AI integration
 
 AI agents working on this product repository should read `AGENTS.md` first.
@@ -48,8 +59,6 @@ The public integration contract is [`specs/AI_AGENT_PROTOCOL.md`](specs/AI_AGENT
 ## Update and collaboration rule
 
 Bridge Runtime, Adapter, Installer, protocol, and promoted generic Knowledge Pack changes must remain synchronized with this repository.
-
-Before modifying those areas, an AI or human maintainer must read `CHANGELOG.md`, inspect current head/recent commits and relevant PRs, reconcile newer remote work, then modify from that state. After validation, update the changelog when required and check remote state again before publication.
 
 Required sequence:
 
@@ -68,11 +77,12 @@ This repository may contain:
 - Clean generic Knowledge Pack
 - Clean Bus/project templates
 - Release manifests and distributable bundles
+- Generic transport adapters and deployment schema
 
 It must not contain:
 
 - developer-machine Bridge IDs
-- GitHub tokens or secret material
+- GitHub tokens, Supabase secret keys, or other secret material
 - current workspaces/sessions/PIDs
 - command or recovery history
 - local install paths
@@ -82,12 +92,12 @@ It must not contain:
 
 ## Current product status
 
-Runtime **0.2.6.50**, Houdini Adapter **0.5.26**, Supervisor **0.1.4**, clean Knowledge, release manifests, deterministic Runtime/installer bundles, Setup backend, and the Windows installer are assembled and product-validated.
+Runtime **0.2.6.54**, Houdini Adapter **0.5.26**, Supervisor **0.1.4**.
 
-Windows product validation passes `compileall`, **84/84** tests, release verification, PowerShell parsing, artifact publication, and a clean GitHub re-download/install smoke test.
+GitHub remains the default transport. Supabase fallback support is shipped but remains inert until a project/table and local secret credential are configured. The fallback credential is stored through the existing local SecretStore/Windows DPAPI path and is never committed.
 
-The only remaining gate is explicit real-environment acceptance: provision a genuinely new user Bus through Setup UI, authorize/connect it, activate the Houdini Adapter, and verify a live Houdini round-trip.
+The release workflow rebuilds and verifies deterministic Runtime/installer artifacts on `main`.
 
-See [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md).
+See [`docs/SUPABASE_FALLBACK_TRANSPORT.md`](docs/SUPABASE_FALLBACK_TRANSPORT.md) and [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md).
 
-The existing developer Runtime/Bus is intentionally not switched by repository migration or release assembly.
+The existing developer Runtime/Bus is intentionally not switched merely by repository migration or release assembly.
