@@ -144,7 +144,8 @@ def test_supabase_ui_contract_is_present_on_setup_and_dashboard():
     assert "install_fallback_routes" in app
 
     for marker in (
-        "Supabase Backup Bus",
+        "Supabase Primary Bus",
+        "GitHub Bus 作为备用命令通道",
         'id="supabaseUrl"',
         'id="supabaseSecret"',
         'id="supabasePoll"',
@@ -153,6 +154,8 @@ def test_supabase_ui_contract_is_present_on_setup_and_dashboard():
         assert marker in setup_js
 
     assert "fallbackRemoteCard" in dashboard_js
+    assert "Supabase Primary Bus" in dashboard_js
+    assert "GitHub fallback" in dashboard_js
     assert 'id="fallbackRemote"' in dashboard_js
     assert 'id="testFallbackRemote"' in dashboard_js
     assert 'id="disconnectFallbackRemote"' in dashboard_js
