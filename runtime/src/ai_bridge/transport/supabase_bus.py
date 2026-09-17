@@ -27,12 +27,11 @@ class SupabaseBusConfig:
 
 
 class SupabaseBusTransport:
-    """Secondary command transport backed by Supabase PostgREST.
+    """Primary realtime command transport backed by Supabase PostgREST.
 
-    GitHub remains the primary transport. This transport runs concurrently,
-    using the same canonical command envelope and command_id. BridgeDB and
-    TransportRunner remain the execution authority and provide cross-transport
-    idempotency.
+    GitHub remains the durable authority and fallback command transport. Both
+    transports use the same canonical command envelope and command_id. BridgeDB
+    remains execution authority and provides cross-transport idempotency.
     """
 
     def __init__(self, config: SupabaseBusConfig, client: httpx.Client | None = None) -> None:
@@ -77,8 +76,6 @@ class SupabaseBusTransport:
 
     @property
     def headers(self) -> dict[str, str]:
-        # New sb_secret_* keys are intentionally sent only as `apikey`.
-        # Legacy JWT-style service_role keys still need Authorization Bearer.
         headers = {
             "apikey": self.config.secret_key,
             "Accept": "application/json",
@@ -154,11 +151,17 @@ class SupabaseBusTransport:
 
     def message_state(self) -> dict:
         return {
-            "mode": "supabase_fallback",
+            "mode": "supabase_fallback",  # compatibility value through 0.2.6.x
             "provider": "supabase",
             "bridge_id": self.config.bridge_id,
             "table": self.config.table,
-            "parallel_with_primary": True,
+            "parallel_with_primary": True,  # compatibility field through 0.2.6.x
+            "parallel_with_fallback": True,
+            "role": "primary_fast",
+            "multi_channel": True,
+            "multi_ai": True,
+            "same_session_serial": True,
+            "max_execution_lanes": 8,
         }
 
     def _record_receipt(self, command_id: str) -> None:
