@@ -136,10 +136,12 @@ def test_remote_controller_supabase_configuration_inherits_github_bridge_id_and_
 
 def test_supabase_ui_contract_is_present_on_setup_and_dashboard():
     root = Path(__file__).resolve().parents[1]
-    setup = (root / "src/ai_bridge/web/templates/setup.html").read_text(encoding="utf-8")
-    index = (root / "src/ai_bridge/web/templates/index.html").read_text(encoding="utf-8")
-    app_js = (root / "src/ai_bridge/web/static/app.js").read_text(encoding="utf-8")
-    routes = (root / "src/ai_bridge/web/routes.py").read_text(encoding="utf-8")
+    app = (root / "src/ai_bridge/app.py").read_text(encoding="utf-8")
+    routes = (root / "src/ai_bridge/web/fallback_routes.py").read_text(encoding="utf-8")
+    setup_js = (root / "src/ai_bridge/web/static/fallback_setup.js").read_text(encoding="utf-8")
+    dashboard_js = (root / "src/ai_bridge/web/static/fallback_dashboard.js").read_text(encoding="utf-8")
+
+    assert "install_fallback_routes" in app
 
     for marker in (
         "Supabase Backup Bus",
@@ -148,12 +150,12 @@ def test_supabase_ui_contract_is_present_on_setup_and_dashboard():
         'id="supabasePoll"',
         'id="connectSupabase"',
     ):
-        assert marker in setup
+        assert marker in setup_js
 
-    assert 'id="fallbackRemote"' in index
-    assert 'id="testFallbackRemote"' in index
-    assert 'id="disconnectFallbackRemote"' in index
-    assert "fallbackRemoteCard" in app_js
+    assert "fallbackRemoteCard" in dashboard_js
+    assert 'id="fallbackRemote"' in dashboard_js
+    assert 'id="testFallbackRemote"' in dashboard_js
+    assert 'id="disconnectFallbackRemote"' in dashboard_js
 
     assert '"/setup/supabase"' in routes
     assert '"/control/fallback/test"' in routes
