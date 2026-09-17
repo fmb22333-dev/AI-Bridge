@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 import time
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from ai_bridge.core.service import BridgeService, DuplicateCommandError
@@ -17,10 +20,24 @@ TRANSPORT_ACCEPTED = "transport_accepted"
 
 
 class TransportRunner:
+    """Poll a remote transport and dispatch commands through bounded execution lanes.
+
+    A transport opts into lane scheduling by advertising ``multi_channel=True``.
+    Commands for the same Host Session are FIFO/serialized; different Sessions
+    and no-session adapter lanes may run concurrently. Result publication stays
+    serialized at the transport boundary.
+    """
+
     def __init__(self, service: BridgeService, transport: RemoteTransport, activity_observer=None) -> None:
         self.service = service
         self.transport = transport
         self.activity_observer = activity_observer
+        self._scheduler_lock = threading.RLock()
+        self._publication_lock = threading.RLock()
+        self._lane_queues: dict[str, deque] = {}
+        self._lane_active: set[str] = set()
+        self._closed = False
+        self._executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="AI-Bridge-Lane")
 
     @staticmethod
     def _utc_now() -> str:
@@ -42,21 +59,47 @@ class TransportRunner:
     def _status_query(self, command) -> ExecutionResult:
         target = str(command.arguments.get("command_id") or "").strip()
         if not target:
-            return ExecutionResult(command_id=command.command_id, status=ExecutionStatus.FAILED, failure=FailureInfo(origin=FailureOrigin.CORE, code="TARGET_COMMAND_ID_REQUIRED", message="arguments.command_id is required"))
+            return ExecutionResult(
+                command_id=command.command_id,
+                status=ExecutionStatus.FAILED,
+                failure=FailureInfo(
+                    origin=FailureOrigin.CORE,
+                    code="TARGET_COMMAND_ID_REQUIRED",
+                    message="arguments.command_id is required",
+                ),
+            )
         row = self.service.db.get_command(target)
         if row is None:
-            return ExecutionResult(command_id=command.command_id, status=ExecutionStatus.SUCCESS, result={"target_command_id": target, "state": "not_found", "terminal": False, "found": False})
+            return ExecutionResult(
+                command_id=command.command_id,
+                status=ExecutionStatus.SUCCESS,
+                result={
+                    "target_command_id": target,
+                    "state": "not_found",
+                    "terminal": False,
+                    "found": False,
+                },
+            )
         terminal_result = row.get("result")
         payload = {
-            "target_command_id": target, "state": str(row.get("status") or "unknown"),
-            "terminal": terminal_result is not None, "found": True,
-            "workspace": row.get("workspace_id"), "adapter": row.get("adapter"),
-            "operation": row.get("operation"), "evidence_id": row.get("evidence_id"),
-            "created_at": row.get("created_at"), "updated_at": row.get("updated_at"),
+            "target_command_id": target,
+            "state": str(row.get("status") or "unknown"),
+            "terminal": terminal_result is not None,
+            "found": True,
+            "workspace": row.get("workspace_id"),
+            "adapter": row.get("adapter"),
+            "operation": row.get("operation"),
+            "evidence_id": row.get("evidence_id"),
+            "created_at": row.get("created_at"),
+            "updated_at": row.get("updated_at"),
         }
         if bool(command.arguments.get("include_result")) and terminal_result is not None:
             payload["terminal_result"] = terminal_result
-        return ExecutionResult(command_id=command.command_id, status=ExecutionStatus.SUCCESS, result=payload)
+        return ExecutionResult(
+            command_id=command.command_id,
+            status=ExecutionStatus.SUCCESS,
+            result=payload,
+        )
 
     def _requires_durable_ack(self, command) -> bool:
         checker = getattr(self.transport, "requires_durable_ack", None)
@@ -111,12 +154,7 @@ class TransportRunner:
             for receipt_id in receipt_ids
         )
 
-    def _publish_receipts(
-        self,
-        command,
-        result: ExecutionResult,
-        receipts: list[dict],
-    ) -> bool:
+    def _publish_receipts(self, command, result: ExecutionResult, receipts: list[dict]) -> bool:
         publisher = getattr(self.transport, "publish_result_for_receipt", None)
         marker = getattr(self.service.db, "mark_ingress_receipt_published", None)
         lister = getattr(self.service.db, "list_ingress_receipts", None)
@@ -195,6 +233,14 @@ class TransportRunner:
         self.transport.publish_result(publishable)
         self.service.db.mark_published(self.transport.key, command.command_id)
 
+    def _publish_serialized(self, command, result: ExecutionResult, *, received_at: str, execute_ms: float) -> None:
+        if self._closed:
+            return
+        with self._publication_lock:
+            if self._closed:
+                return
+            self._publish(command, result, received_at=received_at, execute_ms=execute_ms)
+
     def _restore_contents_index(self) -> None:
         if getattr(self, "_contents_index_restored", False):
             return
@@ -215,14 +261,91 @@ class TransportRunner:
         if snapshot is not None:
             setter(self.transport.key, snapshot)
 
+    def _parallel_enabled(self) -> bool:
+        getter = getattr(self.transport, "message_state", None)
+        if not callable(getter):
+            return False
+        try:
+            state = getter()
+        except Exception:
+            return False
+        return isinstance(state, dict) and state.get("multi_channel") is True
+
+    @staticmethod
+    def _lane_key(command) -> str:
+        if command.session:
+            return f"session:{command.session}"
+        return f"adapter:{command.adapter}"
+
+    def _execute_scheduled(self, command, received_at: str) -> None:
+        self._activity(
+            "command_started",
+            command_id=command.command_id,
+            operation=command.operation,
+            adapter=command.adapter,
+            workspace=command.workspace,
+        )
+        execute_started = time.perf_counter()
+        try:
+            try:
+                result = self.service.execute(command)
+            except (DuplicateCommandError, sqlite3.IntegrityError):
+                existing = self.service.db.get_command(command.command_id)
+                if existing is None or not isinstance(existing.get("result"), dict):
+                    return
+                result = ExecutionResult.model_validate(existing["result"])
+            self._publish_serialized(
+                command,
+                result,
+                received_at=received_at,
+                execute_ms=(time.perf_counter() - execute_started) * 1000.0,
+            )
+        finally:
+            self._activity(
+                "command_finished",
+                command_id=command.command_id,
+                operation=command.operation,
+            )
+
+    def _drain_lane(self, lane: str) -> None:
+        while True:
+            with self._scheduler_lock:
+                queue = self._lane_queues.get(lane)
+                if not queue:
+                    self._lane_active.discard(lane)
+                    self._lane_queues.pop(lane, None)
+                    return
+                command, received_at = queue.popleft()
+            self._execute_scheduled(command, received_at)
+
+    def _schedule(self, command, received_at: str) -> None:
+        lane = self._lane_key(command)
+        with self._scheduler_lock:
+            if self._closed:
+                return
+            queue = self._lane_queues.setdefault(lane, deque())
+            queue.append((command, received_at))
+            if lane in self._lane_active:
+                return
+            self._lane_active.add(lane)
+            self._executor.submit(self._drain_lane, lane)
+
+    def shutdown(self, *, wait: bool = False) -> None:
+        with self._scheduler_lock:
+            self._closed = True
+            self._lane_queues.clear()
+        self._executor.shutdown(wait=wait, cancel_futures=True)
+
     def poll_once(self) -> int:
         count = 0
         self._activity("poll_started")
         try:
-            self._retry_pending_receipts()
-            self._restore_contents_index()
-            commands = self.transport.fetch_commands()
-            self._persist_contents_index()
+            with self._publication_lock:
+                self._retry_pending_receipts()
+                self._restore_contents_index()
+                commands = self.transport.fetch_commands()
+                self._persist_contents_index()
+
             for command in commands:
                 receipts = self._command_receipts(command)
                 self._record_receipts(command, receipts)
@@ -232,44 +355,65 @@ class TransportRunner:
                 elif self.service.db.is_published(self.transport.key, command.command_id):
                     continue
 
-                self._activity("command_started", command_id=command.command_id, operation=command.operation, adapter=command.adapter, workspace=command.workspace)
-                try:
-                    received_at = self._utc_now()
-                    execute_started = time.perf_counter()
-                    durable_ack = self._requires_durable_ack(command)
-                    row = self.service.db.get_command(command.command_id) if durable_ack else None
-                    if durable_ack:
-                        accept = getattr(self.service.db, "accept_transport_command", None)
-                        if callable(accept):
-                            row = accept(command)
-                        elif row is None:
-                            self.service.db.insert_command(command, status=TRANSPORT_ACCEPTED)
-                            row = self.service.db.get_command(command.command_id)
-                        ack = getattr(self.transport, "ack_command", None)
-                        if callable(ack):
+                received_at = self._utc_now()
+                durable_ack = self._requires_durable_ack(command)
+                row = self.service.db.get_command(command.command_id) if durable_ack else None
+                if durable_ack:
+                    accept = getattr(self.service.db, "accept_transport_command", None)
+                    if callable(accept):
+                        row = accept(command)
+                    elif row is None:
+                        self.service.db.insert_command(command, status=TRANSPORT_ACCEPTED)
+                        row = self.service.db.get_command(command.command_id)
+                    ack = getattr(self.transport, "ack_command", None)
+                    if callable(ack):
+                        with self._publication_lock:
                             ack(command)
-                        terminal_result = row.get("result") if isinstance(row, dict) else None
-                        if terminal_result is not None:
-                            result = ExecutionResult.model_validate(terminal_result)
-                            self._publish(command, result, received_at=received_at, execute_ms=(time.perf_counter() - execute_started) * 1000.0)
-                            count += 1
-                            continue
-                        if not isinstance(row, dict) or str(row.get("status") or "") != TRANSPORT_ACCEPTED:
-                            continue
-                    if self._is_status_query(command):
+                    terminal_result = row.get("result") if isinstance(row, dict) else None
+                    if terminal_result is not None:
+                        result = ExecutionResult.model_validate(terminal_result)
+                        self._publish_serialized(
+                            command,
+                            result,
+                            received_at=received_at,
+                            execute_ms=0.0,
+                        )
+                        count += 1
+                        continue
+                    if not isinstance(row, dict) or str(row.get("status") or "") != TRANSPORT_ACCEPTED:
+                        continue
+
+                if self._is_status_query(command):
+                    self._activity(
+                        "command_started",
+                        command_id=command.command_id,
+                        operation=command.operation,
+                        adapter=command.adapter,
+                        workspace=command.workspace,
+                    )
+                    started = time.perf_counter()
+                    try:
                         result = self._status_query(command)
-                    else:
-                        try:
-                            result = self.service.execute(command)
-                        except (DuplicateCommandError, sqlite3.IntegrityError):
-                            existing = self.service.db.get_command(command.command_id)
-                            if existing is None or not isinstance(existing.get("result"), dict):
-                                continue
-                            result = ExecutionResult.model_validate(existing["result"])
-                    self._publish(command, result, received_at=received_at, execute_ms=(time.perf_counter() - execute_started) * 1000.0)
+                        self._publish_serialized(
+                            command,
+                            result,
+                            received_at=received_at,
+                            execute_ms=(time.perf_counter() - started) * 1000.0,
+                        )
+                    finally:
+                        self._activity(
+                            "command_finished",
+                            command_id=command.command_id,
+                            operation=command.operation,
+                        )
                     count += 1
-                finally:
-                    self._activity("command_finished", command_id=command.command_id, operation=command.operation)
+                    continue
+
+                if self._parallel_enabled():
+                    self._schedule(command, received_at)
+                else:
+                    self._execute_scheduled(command, received_at)
+                count += 1
             return count
         finally:
             self._activity("poll_finished", accepted=count)

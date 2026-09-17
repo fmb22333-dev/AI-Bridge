@@ -2,11 +2,11 @@
   function fallbackRemoteCard(remote) {
     if (!remote || !remote.configured) {
       const status = remote?.status === "disabled" ? "Disabled" : "未配置";
-      const detail = remote?.status === "disabled" ? "备用通道已断开。" : "Supabase Backup Bus 尚未连接。";
-      return `<div class="item remoteState offline"><div class="sessionTitle"><span class="dot"></span><b>${esc(status)}</b><span class="stateText">supabase_fallback</span></div><small>${esc(detail)}</small></div>`;
+      const detail = remote?.status === "disabled" ? "Supabase 主通道已断开。" : "Supabase Primary Bus 尚未连接。";
+      return `<div class="item remoteState offline"><div class="sessionTitle"><span class="dot"></span><b>${esc(status)}</b><span class="stateText">supabase_primary</span></div><small>${esc(detail)}</small></div>`;
     }
     const good = remote.status === "connected";
-    return `<div class="item remoteState ${good ? "online" : "offline"}"><div class="sessionTitle"><span class="dot"></span><b>${good ? "Connected" : esc(remote.status)}</b><span class="stateText">supabase_fallback</span></div><small>${esc(remote.project_url || "")}</small><small>Bridge ID: <b>${esc(remote.bridge_id || "")}</b> · Poll ${esc(remote.poll_interval_seconds ?? 0.5)}s</small>${remote.credential_saved ? "<small>凭据：已由 Windows DPAPI 安全保存</small>" : ""}${remote.detail ? `<small>${esc(remote.detail)}</small>` : ""}</div>`;
+    return `<div class="item remoteState ${good ? "online" : "offline"}"><div class="sessionTitle"><span class="dot"></span><b>${good ? "Connected" : esc(remote.status)}</b><span class="stateText">supabase_primary</span></div><small>${esc(remote.project_url || "")}</small><small>Bridge ID: <b>${esc(remote.bridge_id || "")}</b> · Poll ${esc(remote.poll_interval_seconds ?? 0.5)}s · Multi-AI ${remote.multi_ai ? "ON" : "OFF"}</small>${remote.credential_saved ? "<small>凭据：已由 Windows DPAPI 安全保存</small>" : ""}${remote.detail ? `<small>${esc(remote.detail)}</small>` : ""}</div>`;
   }
 
   function ensureFallbackCard() {
@@ -14,18 +14,20 @@
     const githubRemote = $("#remote");
     const githubCard = githubRemote?.closest("article.card");
     if (!githubCard) return;
+    const githubHeading = githubCard.querySelector("h2");
+    if (githubHeading) githubHeading.textContent = "GitHub Bus · Backup + Authority";
     const article = document.createElement("article");
     article.className = "card";
     article.innerHTML = `
-      <h2>Supabase Backup Bus</h2>
-      <div id="fallbackRemote"><p class="muted">正在读取备用通道…</p></div>
+      <h2>Supabase Primary Bus</h2>
+      <div id="fallbackRemote"><p class="muted">正在读取 Supabase 主通道…</p></div>
       <div class="actions">
         <button id="editFallbackRemote">修改配置</button>
         <button id="testFallbackRemote">测试连接</button>
         <button id="disconnectFallbackRemote" class="danger">断开并清除凭据</button>
       </div>
       <div id="fallbackRemoteError" class="errorText"></div>
-      <small>与 GitHub Bus 并行监听；故障切换时继续使用同一个 command_id。</small>
+      <small>默认高速命令通道；支持多 AI 独立提交。GitHub fallback 继续并行监听，故障切换必须保留同一个 command_id。</small>
     `;
     githubCard.insertAdjacentElement("afterend", article);
 
@@ -42,11 +44,11 @@
       }
     };
     $("#disconnectFallbackRemote").onclick = async () => {
-      if (!confirm("断开 Supabase Backup Bus 并从本机删除保存的 Secret Key？")) return;
+      if (!confirm("断开 Supabase Primary Bus 并从本机删除保存的 Secret Key？")) return;
       const target = $("#fallbackRemoteError");
       try {
         await api("/control/fallback", {method: "DELETE"});
-        target.textContent = "备用通道已断开，Secret Key 已从本机安全存储中删除。";
+        target.textContent = "Supabase 主通道已断开，Secret Key 已从本机安全存储中删除。GitHub fallback 不受影响。";
         await refreshFallbackRemote();
       } catch (error) {
         target.textContent = "断开失败：" + error.message;
