@@ -108,6 +108,7 @@ class ExecutionPolicyStore:
                     workspace = str(workspace_id).strip()
                     if not workspace:
                         continue
+                    # Migration from Runtime 0.2.6.7 numeric workspace values.
                     if isinstance(item, (int, float)):
                         parsed_workspaces[workspace] = {
                             "budget_seconds": _validated_seconds(item),
@@ -128,6 +129,7 @@ class ExecutionPolicyStore:
                         }
             self._workspaces = parsed_workspaces
         except Exception:
+            # Invalid local settings must not prevent Bridge startup.
             self._projects = {}
             self._workspaces = {}
 

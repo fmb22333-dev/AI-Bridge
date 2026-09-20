@@ -5,14 +5,18 @@ import socket
 import threading
 import time
 import webbrowser
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
 
 from ai_bridge.config import default_data_dir, ensure_connection_config, load_workspaces
 from ai_bridge.adapters.bridge_admin import ADAPTER_NAME as BRIDGE_ADMIN_NAME, BridgeAdminExecutor, SYSTEM_WORKSPACE, descriptor as bridge_admin_descriptor
+from ai_bridge.adapters.workspace_worker import ADAPTER_NAME as WORKSPACE_ADAPTER_NAME, WorkspaceWorkerExecutor, descriptor as workspace_worker_descriptor
 from ai_bridge.core.service import BridgeService
 from ai_bridge.core.execution_policy import ExecutionPolicyStore
+from ai_bridge.core.task_idle_notifier import TaskIdleNotifier
+from ai_bridge.core.worker_supervisor import WorkerSupervisor
 from ai_bridge.core.workspace import WorkspaceRegistry
 from ai_bridge.persistence.db import BridgeDB
 from ai_bridge.security.secret_store import default_secret_store
@@ -44,7 +48,23 @@ def build_runtime(*, data_dir: Path, port: int):
         workspaces=workspaces,
         execution_policy=ExecutionPolicyStore(data_dir / "execution_policy.json"),
     )
+    task_idle_notifier = TaskIdleNotifier(
+        service.db,
+        state_path=data_dir / "state" / "task_idle_notifier.json",
+        idle_seconds=300.0,
+    )
     service.adapter_registry.register(bridge_admin_descriptor(), replace=True)
+
+    worker_supervisor = WorkerSupervisor()
+    service.adapter_registry.register(workspace_worker_descriptor(), replace=True)
+    service.register_executor(
+        WORKSPACE_ADAPTER_NAME,
+        WorkspaceWorkerExecutor(
+            workspaces=workspaces,
+            supervisor=worker_supervisor,
+            workspaces_file=workspaces_file,
+        ),
+    )
 
     def _plugin_status():
         return service.plugins.status(live_sessions=service.active_sessions())
@@ -86,6 +106,7 @@ def build_runtime(*, data_dir: Path, port: int):
             workspace=workspace,
             force_restart=bool(arguments.get("force_restart", False)),
         )
+
 
     def _host_force_recover(arguments: dict):
         host_id = str(arguments.get("host_id") or "").strip().lower()
@@ -153,7 +174,23 @@ def build_runtime(*, data_dir: Path, port: int):
             project_resume_handler=_project_resume,
         ),
     )
-    app = create_app(service, auth_token=connection["token"])
+
+    @asynccontextmanager
+    async def _runtime_lifespan(_app):
+        task_idle_notifier.start()
+        try:
+            yield
+        finally:
+            task_idle_notifier.stop()
+            worker_supervisor.close()
+
+    app = create_app(
+        service,
+        auth_token=connection["token"],
+        lifespan=_runtime_lifespan,
+    )
+    app.state.worker_supervisor = worker_supervisor
+    app.state.task_idle_notifier = task_idle_notifier
     runtime_state = {
         "remote": {
             "configured": False,
@@ -162,10 +199,9 @@ def build_runtime(*, data_dir: Path, port: int):
             "suggested_bridge_id": default_bridge_id(),
         }
     }
+    app.state.runtime_state = runtime_state
     app.state.remote_controller = None
     web_root = Path(__file__).parent / "web"
-    # Install optional fallback routes first so they can compose Setup and
-    # Dashboard assets without expanding the legacy monolithic web module.
     install_fallback_routes(
         app,
         auth_token=connection["token"],

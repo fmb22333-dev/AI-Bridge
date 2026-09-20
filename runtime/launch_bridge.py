@@ -14,6 +14,8 @@ _original_bridge_admin_init = bridge_admin_module.BridgeAdminExecutor.__init__
 
 
 def _versioned_bridge_admin_init(self, *, data_dir: Path, **kwargs) -> None:
+    # Keep the Supervisor runtime-dir override, but transparently preserve
+    # future BridgeAdminExecutor constructor capabilities.
     _original_bridge_admin_init(self, data_dir=data_dir, **kwargs)
     runtime_env = os.environ.get("AI_BRIDGE_RUNTIME_DIR")
     if runtime_env:
@@ -24,6 +26,8 @@ bridge_admin_module.BridgeAdminExecutor.__init__ = _versioned_bridge_admin_init
 
 import ai_bridge.app as bridge_app_module
 
+# Supervisor owns browser presentation. Runtime restarts/updates must not spawn
+# additional tabs. Manual non-supervised launches keep the legacy behavior.
 if os.environ.get("AI_BRIDGE_SUPERVISED") == "1":
     bridge_app_module.webbrowser.open = lambda *args, **kwargs: False
 
