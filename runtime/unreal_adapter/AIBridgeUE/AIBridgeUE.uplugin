@@ -1,0 +1,17 @@
+{
+  "FileVersion": 3,
+  "Version": 11,
+  "VersionName": "0.5.3",
+  "FriendlyName": "AI Bridge UE Editor",
+  "Description": "Editor-only AI Bridge host for shallow Unreal inspection plus explicit FluidFlux source-art export for Houdini parity.",
+  "Category": "Editor",
+  "CanContainContent": false,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "AIBridgeUEEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
