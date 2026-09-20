@@ -49,6 +49,7 @@ class SessionRegistry:
             raise ValueError("stale_after_seconds must be positive")
         self.stale_after_seconds = float(stale_after_seconds)
         self._items: dict[str, SessionInfo] = {}
+        self._busy_unknown: dict[str, dict] = {}
         self._lock = RLock()
 
     def register(self, info: SessionInfo, *, preserve_timestamps: bool = False) -> None:
@@ -84,6 +85,7 @@ class SessionRegistry:
             return updated
 
     def touch(self, session_id: str) -> SessionInfo:
+        """Refresh transport liveness without changing session identity or project state."""
         with self._lock:
             existing = self._items[session_id]
             updated = replace(existing, last_seen_at=utc_now_iso())
@@ -94,11 +96,42 @@ class SessionRegistry:
         with self._lock:
             return self._items[session_id]
 
+    def mark_busy_unknown(self, session_id: str, *, command_id: str, operation: str) -> dict:
+        with self._lock:
+            if session_id not in self._items:
+                raise KeyError(session_id)
+            state = {
+                "session_id": session_id,
+                "state": "busy_unknown",
+                "source_command_id": str(command_id),
+                "source_operation": str(operation),
+                "marked_at": utc_now_iso(),
+            }
+            self._busy_unknown[session_id] = state
+            return dict(state)
+
+    def busy_unknown(self, session_id: str) -> dict | None:
+        with self._lock:
+            state = self._busy_unknown.get(session_id)
+            return None if state is None else dict(state)
+
+    def clear_busy_unknown(self, session_id: str, *, command_id: str | None = None) -> bool:
+        with self._lock:
+            state = self._busy_unknown.get(session_id)
+            if state is None:
+                return False
+            if command_id is not None and str(state.get("source_command_id")) != str(command_id):
+                return False
+            self._busy_unknown.pop(session_id, None)
+            return True
+
     def status(self, session_id: str, *, now: datetime | None = None) -> SessionStatus:
         info = self.get(session_id)
         now_utc = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
         seconds = max(0.0, (now_utc - _parse_utc(info.last_seen_at)).total_seconds())
         state = "connected" if seconds <= self.stale_after_seconds else "disconnected"
+        if state == "connected" and self.busy_unknown(session_id) is not None:
+            state = "busy_unknown"
         return SessionStatus(
             session_id=session_id,
             state=state,
@@ -107,7 +140,7 @@ class SessionRegistry:
         )
 
     def is_active(self, session_id: str) -> bool:
-        return self.status(session_id).state == "connected"
+        return self.status(session_id).state in {"connected", "busy_unknown"}
 
     def list(self, *, adapter: str | None = None) -> list[SessionInfo]:
         with self._lock:

@@ -16,6 +16,21 @@ class QueueAdapterExecutor:
                 failure=FailureInfo(origin=FailureOrigin.ADAPTER, code="SESSION_REQUIRED"),
             )
         effective_timeout = self.timeout if timeout is None else max(1.0, float(timeout))
+        busy_getter = getattr(self.bus, "busy_source", None)
+        busy = busy_getter(command.session) if callable(busy_getter) else None
+        if busy is not None:
+            return ExecutionResult(
+                command_id=command.command_id,
+                status=ExecutionStatus.CONFLICT,
+                failure=FailureInfo(
+                    origin=FailureOrigin.CORE,
+                    stage="precondition",
+                    code="SESSION_BUSY_UNKNOWN",
+                    message="A prior Host operation exceeded its execution budget and has not produced a terminal Adapter result yet.",
+                    retryable=False,
+                ),
+                last_known_state={"session": command.session, "session_state": "busy_unknown", **busy},
+            )
         result = self.bus.submit(command.session, command, timeout=effective_timeout)
         if result is None:
             budgeted = timeout is not None
@@ -37,6 +52,7 @@ class QueueAdapterExecutor:
                     "session": command.session,
                     "budget_seconds": effective_timeout if budgeted else None,
                     "host_operation_may_still_be_running": True,
+                    "session_state": "busy_unknown",
                 },
             )
         return result
