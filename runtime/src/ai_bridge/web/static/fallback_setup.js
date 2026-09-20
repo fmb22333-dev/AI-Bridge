@@ -5,11 +5,9 @@
     if (byId("supabaseBackupCard")) return byId("supabaseBackupCard");
     const main = document.querySelector("main");
     if (!main) return null;
-    const githubHeading = [...document.querySelectorAll("h2")].find((node) => node.textContent.trim() === "GitHub Bus");
-    if (githubHeading) githubHeading.textContent = "GitHub Bus · Backup + Authority";
     const card = document.createElement("div");
     card.className = "card";
-    card.id = "supabaseBackupCard"; // compatibility id through 0.2.6.x
+    card.id = "supabaseBackupCard";
     card.innerHTML = `
       <h2>4. Supabase Primary Bus</h2>
       <p>默认高速命令通道。GitHub Bus 作为备用命令通道并继续承担 Authority / 文档 / 版本职责；Bridge ID 自动继承 GitHub Authority。</p>
@@ -28,6 +26,8 @@
       <div id="supabaseBridgeHint" class="hint muted"></div>
       <div id="supabaseOut" class="status muted">正在读取 Supabase 主通道状态…</div>
     `;
+    const githubHeading = [...document.querySelectorAll("h2")].find((node) => node.textContent.trim() === "GitHub Bus");
+    if (githubHeading) githubHeading.textContent = "GitHub Bus · Backup + Authority";
     main.appendChild(card);
     return card;
   }
@@ -55,18 +55,18 @@
       ? "已由 Windows DPAPI 安全保存；留空继续使用现有 Key"
       : "sb_secret_...";
     hint.textContent = state.primary_configured
-      ? `Bridge ID 自动继承 GitHub Authority：${state.primary_bridge_id || "当前 Bridge"}`
-      : "请先连接 GitHub Authority / Backup Bus；Supabase Primary Bus 必须复用同一个 Bridge ID。";
+      ? `Bridge ID 自动继承：${state.primary_bridge_id || "当前 GitHub Bus"}`
+      : "请先连接 GitHub Bus；Supabase Primary Bus 必须复用 GitHub Authority 的同一个 Bridge ID。";
     connect.disabled = !state.primary_configured;
 
     if (!fallback.configured) {
       out.className = "status muted";
-      out.textContent = fallback.status === "disabled" ? "Supabase 主通道已断开。" : "尚未配置 Supabase Primary Bus。";
+      out.textContent = fallback.status === "disabled" ? "备用通道已断开。" : "尚未配置 Supabase Primary Bus。";
       return;
     }
     const good = fallback.status === "connected";
     out.className = "status " + (good ? "ok" : "error");
-    out.textContent = `${good ? "✓ 主通道已连接" : fallback.status} · ${fallback.project_url || ""} · Poll ${fallback.poll_interval_seconds || 0.5}s${fallback.credential_saved ? " · Key 已安全保存" : ""}${fallback.detail ? " · " + fallback.detail : ""}`;
+    out.textContent = `${good ? "✓ 已连接" : fallback.status} · ${fallback.project_url || ""} · Poll ${fallback.poll_interval_seconds || 0.5}s${fallback.credential_saved ? " · Key 已安全保存" : ""}${fallback.detail ? " · " + fallback.detail : ""}`;
   }
 
   async function load() {
