@@ -1,171 +1,5 @@
 {
-  "allowed_transitions": {
-    "candidate": [
-      "validated",
-      "deprecated"
-    ],
-    "deprecated": [],
-    "observed": [
-      "candidate",
-      "deprecated"
-    ],
-    "promoted": [
-      "deprecated"
-    ],
-    "validated": [
-      "promoted",
-      "candidate",
-      "deprecated"
-    ]
-  },
-  "entries": [
-    {
-      "id": "recipe.cook.checked",
-      "kind": "recipe",
-      "scope": "universal_houdini_workflow",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "recipe:cook.checked",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
-      "id": "hostrule.kinefx.world_joint_attribute_contract",
-      "kind": "host_rule",
-      "scope": "kinefx_point_skeleton",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "host_rule:kinefx.world_joint_attribute_contract",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
-      "id": "recipe.fbx.character_import.set_animation_and_cook",
-      "kind": "recipe",
-      "scope": "kinefx_fbxcharacterimport_21_0_440",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "recipe:fbx.character_import.set_animation_and_cook",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
-      "id": "recipe.kinefx.import_with_frameinfo",
-      "kind": "recipe",
-      "scope": "kinefx_node_type_21_0_440",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "recipe:kinefx.import_with_frameinfo",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
-      "id": "recipe.network.ensure_and_cook",
-      "kind": "recipe",
-      "scope": "houdini_declarative_network_21_0_440",
-      "semantic_contract": {
-        "guarded_plan_handoff": "network.ensure_plan.plan_hash may be passed as expected_plan_hash; mismatch fails before mutation"
-      },
-      "state": "promoted",
-      "supersedes": [
-        "network.build_and_cook for ordinary desired-state reconciliation + Cook",
-        "manual find/create/update/connect/cook orchestration when the final declared graph is known"
-      ],
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "recipe:network.ensure_and_cook",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
-      "id": "hostrule.network.ensure_reconciliation_vs_expected_hash",
-      "kind": "host_rule",
-      "scope": "houdini_declarative_network_21_0_440",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "host_rule:network.ensure_reconciliation_vs_expected_hash",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
-      "id": "hostrule.network.ensure_plan_advisory_preview",
-      "kind": "host_rule",
-      "scope": "houdini_declarative_network_21_0_440",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "host_rule:network.ensure_plan_advisory_preview",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "plan_guard_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
-      "id": "recipe.parm.safe_write_and_cook",
-      "kind": "recipe",
-      "scope": "houdini_parameters_21_0_440",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "recipe:parm.safe_write_and_cook",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    },
-    {
-      "bounded_contract": {
-        "concurrency": "no implicit retry; callers must re-read on stale hash conflict",
-        "failure_transaction": "normal recipe.apply is L2 with Core rollback_on_failure; terminal FAILED restores the verified pre-command checkpoint while preserving the original recipe failure",
-        "scope_limit": "Houdini code-parameter patch + Cook workflow validated on Houdini 21.0.440; no cross-host claim",
-        "sequence": [
-          "code.read",
-          "code.patch(expected_hash=read.hash)",
-          "cook.execute",
-          "conditional host.errors"
-        ],
-        "validation_mode": "recipe.apply_validation may execute unpromoted candidates but always restores its checkpoint after every non-budget terminal outcome"
-      },
-      "id": "recipe.code.safe_patch_and_cook",
-      "kind": "recipe",
-      "scope": "houdini_code_patch_and_cook_21_0_440",
-      "state": "promoted",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "target": "recipe:code.safe_patch_and_cook",
-      "validation": {
-        "live_or_baseline_pass": true,
-        "regression_pass": true
-      }
-    }
-  ],
+  "schema_version": "1.0",
   "lifecycle": [
     "observed",
     "candidate",
@@ -173,19 +7,1018 @@
     "promoted",
     "deprecated"
   ],
-  "promotion_gate": {
-    "promoted_requires": [
-      "validated_state",
-      "regression_pass",
-      "live_or_project_baseline_evidence",
-      "scope_not_silently_broadened"
+  "allowed_transitions": {
+    "observed": [
+      "candidate",
+      "deprecated"
     ],
+    "candidate": [
+      "validated",
+      "deprecated"
+    ],
+    "validated": [
+      "promoted",
+      "candidate",
+      "deprecated"
+    ],
+    "promoted": [
+      "deprecated"
+    ],
+    "deprecated": []
+  },
+  "promotion_gate": {
     "validated_requires": [
       "machine_readable_definition",
       "bounded_scope",
       "evidence",
       "regression_or_live_validation"
+    ],
+    "promoted_requires": [
+      "validated_state",
+      "regression_pass",
+      "live_or_project_baseline_evidence",
+      "scope_not_silently_broadened"
     ]
   },
-  "schema_version": "1.0"
+  "entries": [
+    {
+      "id": "recipe.cook.checked",
+      "kind": "recipe",
+      "state": "promoted",
+      "target": "recipe:cook.checked",
+      "scope": "universal_houdini_workflow",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "historical_houdini_runtime",
+          "summary": "Repeated pattern: explicit Cook followed by host errors/warnings readback."
+        },
+        {
+          "source_class": "regression_test",
+          "summary": "P1 Seed Pack 1 recipe guard validation PASS."
+        },
+        {
+          "source_class": "live_bridge",
+          "summary": "Knowledge Pack live activation verified on Houdini 21.0.440."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Repeated historical Cook + diagnostics sequence."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Recipe guard and regression suite PASS."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-06",
+          "reason": "Runtime 0.2.1.0 Seed Pack live activated."
+        }
+      ]
+    },
+    {
+      "id": "hostrule.kinefx.world_joint_attribute_contract",
+      "kind": "host_rule",
+      "state": "promoted",
+      "target": "host_rule:kinefx.world_joint_attribute_contract",
+      "scope": "kinefx_point_skeleton",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "retarget_runtime",
+          "summary": "Validated Retarget project repeatedly used P as world joint position and transform as matrix3 world rotation."
+        },
+        {
+          "source_class": "regression_test",
+          "summary": "P1 Seed Pack host-rule presence and version scope validated."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "state_history": [
+        {
+          "state": "observed",
+          "date": "2026-08",
+          "reason": "Repeated Retarget runtime evidence."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Historical evidence curated and version-scoped."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-06",
+          "reason": "Seed Pack 1 live activation."
+        }
+      ]
+    },
+    {
+      "id": "template.kinefx.import_fix_triplet",
+      "kind": "template",
+      "state": "validated",
+      "target": "template:kinefx.import_fix_triplet",
+      "scope": "project_family",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "retarget_handoff",
+          "summary": "FBX Character Import outputs 0/1/2 were repeatedly wired to input-fix inputs 0/1/2."
+        },
+        {
+          "source_class": "retarget_runtime",
+          "summary": "Observed import nodes include IMPORT_ANIM / IMPORT_DEFAULT / IMPORT_GRIP of type kinefx::Sop/fbxcharacterimport."
+        },
+        {
+          "source_class": "live_bridge_network_scan",
+          "summary": "Houdini 21.0.440 live scan confirmed three repeated import/frame-info/input-fix chains and corrected the animated-pose routing."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "promotion_requirements": [
+        "validate on an independent non-Retarget project before universal promotion",
+        "replace project-specific node names with role-based construction"
+      ],
+      "state_history": [
+        {
+          "state": "observed",
+          "date": "2026-08",
+          "reason": "Repeated in Retarget project network."
+        },
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Machine-readable template extracted without universalizing project paths."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Three live project-family instances matched corrected topology; regression coverage added."
+        }
+      ]
+    },
+    {
+      "id": "template.kinefx.output_triplet_to_fbx_character",
+      "kind": "template",
+      "state": "validated",
+      "target": "template:kinefx.output_triplet_to_fbx_character",
+      "scope": "project_family",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "retarget_handoff",
+          "summary": "Final three streams were routed through FBX_output_Transform outputs 0/1/2 into FBX_OUT inputs 0/1/2."
+        },
+        {
+          "source_class": "retarget_runtime",
+          "summary": "FBX_OUT observed as kinefx::Sop/rop_fbxcharacteroutput."
+        },
+        {
+          "source_class": "live_bridge_network_scan",
+          "summary": "Live FBX_output_Transform -> FBX_OUT 0/1/2 connector mapping confirmed on Houdini 21.0.440."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "promotion_requirements": [
+        "validate on an independent non-Retarget project before universal promotion"
+      ],
+      "state_history": [
+        {
+          "state": "observed",
+          "date": "2026-08",
+          "reason": "Repeated validated Retarget export wiring."
+        },
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Extracted as project-family template."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Live node type and connector mapping matched historical baseline; regression coverage added."
+        }
+      ]
+    },
+    {
+      "id": "alias.fbx_character_import.file_parameters",
+      "kind": "alias_set",
+      "state": "validated",
+      "target": "alias:fbx_character_import.file_parameters",
+      "scope": "node_type_version_sensitive",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "batch_log",
+          "summary": "Import File observed at /obj/geo1/IMPORT_ANIM/fbxfile."
+        },
+        {
+          "source_class": "batch_log",
+          "summary": "Animation FBX File observed at /obj/geo1/IMPORT_ANIM/animfbxfile and INPUT_FILE readback was required."
+        },
+        {
+          "source_class": "live_hom",
+          "summary": "fbxfile and animfbxfile confirmed on two distinct live kinefx::fbxcharacterimport nodes; animfbxfile readback succeeded."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "promotion_requirements": [
+        "validate on an independent project before broadening beyond Houdini 21.0.440 node-type scope"
+      ],
+      "state_history": [
+        {
+          "state": "observed",
+          "date": "2026-08",
+          "reason": "Exact parm paths logged in Retarget batch workflow."
+        },
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Preserved as version-sensitive alias evidence."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Two live nodes + historical batch logs agree on exact parm tokens."
+        }
+      ]
+    },
+    {
+      "id": "template.root_motion.directional_projection",
+      "kind": "algorithm_template",
+      "state": "candidate",
+      "target": "template:root_motion.directional_projection",
+      "scope": "animation_project_family",
+      "supported_host_versions": [
+        "historical_project_scope"
+      ],
+      "evidence": [
+        {
+          "source_class": "historical_houdini_project",
+          "summary": "Eight-direction root path correction used fixedP = startP + dir8 * dot(originalP - startP, dir8), modifying root only."
+        }
+      ],
+      "validation": {
+        "regression_pass": false,
+        "live_or_baseline_pass": true
+      },
+      "promotion_requirements": [
+        "validate coordinate-up convention explicitly",
+        "separate root-only semantic from character-specific axis assumptions",
+        "test on a second locomotion asset set"
+      ],
+      "state_history": [
+        {
+          "state": "observed",
+          "date": "2026-06",
+          "reason": "Validated in eight-direction animation task."
+        },
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Reusable algorithm extracted but axis/project scope retained."
+        }
+      ]
+    },
+    {
+      "id": "semantic.parameter_vs_detail_attribute_access",
+      "kind": "host_rule_candidate",
+      "state": "validated",
+      "target": "candidate_host_rule:parameter_vs_detail_attribute_access",
+      "scope": "houdini_expression_semantics",
+      "supported_host_versions": [
+        "historical_project_scope"
+      ],
+      "evidence": [
+        {
+          "source_class": "historical_houdini_project",
+          "summary": "Node parameter access used ch(...); detail attribute access used detail(path, attribute_name, 0). Parameter and attribute namespaces must not be conflated."
+        }
+      ],
+      "validation": {
+        "regression_pass": false,
+        "live_or_baseline_pass": true
+      },
+      "promotion_requirements": [
+        "add regression example before moving to promoted"
+      ],
+      "state_history": [
+        {
+          "state": "observed",
+          "date": "2026-06",
+          "reason": "Explicitly clarified during Houdini project work."
+        },
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "General semantic extracted."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Semantics are stable but not yet covered by Bridge regression."
+        }
+      ]
+    },
+    {
+      "id": "alias.fbx_character_output.core_parameters",
+      "kind": "alias_set",
+      "state": "validated",
+      "target": "alias:fbx_output.ui_semantics",
+      "scope": "node_type_version_sensitive",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "live_hom",
+          "summary": "FBX_OUT inspect.node confirmed cliprangemode/f1/f2/f3/inputfilepath/outputfilepath/clipname on kinefx::Sop/rop_fbxcharacteroutput."
+        },
+        {
+          "source_class": "live_parm_read",
+          "summary": "cliprangemode, inputfilepath, and outputfilepath successfully read from the live node."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "promotion_requirements": [
+        "validate on an independent project before broadening scope",
+        "do not infer cliprangemode menu semantics from numeric value alone"
+      ],
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Historical UI labels preserved without universal tokens."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Live HOM established exact node-type parameter tokens on Houdini 21.0.440."
+        }
+      ]
+    },
+    {
+      "id": "recipe.fbx.character_import.set_animation_and_cook",
+      "kind": "recipe",
+      "state": "promoted",
+      "target": "recipe:fbx.character_import.set_animation_and_cook",
+      "scope": "kinefx_fbxcharacterimport_21_0_440",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "historical_batch_workflow",
+          "summary": "Repeated requirement: update Animation FBX File, read back actual input, Cook, and inspect errors."
+        },
+        {
+          "source_class": "live_hom",
+          "summary": "animfbxfile verified on two live kinefx::fbxcharacterimport nodes and read successfully."
+        },
+        {
+          "source_class": "composition",
+          "summary": "Recipe uses only promoted bounded primitives with optimistic concurrency and no implicit retry."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Repeated FBX batch workflow identified as high-value syntax sugar."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Live token validation plus recipe guard regression."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-06",
+          "reason": "Bounded specialization reduces caller arguments without weakening safety."
+        }
+      ]
+    },
+    {
+      "id": "template.retarget.frozen_timeline_sidechain",
+      "kind": "template",
+      "state": "candidate",
+      "target": "template:retarget.frozen_timeline_sidechain",
+      "scope": "project_family",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "live_bridge_network_scan",
+          "summary": "Footstep branch: TimeShift freeze -> Python timeline -> export consumer auxiliary input."
+        },
+        {
+          "source_class": "live_bridge_network_scan",
+          "summary": "Foot Plant branch: TimeShift freeze -> Python timeline -> solver auxiliary input."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "promotion_requirements": [
+        "validate a third independent subsystem or non-Retarget project",
+        "inspect TimeShift parameters to confirm the intended frozen-reference semantics",
+        "define the timeline payload contract independently of historical node names"
+      ],
+      "state_history": [
+        {
+          "state": "observed",
+          "date": "2026-09-06",
+          "reason": "Two live Retarget branches share the same sidechain role pattern."
+        },
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Captured as project-family evidence without execution authority."
+        }
+      ]
+    },
+    {
+      "id": "alias.houdini.node_type.constructor_tokens",
+      "kind": "alias_set",
+      "state": "validated",
+      "target": "alias:houdini.node_type.constructor_tokens",
+      "scope": "host_version_node_type",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "live_network_validate",
+          "summary": "Display type strings failed constructor preflight while constructor tokens succeeded for FBX Character Import and Null."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "promotion_requirements": [
+        "validate additional independent node families before claiming a generic conversion rule"
+      ],
+      "state_history": [
+        {
+          "state": "observed",
+          "date": "2026-09-06",
+          "reason": "Display-vs-constructor mismatch found during Phase-5 executable template work."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Two node families confirmed by live network.validate probes."
+        }
+      ]
+    },
+    {
+      "id": "recipe.kinefx.import_with_frameinfo",
+      "kind": "recipe",
+      "state": "promoted",
+      "target": "recipe:kinefx.import_with_frameinfo",
+      "scope": "kinefx_node_type_21_0_440",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "validated_template",
+          "summary": "Derived from validated import/frame-info portion of the Retarget import topology without project-defined subnet mutation."
+        },
+        {
+          "source_class": "live_network_validate",
+          "summary": "Full planned node types, parameters, and import output2 -> frame-info connection passed live preflight."
+        },
+        {
+          "source_class": "validated_aliases",
+          "summary": "fbxfile and animfbxfile were independently validated on two live FBX Character Import nodes."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "High-frequency node creation boilerplate selected for first executable syntax sugar."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Constructor tokens, parameter aliases, and full graph preflight passed live."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-06",
+          "reason": "Self-contained graph creation does not rewire existing project-specific nodes."
+        }
+      ]
+    },
+    {
+      "id": "recipe.retarget.fbx_import_to_input_fix",
+      "kind": "recipe",
+      "state": "promoted",
+      "target": "recipe:retarget.fbx_import_to_input_fix",
+      "scope": "retarget_inputfix_contract_21_0_440",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "validated_template",
+          "summary": "kinefx.import_fix_triplet was live-confirmed in three Retarget project-family branches with output2 routed through FRAMEINFO before inputFix input2."
+        },
+        {
+          "source_class": "live_atomic_connection_validation",
+          "summary": "Adapter 0.5.5 live stale-hash test on /obj/geo1/inputFix returned written=0 and preserved all three input hashes."
+        },
+        {
+          "source_class": "transactional_kernel_regression",
+          "summary": "Adapter 0.5.6 network.apply_transactional provides external input preflight, atomic rewiring, cleanup of newly created nodes on failure, and Recipe Engine conflict failure semantics; 108/108 PASS before activation."
+        },
+        {
+          "source_class": "live_kernel_activation",
+          "summary": "Adapter 0.5.6 is live on Houdini 21.0.440 in E:/AA/SpeedUP.hip."
+        },
+        {
+          "source_class": "live_recipe_validation",
+          "summary": "Runtime 0.2.3.2 live recipe.get and recipe.validate passed on Houdini 21.0.440; structural network.validate for the planned 2-node/4-connection graph returned ok=true with zero warnings/errors. recipe.apply was intentionally not executed on the configured user HIP."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "bounded_contract": {
+        "input_fix_inputs": {
+          "0": "Rest Geometry from FBX Character Import output 0",
+          "1": "Capture Pose from FBX Character Import output 1",
+          "2": "Animated Pose from FRAMEINFO output 0"
+        },
+        "external_role_binding": "input_fix_path must reference an existing project-defined input-fix node",
+        "universal": false
+      },
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Full one-call Retarget import wiring was withheld until atomic existing-node rewiring and transaction cleanup existed."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "0.5.5 live connection safety plus 0.5.6 transactional-kernel regression and live activation satisfied the bounded contract."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-06",
+          "reason": "Promoted only inside retarget_inputfix_contract_21_0_440; no universal KineFX claim."
+        }
+      ],
+      "validation_status": {
+        "targeted": "7/7 PASS",
+        "full": "121/121 PASS",
+        "live_network_preflight": true,
+        "live_recipe_get": true,
+        "live_recipe_validate": true,
+        "live_recipe_apply_on_user_project": false
+      }
+    },
+    {
+      "id": "recipe.network.ensure_and_cook",
+      "kind": "recipe",
+      "state": "promoted",
+      "target": "recipe:network.ensure_and_cook",
+      "scope": "houdini_declarative_network_21_0_440",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "historical_houdini_installers",
+          "summary": "Repeated Retarget installer/build scripts required find-or-create, parameter/state setup, wiring, Cook, diagnostics, and safe rerun across multiple project versions."
+        },
+        {
+          "source_class": "regression_test",
+          "summary": "Phase 6A targeted 7/7 PASS; full suite 128/128 PASS."
+        },
+        {
+          "source_class": "live_bridge",
+          "summary": "Adapter 0.5.7 live ensure on existing SOURCE_DEFAULT_GEOMETRY chain returned written=0 with no graph changes and Cook PASS."
+        },
+        {
+          "source_class": "live_recipe",
+          "summary": "network.ensure_and_cook recipe.get, recipe.validate, and recipe.apply all passed on Houdini 21.0.440; recipe.apply returned verified=true and written=0."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-07",
+          "reason": "Repeated installer/reconciliation boilerplate selected as a high-value generalization target."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-07",
+          "reason": "Transactional ensure kernel passed targeted/full regression before live activation."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-07",
+          "reason": "Adapter 0.5.7 live idempotent primitive and full recipe path both passed with zero graph writes on an already-correct network."
+        }
+      ],
+      "supersedes": [
+        "network.build_and_cook for ordinary desired-state reconciliation + Cook",
+        "manual find/create/update/connect/cook orchestration when the final declared graph is known"
+      ],
+      "semantic_contract": {
+        "guarded_plan_handoff": "network.ensure_plan.plan_hash may be passed as expected_plan_hash; mismatch fails before mutation"
+      }
+    },
+    {
+      "id": "hostrule.network.ensure_reconciliation_vs_expected_hash",
+      "kind": "host_rule",
+      "state": "promoted",
+      "target": "host_rule:network.ensure_reconciliation_vs_expected_hash",
+      "scope": "houdini_declarative_network_21_0_440",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "regression_test",
+          "summary": "Phase 6A tests distinguish idempotent reconciliation from zero-write preflight failures and rollback semantics."
+        },
+        {
+          "source_class": "live_bridge",
+          "summary": "Existing correct network reconciled with zero graph writes; separate expected-hash APIs remain unchanged for external-read conditional writes."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "state_history": [
+        {
+          "state": "validated",
+          "date": "2026-09-07",
+          "reason": "Semantics are enforced by kernel tests and capability schema."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-07",
+          "reason": "Live zero-write reconciliation confirmed on Houdini 21.0.440."
+        }
+      ]
+    },
+    {
+      "id": "hostrule.network.ensure_plan_advisory_preview",
+      "kind": "host_rule",
+      "state": "promoted",
+      "target": "host_rule:network.ensure_plan_advisory_preview",
+      "scope": "houdini_declarative_network_21_0_440",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "regression_test",
+          "summary": "Phase 6B targeted 7/7 PASS and full suite 136/136 PASS cover zero-change plans, precise parameter/state/connection diffs, missing-node CREATE plans without probe creation, duplicate-target rejection, and bounded details with complete summaries."
+        },
+        {
+          "source_class": "live_bridge",
+          "summary": "Adapter 0.5.8 live plan on existing SOURCE_DEFAULT_GEOMETRY chain returned total_changes=0 and read_only=true; planned Cook was not executed."
+        },
+        {
+          "source_class": "live_no_probe_creation",
+          "summary": "Live plan for /obj/geo1/__AI_PHASE6B_PLAN_ONLY_NULL returned CREATE 1, then inspect.find returned count=0, confirming no probe node was created."
+        },
+        {
+          "source_class": "live_plan_guard",
+          "summary": "Adapter 0.5.9 live Plan -> Ensure guard on SOURCE_DEFAULT_GEOMETRY: matching plan_hash returned matched=true and written=0; reusing the old hash with the cook target removed returned PLAN_CONFLICT, matched=false, written=0, and no graph mutation."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true,
+        "plan_guard_pass": true
+      },
+      "state_history": [
+        {
+          "state": "validated",
+          "date": "2026-09-07",
+          "reason": "Read-only Ensure Plan kernel passed targeted and full regression before live activation."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-07",
+          "reason": "Adapter 0.5.8 live zero-change and missing-node plan tests confirmed read-only advisory semantics without probe mutation."
+        }
+      ]
+    },
+    {
+      "id": "mechanism.capability_guidance.advisory_router",
+      "kind": "adapter_mechanism",
+      "state": "validated",
+      "target": "kernel:capability_guidance.advisory_router",
+      "scope": "generic_houdini_capability_routing",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "regression_test",
+          "summary": "Runtime 0.2.6.6 staging targeted capability-guidance suite 6/6 PASS; full compile PASS and 154/154 tests PASS."
+        },
+        {
+          "source_class": "architecture_rule",
+          "summary": "Routing is advisory-only, non-blocking, non-auto-executing, rate-limited, and reads generic machine-readable guidance entries."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": false
+      },
+      "promotion_requirements": [
+        "load Adapter 0.5.13 in a real Houdini process",
+        "confirm successful low-level operations retain their original status while suggestions appear only after registered patterns",
+        "confirm candidate capabilities are not emitted as execution suggestions"
+      ],
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-07",
+          "reason": "Repeated low-level round trips showed a need for discoverable higher-level capability suggestions without blocking fallback."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-07",
+          "reason": "Generic advisory implementation passed targeted and full Runtime regression; live Adapter activation remains pending."
+        }
+      ]
+    },
+    {
+      "id": "orchestration.diagnostic.transaction",
+      "kind": "generic_orchestration",
+      "state": "candidate",
+      "target": "capability:diagnostic.transaction",
+      "scope": "generic_houdini_temporary_diagnostics",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "live_workflow_observation",
+          "summary": "Repeated temporary diagnostic construction required create/connect/Cook/collect/cleanup round trips and exposed cleanup/UNKNOWN-state costs."
+        },
+        {
+          "source_class": "design_review",
+          "summary": "User approved advisory capability routing and requested generalized Houdini behavior rather than project-specific AutoUV logic."
+        }
+      ],
+      "validation": {
+        "regression_pass": false,
+        "live_or_baseline_pass": false
+      },
+      "bounded_contract": {
+        "lifecycle": "validate -> isolated temporary namespace -> cook -> bounded generic collection -> cleanup",
+        "blocking_project_semantics": false,
+        "low_level_fallback_required": true,
+        "auto_retry": false
+      },
+      "promotion_requirements": [
+        "implement a bounded generic schema with no project-specific attributes or algorithms",
+        "test cleanup after success, Cook failure, collection failure, timeout, and unknown terminal state",
+        "validate on at least two unrelated Houdini workflows",
+        "prove lower round-trip count without removing primitive fallback"
+      ],
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-07",
+          "reason": "High-value lifecycle pattern identified, but implementation and independent validation are intentionally deferred."
+        }
+      ]
+    },
+    {
+      "id": "recipe.parm.safe_write_and_cook",
+      "kind": "recipe",
+      "state": "promoted",
+      "target": "recipe:parm.safe_write_and_cook",
+      "scope": "houdini_parameters_21_0_440",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "historical_houdini_runtime",
+          "summary": "Repeated safe parameter write pattern: read hash -> optimistic write -> Cook -> diagnostics."
+        },
+        {
+          "source_class": "p1_seed_pack",
+          "summary": "Recipe was introduced as promoted Seed Pack syntax sugar and validated on Houdini 21.0.440."
+        },
+        {
+          "source_class": "authority_reconciliation_2026_09_09",
+          "summary": "Promotion registry reconciled with the existing promoted recipe metadata so registry becomes the single execution authority."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-06",
+          "reason": "Repeated parameter write/Cook sequence extracted."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-06",
+          "reason": "Seed Pack regression and host evidence passed."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-06",
+          "reason": "Bounded optimistic write recipe activated."
+        }
+      ]
+    },
+    {
+      "id": "recipe.code.safe_patch_and_cook",
+      "kind": "recipe",
+      "state": "promoted",
+      "target": "recipe:code.safe_patch_and_cook",
+      "scope": "houdini_code_patch_and_cook_21_0_440",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "regression_test",
+          "summary": "Runtime 0.2.6.36 / Adapter 0.5.21: targeted recipe/rollback regression 14/14 PASS; full compile PASS; full Runtime regression 268/268 PASS."
+        },
+        {
+          "source_class": "live_houdini_validation_success",
+          "summary": "cmd-code-safe-recipe-success-014 on AutoUV_R2: code.read -> optimistic code.patch -> Cook PASS; validation-only checkpoint rollback verified; independent readback restored the original snippet."
+        },
+        {
+          "source_class": "live_conflict_validation",
+          "summary": "cmd-code-safe-hash-conflict-017: stale expected_hash returned CONFLICT with WRITE=NOT_RUN and preserved the original snippet."
+        },
+        {
+          "source_class": "live_old_text_validation",
+          "summary": "cmd-code-safe-oldtext-mismatch-016: missing old_text failed with PATCH_MATCH_COUNT_INVALID: 0; validation checkpoint rollback verified."
+        },
+        {
+          "source_class": "live_cook_failure_diagnostics",
+          "summary": "cmd-code-safe-c-cook-failure-002 on Adapter 0.5.21: patched invalid VEX, cook raised OperationFailed, synthetic cook_status=FAILED enabled conditional host.errors, real compile diagnostics were collected, original RECIPE_STEP_FAILED was preserved, and checkpoint rollback verified."
+        },
+        {
+          "source_class": "live_rollback_readback",
+          "summary": "cmd-code-safe-c-readback-003 independently confirmed the snippet returned to i@__ai_bridge_validation = 1; after Cook-failure rollback."
+        }
+      ],
+      "validation": {
+        "regression_pass": true,
+        "live_or_baseline_pass": true
+      },
+      "bounded_contract": {
+        "sequence": [
+          "code.read",
+          "code.patch(expected_hash=read.hash)",
+          "cook.execute",
+          "conditional host.errors"
+        ],
+        "failure_transaction": "normal recipe.apply is L2 with Core rollback_on_failure; terminal FAILED restores the verified pre-command checkpoint while preserving the original recipe failure",
+        "validation_mode": "recipe.apply_validation may execute unpromoted candidates but always restores its checkpoint after every non-budget terminal outcome",
+        "concurrency": "no implicit retry; callers must re-read on stale hash conflict",
+        "scope_limit": "Houdini code-parameter patch + Cook workflow validated on Houdini 21.0.440; no cross-host claim"
+      },
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-09",
+          "reason": "Repeated safe code patch/Cook workflow existed as syntax sugar but promotion was withheld until failure rollback semantics were implemented."
+        },
+        {
+          "state": "validated",
+          "date": "2026-09-09",
+          "reason": "Runtime 0.2.6.34 added rollback_on_failure; Runtime 0.2.6.35 added always-rollback candidate validation; live AutoUV testing then exposed and fixed Cook exception diagnostic continuation in Adapter 0.5.21."
+        },
+        {
+          "state": "promoted",
+          "date": "2026-09-09",
+          "reason": "Live success, stale-hash conflict, old_text mismatch, Cook exception diagnostics, checkpoint rollback, and independent post-rollback readback all passed on Houdini 21.0.440."
+        }
+      ]
+    },
+    {
+      "id": "recipe.network.build",
+      "kind": "recipe",
+      "state": "candidate",
+      "target": "recipe:network.build",
+      "scope": "houdini_strict_fresh_build",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "evidence": [
+        {
+          "source_class": "historical_semantic_audit",
+          "summary": "The recipe intentionally uses network.apply(allow_update_existing=false), preserving a narrow fresh-build-only semantic distinct from reconciliation."
+        }
+      ],
+      "validation": {
+        "regression_pass": false,
+        "live_or_baseline_pass": false
+      },
+      "promotion_requirements": [
+        "live failure-path validation on conflicting existing nodes",
+        "prove a recurring strict fresh-build use case not covered by Ensure"
+      ],
+      "state_history": [
+        {
+          "state": "candidate",
+          "date": "2026-09-09",
+          "reason": "Retained only for explicit fresh-build semantics; not normal network editing authority."
+        }
+      ]
+    },
+    {
+      "id": "recipe.network.build_and_cook",
+      "kind": "recipe",
+      "state": "deprecated",
+      "target": "recipe:network.build_and_cook",
+      "scope": "houdini_strict_fresh_build",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "superseded_by": "network.ensure_and_cook",
+      "deprecation_reason": "Ordinary build/update/cook intent is covered by the promoted idempotent network.ensure_and_cook path; a second near-synonymous execution authority increases routing ambiguity.",
+      "evidence": [
+        {
+          "source_class": "bridge_semantic_audit",
+          "summary": "Historical handoff explicitly recommended deprecation because network.ensure_and_cook covers the mature reconciliation+Cook use case."
+        }
+      ],
+      "validation": {
+        "regression_pass": false,
+        "live_or_baseline_pass": true
+      },
+      "state_history": [
+        {
+          "state": "deprecated",
+          "date": "2026-09-09",
+          "reason": "Formalized prior semantic decision: do not re-promote unless a real recurring fresh-build+Cook/no-reconcile requirement appears."
+        }
+      ]
+    }
+  ]
 }

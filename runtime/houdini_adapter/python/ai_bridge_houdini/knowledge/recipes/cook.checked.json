@@ -1,34 +1,38 @@
 {
-  "description": "Force-cook a target node and return host errors/warnings in the same bounded recipe.",
   "id": "cook.checked",
-  "optional": [],
-  "promotion_state": "promoted",
+  "version": "1.0",
+  "description": "Force-cook a target node and return host errors/warnings in the same bounded recipe.",
   "required": [
     "path"
   ],
-  "steps": [
-    {
-      "arguments": {
-        "force": true,
-        "path": {
-          "$arg": "path"
-        }
-      },
-      "op": "cook.execute",
-      "save_as": "cook"
-    },
-    {
-      "arguments": {
-        "path": {
-          "$arg": "path"
-        }
-      },
-      "op": "host.errors",
-      "save_as": "errors"
-    }
-  ],
+  "optional": [],
   "supported_host_versions": [
     "21.0.440"
   ],
-  "version": "1.0"
+  "promotion_state": "promoted",
+  "provenance": [
+    "historical_houdini_runtime",
+    "p1_seed_pack_2026-09-06"
+  ],
+  "steps": [
+    {
+      "op": "cook.execute",
+      "save_as": "cook",
+      "arguments": {
+        "path": {
+          "$arg": "path"
+        },
+        "force": true
+      }
+    },
+    {
+      "op": "host.errors",
+      "save_as": "errors",
+      "arguments": {
+        "path": {
+          "$arg": "path"
+        }
+      }
+    }
+  ]
 }

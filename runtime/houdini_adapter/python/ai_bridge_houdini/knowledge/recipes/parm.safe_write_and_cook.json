@@ -1,67 +1,71 @@
 {
-  "description": "Read a parameter hash, write with optimistic concurrency, force-cook a target, then return host errors/warnings.",
   "id": "parm.safe_write_and_cook",
-  "optional": [],
-  "promotion_state": "promoted",
+  "version": "1.0",
+  "description": "Read a parameter hash, write with optimistic concurrency, force-cook a target, then return host errors/warnings.",
   "required": [
     "path",
     "parameter",
     "value",
     "cook_path"
   ],
-  "steps": [
-    {
-      "arguments": {
-        "parameter": {
-          "$arg": "parameter"
-        },
-        "path": {
-          "$arg": "path"
-        }
-      },
-      "op": "parm.read",
-      "save_as": "read"
-    },
-    {
-      "arguments": {
-        "expected_hash": {
-          "$result": "read.hash"
-        },
-        "parameter": {
-          "$arg": "parameter"
-        },
-        "path": {
-          "$arg": "path"
-        },
-        "value": {
-          "$arg": "value"
-        }
-      },
-      "op": "parm.write",
-      "save_as": "write"
-    },
-    {
-      "arguments": {
-        "force": true,
-        "path": {
-          "$arg": "cook_path"
-        }
-      },
-      "op": "cook.execute",
-      "save_as": "cook"
-    },
-    {
-      "arguments": {
-        "path": {
-          "$arg": "cook_path"
-        }
-      },
-      "op": "host.errors",
-      "save_as": "errors"
-    }
-  ],
+  "optional": [],
   "supported_host_versions": [
     "21.0.440"
   ],
-  "version": "1.0"
+  "promotion_state": "promoted",
+  "provenance": [
+    "historical_houdini_runtime",
+    "p1_seed_pack_2026-09-06"
+  ],
+  "steps": [
+    {
+      "op": "parm.read",
+      "save_as": "read",
+      "arguments": {
+        "path": {
+          "$arg": "path"
+        },
+        "parameter": {
+          "$arg": "parameter"
+        }
+      }
+    },
+    {
+      "op": "parm.write",
+      "save_as": "write",
+      "arguments": {
+        "path": {
+          "$arg": "path"
+        },
+        "parameter": {
+          "$arg": "parameter"
+        },
+        "value": {
+          "$arg": "value"
+        },
+        "expected_hash": {
+          "$result": "read.hash"
+        }
+      }
+    },
+    {
+      "op": "cook.execute",
+      "save_as": "cook",
+      "arguments": {
+        "path": {
+          "$arg": "cook_path"
+        },
+        "force": true
+      }
+    },
+    {
+      "op": "host.errors",
+      "save_as": "errors",
+      "arguments": {
+        "path": {
+          "$arg": "cook_path"
+        }
+      }
+    }
+  ]
 }

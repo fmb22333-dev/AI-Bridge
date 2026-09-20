@@ -2,52 +2,352 @@
   "schema_version": "1.0",
   "templates": [
     {
-      "description": "Create and configure a KineFX FBX Character Import plus a pass-through FRAMEINFO Null on Animated Pose output 2. Does not connect into project-defined input-fix nodes.",
+      "id": "kinefx.import_fix_triplet",
+      "state": "validated",
+      "scope": "project_family",
       "host": "houdini",
-      "id": "kinefx.import_frameinfo_build",
-      "roles": [
+      "description": "Validated Retarget project-family three-stream FBX Character Import topology with a FRAMEINFO null on the animated-pose stream.",
+      "nodes": [
         {
-          "constructor_type": "kinefx::fbxcharacterimport",
-          "display_type": "kinefx::Sop/fbxcharacterimport",
-          "role": "import"
+          "role": "import",
+          "type": "kinefx::Sop/fbxcharacterimport",
+          "historical_names": [
+            "IMPORT_ANIM",
+            "IMPORT_DEFAULT",
+            "IMPORT_SOURCE_DEFAULT"
+          ]
         },
         {
-          "constructor_type": "null",
-          "display_type": "Sop/null",
-          "role": "frame_info"
+          "role": "frame_info",
+          "type": "Sop/null",
+          "historical_names": [
+            "FRAMEINFO_SOURCE",
+            "FRAMEINFO_SOURCE1",
+            "FRAMEINFO_SOURCE_DEFAULT"
+          ]
+        },
+        {
+          "role": "input_fix",
+          "type": "project_defined",
+          "historical_names": [
+            "inputFix",
+            "inputFix1",
+            "inputFix_SOURCE_DEFAULT"
+          ]
         }
+      ],
+      "safety": [
+        "project-family validated, not universal",
+        "inspect live connector counts before construction",
+        "historical node names are evidence only"
+      ],
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "wiring": [
+        {
+          "from_role": "import",
+          "from_output": 0,
+          "to_role": "input_fix",
+          "to_input": 0,
+          "semantic": "Rest Geometry"
+        },
+        {
+          "from_role": "import",
+          "from_output": 1,
+          "to_role": "input_fix",
+          "to_input": 1,
+          "semantic": "Capture Pose"
+        },
+        {
+          "from_role": "import",
+          "from_output": 2,
+          "to_role": "frame_info",
+          "to_input": 0,
+          "semantic": "Animated Pose"
+        },
+        {
+          "from_role": "frame_info",
+          "from_output": 0,
+          "to_role": "input_fix",
+          "to_input": 2,
+          "semantic": "Animated Pose via frame-info"
+        }
+      ],
+      "validation_evidence": [
+        "Live /obj network scan on Houdini 21.0.440 confirmed the topology for IMPORT_ANIM, IMPORT_DEFAULT, and IMPORT_SOURCE_DEFAULT.",
+        "The earlier direct out2 -> inputFix in2 candidate was corrected; animated pose passes through the matching FRAMEINFO null."
+      ],
+      "syntax_sugar_recipe": "retarget.fbx_import_to_input_fix",
+      "executable_scope": "retarget_inputfix_contract_21_0_440",
+      "transactional": true,
+      "assumptions": [
+        "input_fix_path names an existing Retarget input-fix node whose inputs 0/1/2 mean Rest Geometry, Capture Pose, and Animated Pose respectively",
+        "Houdini host version is 21.0.440",
+        "FBX Character Import constructor token is kinefx::fbxcharacterimport and FRAMEINFO constructor token is null"
+      ],
+      "heuristics": [
+        "The recipe binds the existing input-fix node by explicit path rather than constructing or cloning its project-defined subnet internals.",
+        "All three externally owned input hashes are read immediately before network.apply_transactional and are rechecked by the transaction."
+      ],
+      "validation_status": {
+        "state": "promoted_within_bounded_scope",
+        "runtime": "0.2.3.2",
+        "adapter": "0.5.6",
+        "regression": [
+          "Phase 5D targeted 7/7 PASS",
+          "Full suite 121/121 PASS"
+        ],
+        "live": [
+          "network.validate 2 nodes + 4 connections PASS with zero warnings/errors",
+          "recipe.get retarget.fbx_import_to_input_fix PASS",
+          "recipe.validate retarget.fbx_import_to_input_fix PASS",
+          "recipe.apply intentionally not run on configured user HIP"
+        ],
+        "evidence_chain": [
+          "three live project-family import/frame-info/input-fix chains",
+          "corrected animated-pose routing through FRAMEINFO",
+          "0.5.5 live zero-write stale-hash batch-connect test",
+          "0.5.6 transactional graph kernel regression and live activation"
+        ]
+      }
+    },
+    {
+      "id": "kinefx.output_triplet_to_fbx_character",
+      "state": "validated",
+      "scope": "project_family",
+      "host": "houdini",
+      "description": "Three final skeleton streams -> historical output-transform adapter -> ROP FBX Character Output.",
+      "nodes": [
+        {
+          "role": "output_transform_adapter",
+          "type": "project_defined",
+          "historical_names": [
+            "FBX_output_Transform"
+          ]
+        },
+        {
+          "role": "fbx_character_output",
+          "type": "kinefx::Sop/rop_fbxcharacteroutput",
+          "historical_names": [
+            "FBX_OUT"
+          ]
+        }
+      ],
+      "wiring": [
+        {
+          "from_role": "final_streams",
+          "from_output": 0,
+          "to_role": "output_transform_adapter",
+          "to_input": 0
+        },
+        {
+          "from_role": "final_streams",
+          "from_output": 1,
+          "to_role": "output_transform_adapter",
+          "to_input": 1
+        },
+        {
+          "from_role": "final_streams",
+          "from_output": 2,
+          "to_role": "output_transform_adapter",
+          "to_input": 2
+        },
+        {
+          "from_role": "output_transform_adapter",
+          "from_output": 0,
+          "to_role": "fbx_character_output",
+          "to_input": 0
+        },
+        {
+          "from_role": "output_transform_adapter",
+          "from_output": 1,
+          "to_role": "fbx_character_output",
+          "to_input": 1
+        },
+        {
+          "from_role": "output_transform_adapter",
+          "from_output": 2,
+          "to_role": "fbx_character_output",
+          "to_input": 2
+        }
+      ],
+      "safety": [
+        "verify active node connector semantics",
+        "read back output path/range before export",
+        "project node names are evidence only"
+      ],
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "validation_evidence": [
+        "Live /obj network scan confirmed FBX_output_Transform outputs 0/1/2 -> FBX_OUT inputs 0/1/2.",
+        "Live inspect.node confirmed FBX_OUT type kinefx::Sop/rop_fbxcharacteroutput."
+      ]
+    },
+    {
+      "id": "kinefx.retarget_core_chain",
+      "state": "candidate",
+      "scope": "project_family",
+      "host": "houdini",
+      "description": "Observed Retarget core roles; retained as a candidate construction vocabulary, not a universal graph.",
+      "nodes": [
+        {
+          "role": "frame_info",
+          "type": "Sop/null",
+          "historical_names": [
+            "FRAMEINFO_SOURCE"
+          ]
+        },
+        {
+          "role": "retarget_solver",
+          "type": "Sop/attribwrangle",
+          "historical_names": [
+            "RETARGET_PROTOTYPE"
+          ]
+        },
+        {
+          "role": "hand_fix",
+          "type": "Sop/attribwrangle",
+          "historical_names": [
+            "FIX_HANDS"
+          ]
+        },
+        {
+          "role": "compute_world",
+          "type": "kinefx::Sop/computetransform",
+          "historical_names": [
+            "COMPUTE_WORLD_RESULT"
+          ]
+        },
+        {
+          "role": "joint_deform",
+          "type": "kinefx::Sop/jointdeform",
+          "historical_names": [
+            "jointdeform1"
+          ]
+        }
+      ],
+      "safety": [
+        "roles are reusable vocabulary; exact ordering/wiring is not promoted",
+        "validate each required node/parm before construction"
+      ]
+    },
+    {
+      "id": "root_motion.directional_projection",
+      "state": "candidate",
+      "scope": "animation_project_family",
+      "host": "houdini",
+      "description": "Project the root displacement onto a chosen 8-direction horizontal axis while leaving non-root joints unchanged.",
+      "algorithm": "fixedP = startP + dir8 * dot(originalP - startP, dir8)",
+      "historical_axis_contract": "Y-up horizontal XZ; dir_id 0=F,1=FR,2=R,3=BR,4=B,5=BL,6=L,7=FL",
+      "safety": [
+        "axis contract is project-scoped",
+        "root-only mutation is part of the candidate semantic",
+        "must not be generalized to arbitrary rigs without validation"
+      ]
+    },
+    {
+      "id": "retarget.frozen_timeline_sidechain",
+      "state": "candidate",
+      "scope": "project_family",
+      "host": "houdini",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "description": "Observed Retarget sidechain that freezes a reference stream with TimeShift, derives timeline data in a Python SOP, and feeds that data into an auxiliary consumer input.",
+      "roles": [
+        {
+          "role": "freeze",
+          "type": "Sop/timeshift"
+        },
+        {
+          "role": "timeline",
+          "type": "Sop/python"
+        },
+        {
+          "role": "consumer",
+          "type": "project_defined"
+        }
+      ],
+      "examples": [
+        {
+          "freeze": "FREEZE_FOOTSTEP_FINAL_DEP_V15_25_0",
+          "timeline": "FOOTSTEP_TIMELINE_V15_25_0",
+          "consumer": "EXPORT_FOOTSTEP_CURVE_V15_25_0",
+          "wiring": [
+            "freeze out0 -> timeline in0",
+            "timeline out0 -> consumer in1"
+          ]
+        },
+        {
+          "freeze": "FREEZE_TARGET_FOOT_PLANT_DEP_V16_0_0",
+          "timeline": "TARGET_FOOT_PLANT_TIMELINE_V18_7_0",
+          "consumer": "TARGET_FOOT_PLANT_SOLVER_V18_7_0",
+          "wiring": [
+            "freeze out0 -> timeline in0",
+            "timeline out0 -> consumer in1"
+          ]
+        }
+      ],
+      "safety": [
+        "candidate only; do not infer universal Retarget architecture",
+        "validate the TimeShift frame/time freeze semantics before promotion",
+        "consumer input 1 is historical project-family evidence, not a universal connector contract"
+      ]
+    },
+    {
+      "id": "kinefx.import_frameinfo_build",
+      "state": "validated",
+      "scope": "kinefx_node_type_21_0_440",
+      "host": "houdini",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "description": "Create and configure a KineFX FBX Character Import plus a pass-through FRAMEINFO Null on Animated Pose output 2. Does not connect into project-defined input-fix nodes.",
+      "roles": [
+        {
+          "role": "import",
+          "constructor_type": "kinefx::fbxcharacterimport",
+          "display_type": "kinefx::Sop/fbxcharacterimport"
+        },
+        {
+          "role": "frame_info",
+          "constructor_type": "null",
+          "display_type": "Sop/null"
+        }
+      ],
+      "wiring": [
+        {
+          "from_role": "import",
+          "from_output": 2,
+          "to_role": "frame_info",
+          "to_input": 0,
+          "semantic": "Animated Pose"
+        }
+      ],
+      "semantic_parameters": [
+        {
+          "semantic": "import_file",
+          "role": "import",
+          "internal_name": "fbxfile"
+        },
+        {
+          "semantic": "animation_file",
+          "role": "import",
+          "internal_name": "animfbxfile"
+        }
+      ],
+      "syntax_sugar_recipe": "kinefx.import_with_frameinfo",
+      "validation_evidence": [
+        "Live constructor-token probes passed on Houdini 21.0.440.",
+        "Live full network.validate passed with both FBX file parameters and the import output2 -> frame_info input0 connection.",
+        "Parameter aliases fbxfile/animfbxfile were already validated on two live Import nodes."
       ],
       "safety": [
         "self-contained creation only",
         "does not mutate existing inputFix connections",
         "caller chooses explicit node names"
-      ],
-      "scope": "kinefx_node_type_21_0_440",
-      "semantic_parameters": [
-        {
-          "internal_name": "fbxfile",
-          "role": "import",
-          "semantic": "import_file"
-        },
-        {
-          "internal_name": "animfbxfile",
-          "role": "import",
-          "semantic": "animation_file"
-        }
-      ],
-      "state": "validated",
-      "supported_host_versions": [
-        "21.0.440"
-      ],
-      "syntax_sugar_recipe": "kinefx.import_with_frameinfo",
-      "wiring": [
-        {
-          "from_output": 2,
-          "from_role": "import",
-          "semantic": "Animated Pose",
-          "to_input": 0,
-          "to_role": "frame_info"
-        }
       ]
     }
   ]

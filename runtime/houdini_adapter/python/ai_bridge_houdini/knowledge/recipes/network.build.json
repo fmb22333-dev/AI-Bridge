@@ -1,0 +1,50 @@
+{
+  "id": "network.build",
+  "version": "1.0",
+  "description": "Validate and apply a strictly fresh declarative Houdini node network; fail instead of reconciling existing conflicting nodes.",
+  "required": [
+    "parent",
+    "nodes",
+    "connections"
+  ],
+  "optional": [],
+  "steps": [
+    {
+      "op": "network.validate",
+      "save_as": "preflight",
+      "arguments": {
+        "parent": {
+          "$arg": "parent"
+        },
+        "nodes": {
+          "$arg": "nodes"
+        },
+        "connections": {
+          "$arg": "connections"
+        }
+      }
+    },
+    {
+      "op": "network.apply",
+      "save_as": "apply",
+      "arguments": {
+        "parent": {
+          "$arg": "parent"
+        },
+        "nodes": {
+          "$arg": "nodes"
+        },
+        "connections": {
+          "$arg": "connections"
+        },
+        "layout": false,
+        "allow_update_existing": false
+      }
+    }
+  ],
+  "lifecycle_state": "candidate",
+  "scope": "houdini_strict_fresh_build",
+  "not_for": [
+    "normal installer/reconciliation work; use network.ensure_and_cook"
+  ]
+}

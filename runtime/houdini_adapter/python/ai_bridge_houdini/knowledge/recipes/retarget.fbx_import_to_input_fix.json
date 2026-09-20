@@ -1,0 +1,166 @@
+{
+  "id": "retarget.fbx_import_to_input_fix",
+  "version": "1.0",
+  "description": "Transactionally create a KineFX FBX Character Import and FRAMEINFO Null, then wire the validated Retarget three-stream contract into an existing input-fix node.",
+  "required": [
+    "parent",
+    "import_name",
+    "frame_info_name",
+    "import_file",
+    "animation_file",
+    "input_fix_path"
+  ],
+  "optional": [],
+  "supported_host_versions": [
+    "21.0.440"
+  ],
+  "promotion_state": "promoted",
+  "scope": "retarget_inputfix_contract_21_0_440",
+  "assumptions": [
+    "input_fix_path already exists",
+    "input_fix inputs 0/1/2 retain the validated Retarget Rest/Capture/Animated semantics",
+    "the recipe does not create or replace the project-defined input-fix subnet"
+  ],
+  "heuristics": [
+    "Use explicit role binding for project-defined nodes rather than cloning unknown subnet internals.",
+    "Read all externally owned input hashes immediately before the transaction."
+  ],
+  "validation_status": {
+    "adapter": "0.5.6",
+    "runtime": "0.2.3.2",
+    "regression": {
+      "targeted": "7/7 PASS",
+      "full": "121/121 PASS"
+    },
+    "live": {
+      "network_validate": "PASS: 2 nodes + 4 connections, 0 errors, 0 warnings",
+      "recipe_get": "PASS",
+      "recipe_validate": "PASS",
+      "recipe_apply_on_user_project": "NOT_RUN_BY_DESIGN"
+    },
+    "note": "Mutation was intentionally not executed against the user's configured HIP; transaction safety is independently covered by Adapter 0.5.5/0.5.6 live and regression evidence."
+  },
+  "compression": {
+    "caller_arguments": 6,
+    "expanded_state_reads": 3,
+    "expanded_nodes": 2,
+    "expanded_parameter_writes": 2,
+    "expanded_connections": 4,
+    "existing_node_rewires": 3,
+    "transaction_cleanup": true
+  },
+  "provenance": [
+    "validated_retarget_import_topology",
+    "live_inputfix_output_index_hash_readback",
+    "live_batch_connect_zero_write_conflict_test",
+    "network.apply_transactional_0.5.6",
+    "p1_phase5d"
+  ],
+  "steps": [
+    {
+      "op": "node.input_state",
+      "save_as": "input0",
+      "arguments": {
+        "target": {
+          "$arg": "input_fix_path"
+        },
+        "input_index": 0
+      }
+    },
+    {
+      "op": "node.input_state",
+      "save_as": "input1",
+      "arguments": {
+        "target": {
+          "$arg": "input_fix_path"
+        },
+        "input_index": 1
+      }
+    },
+    {
+      "op": "node.input_state",
+      "save_as": "input2",
+      "arguments": {
+        "target": {
+          "$arg": "input_fix_path"
+        },
+        "input_index": 2
+      }
+    },
+    {
+      "op": "network.apply_transactional",
+      "save_as": "apply",
+      "arguments": {
+        "parent": {
+          "$arg": "parent"
+        },
+        "nodes": [
+          {
+            "id": "import",
+            "name": {
+              "$arg": "import_name"
+            },
+            "type": "kinefx::fbxcharacterimport",
+            "parms": {
+              "fbxfile": {
+                "$arg": "import_file"
+              },
+              "animfbxfile": {
+                "$arg": "animation_file"
+              }
+            }
+          },
+          {
+            "id": "frame_info",
+            "name": {
+              "$arg": "frame_info_name"
+            },
+            "type": "null"
+          }
+        ],
+        "connections": [
+          {
+            "source": "import",
+            "output": 2,
+            "target": "frame_info",
+            "input": 0
+          },
+          {
+            "source": "import",
+            "output": 0,
+            "target": {
+              "$arg": "input_fix_path"
+            },
+            "input": 0,
+            "expected_hash": {
+              "$result": "input0.hash"
+            }
+          },
+          {
+            "source": "import",
+            "output": 1,
+            "target": {
+              "$arg": "input_fix_path"
+            },
+            "input": 1,
+            "expected_hash": {
+              "$result": "input1.hash"
+            }
+          },
+          {
+            "source": "frame_info",
+            "output": 0,
+            "target": {
+              "$arg": "input_fix_path"
+            },
+            "input": 2,
+            "expected_hash": {
+              "$result": "input2.hash"
+            }
+          }
+        ],
+        "layout": false
+      }
+    }
+  ]
+}
