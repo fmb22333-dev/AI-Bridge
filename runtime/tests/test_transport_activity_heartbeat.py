@@ -93,3 +93,98 @@ def test_remote_controller_exposes_live_activity_in_public_state(tmp_path):
     controller._on_transport_activity("command_finished", {"at": "2026-09-08T20:00:02+00:00", "command_id": "cmd-live"})
     state = controller.public_state("connected", GitHubRemoteConfig(repository="owner/repo", branch="main", bridge_id="bridge"))
     assert state["activity"]["current_execution"] is None
+
+def test_remote_controller_tracks_multiple_active_executions_without_false_idle(tmp_path):
+    runtime_state = {}
+    controller = RemoteController(service=SimpleNamespace(), data_dir=tmp_path, runtime_state=runtime_state, secret_store=FakeSecrets())
+    controller._on_transport_activity("command_started", {"at": "2026-09-14T03:00:00+00:00", "command_id": "cmd-a", "operation": "cook.execute"})
+    controller._on_transport_activity("command_started", {"at": "2026-09-14T03:00:01+00:00", "command_id": "cmd-b", "operation": "bridge.update.status"})
+    state = controller.public_state("connected", GitHubRemoteConfig(repository="owner/repo", branch="main", bridge_id="bridge"))
+    assert state["activity"]["active_execution_count"] == 2
+    controller._on_transport_activity("command_finished", {"at": "2026-09-14T03:00:02+00:00", "command_id": "cmd-b"})
+    state = controller.public_state("connected", GitHubRemoteConfig(repository="owner/repo", branch="main", bridge_id="bridge"))
+    assert state["activity"]["active_execution_count"] == 1
+    assert state["activity"]["current_execution"]["command_id"] == "cmd-a"
+    controller._on_transport_activity("command_finished", {"at": "2026-09-14T03:00:03+00:00", "command_id": "cmd-a"})
+    assert controller.public_state("connected", GitHubRemoteConfig(repository="owner/repo", branch="main", bridge_id="bridge"))["activity"]["active_execution_count"] == 0
+
+
+def test_transport_runner_replace_transport_resets_contents_bootstrap_state():
+    command = CommandEnvelope.model_validate({
+        "protocol": "bridge/1",
+        "command_id": "cmd-replace-transport",
+        "workspace": "Bridge",
+        "adapter": "bridge_admin",
+        "operation": "bridge.update.status",
+        "arguments": {},
+        "execution": {"verify": True, "checkpoint": "none", "dry_run": False},
+        "risk": "L1",
+    })
+    old_transport = FakeTransport(command)
+    new_transport = FakeTransport(command)
+    runner = TransportRunner(FakeService(), old_transport)
+    runner._contents_index_restored = True
+
+    assert runner.replace_transport(new_transport) is old_transport
+    assert runner.transport is new_transport
+    assert runner._contents_index_restored is False
+    runner.shutdown()
+
+
+def test_remote_controller_rebuild_policy_requires_three_generic_failures():
+    assert RemoteController._should_rebuild_transport("error", 2) is False
+    assert RemoteController._should_rebuild_transport("error", 3) is True
+    assert RemoteController._should_rebuild_transport("auth_degraded", 99) is False
+    assert RemoteController._should_rebuild_transport("rate_limited", 99) is False
+
+
+def test_remote_controller_rebuild_transport_replaces_runner_transport(tmp_path):
+    command = CommandEnvelope.model_validate({
+        "protocol": "bridge/1",
+        "command_id": "cmd-rebuild-transport",
+        "workspace": "Bridge",
+        "adapter": "bridge_admin",
+        "operation": "bridge.update.status",
+        "arguments": {},
+        "execution": {"verify": True, "checkpoint": "none", "dry_run": False},
+        "risk": "L1",
+    })
+
+    class Client:
+        def __init__(self):
+            self.closed = False
+        def close(self):
+            self.closed = True
+
+    class RecoverableTransport(FakeTransport):
+        def __init__(self, command):
+            super().__init__(command)
+            self.client = Client()
+            self.initialized = False
+        def health(self):
+            return SimpleNamespace(ok=True, detail="connected")
+        def initialize_message_mode(self):
+            self.initialized = True
+            return "issue_channel_v5"
+
+    old_transport = RecoverableTransport(command)
+    new_transport = RecoverableTransport(command)
+    controller = RemoteController(
+        service=FakeService(),
+        data_dir=tmp_path,
+        runtime_state={},
+        secret_store=FakeSecrets(),
+        transport_factory=lambda config, token: new_transport,
+    )
+    controller._transport = old_transport
+    runner = TransportRunner(controller.service, old_transport)
+    config = GitHubRemoteConfig(repository="owner/repo", branch="main", bridge_id="bridge")
+
+    rebuilt = controller._rebuild_transport(config, runner)
+
+    assert rebuilt is new_transport
+    assert runner.transport is new_transport
+    assert controller._transport is new_transport
+    assert new_transport.initialized is True
+    assert old_transport.client.closed is True
+    runner.shutdown()
