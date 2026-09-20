@@ -8,6 +8,19 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.84 public synchronization + Unreal one-click install — 2026-09-20
+
+- Reconciled the shared product Runtime with the live-verified development baseline **0.2.6.84** while preserving the standalone product boundary: public Runtime/update authority remains `fmb22333-dev/AI-Bridge:main`; a user's Bus remains transport/project authority and is never an implicit Runtime release source.
+- Integrated the post-0.2.6.56 transport/runtime work, including bounded execution-lane isolation, structured V5 result delivery and lazy full-result recovery, Local Direct support, Workspace lane isolation, Supabase primary realtime routing, Presence version authority, clean Bus provisioning transport authority, Runtime watchdog hardening, and the Windows task-idle completion notification.
+- Synchronized Houdini Adapter **0.5.27** and regenerated distributable Knowledge through the clean filter; candidate/deprecated/project-family recipes remain excluded from distributable execution authority.
+- Promoted **AIBridgeUE 0.5.3** into the distributable Runtime. Host Plugins now exposes Unreal Engine as `ready` with project-scoped one-click install/update. Installation copies the bundled plugin into the selected Unreal project's `Plugins/AIBridgeUE`, removes plugin-local stale `Binaries/` and `Intermediate/`, and fails closed when the target Unreal Editor process is running. Bridge does not restart Unreal automatically.
+- Updated the product release contract from Houdini-only to **Houdini + Unreal**. Blender remains scaffold-only.
+- Rebased clean Bus provisioning and Setup so new installs retain the newer Supabase-primary/Presence discovery semantics while still pointing Runtime/protocol authority to the public product repository rather than the private development Bus.
+- Upgraded the product Supervisor to **0.1.5**, retaining its transport watchdog and candidate-validation improvements while preserving the public fail-closed `BUS_RUNTIME_BOOTSTRAP_FORBIDDEN` rule and `AI-Bridge:main/runtime-release.json` default update source.
+- Development-source interval from the prior public baseline `c9be86a58899e581621d30f82a1c5783d30a76f9` to the accepted 0.2.6.84 source mirror `dc9f4ef1ac7111ee86ca6cfaef95f512c4112a8c` was classified before synchronization. Project authority/history, live state, machine paths, credentials, command history and project-family evidence remain **DO NOT DISTRIBUTE**.
+- Live developer validation before public synchronization: Runtime publication/activation **0.2.6.84**, full Runtime **486/486 PASS**, compile PASS, Knowledge publish gate PASS, Supervisor **0.1.5** running, Supabase `transport.ping` SUCCESS, and AIBridgeUE **0.5.3** reported by `bridge.plugin.status`.
+- Public Windows product validation and fresh-install smoke are the release gate for this synchronization. The migration baseline remains unchanged until that gate passes.
+
 ### Runtime 0.2.6.55 Supabase Backup Bus UI — 2026-09-17
 
 - Promoted Supabase fallback configuration from headless environment bootstrap to a first-class **Supabase Backup Bus** in AI Bridge Setup and Dashboard while keeping GitHub Bus as primary transport.

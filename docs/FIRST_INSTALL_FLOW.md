@@ -99,14 +99,15 @@ Project authority documents and project entries are created only when the user e
 
 ## Implementation / validation status — 2026-09-10
 
-The installer and release assembly described above are implemented for the current Houdini product slice:
+The installer and release assembly described above are implemented for the current Houdini + Unreal product slice:
 
-- Runtime 0.2.6.50
-- Houdini Adapter 0.5.26
-- Supervisor 0.1.4
+- Runtime 0.2.6.84
+- Houdini Adapter 0.5.27
+- AIBridgeUE 0.5.3
+- Supervisor 0.1.5
 - `AI_Bridge_Installer.zip` containing the one-click BAT/PowerShell entrypoints
 - deterministic Runtime/release manifests with SHA-256 verification
 
 Automated Windows validation has passed a clean GitHub re-download/install smoke test.
 
-**Still pending:** the interactive end-user acceptance path that actually creates a brand-new GitHub Bus through Setup UI, authorizes/connects it, activates Houdini Adapter in that fresh installation, and proves a live Houdini round-trip. This is deliberately kept separate from the automated installer smoke test.
+**Still pending:** explicit real-environment end-user acceptance on a genuinely fresh machine/account. This should cover clean Bus authorization, Houdini Adapter activation/live round-trip, and project-scoped AIBridgeUE one-click installation. It remains separate from the automated installer smoke test.
