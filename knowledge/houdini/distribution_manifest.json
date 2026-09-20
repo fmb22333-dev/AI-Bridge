@@ -1,7 +1,11 @@
 {
   "alias_set_count": 3,
-  "content_digest": "f2fabe69cad95c9722a285c2fa5f91f91837a75d9dda73a8d236d53351fcf093",
-  "excluded_recipes": [],
+  "content_digest": "cdb49df281c07e67b6290fe380ef1e704d1c19ca0ee3c0a129fde40ee1e91841",
+  "excluded_recipes": [
+    "network.build",
+    "network.build_and_cook",
+    "retarget.fbx_import_to_input_fix"
+  ],
   "guidance_count": 5,
   "included_recipes": [
     "code.safe_patch_and_cook",
@@ -12,7 +16,7 @@
     "parm.safe_write_and_cook"
   ],
   "mode": "clean_distribution",
-  "promotion_entry_count": 9,
+  "promotion_entry_count": 10,
   "schema_version": "1.0",
   "source_gate": {
     "capability_authority_available": true,
@@ -22,7 +26,8 @@
       "fbx.character_import.set_animation_and_cook",
       "kinefx.import_with_frameinfo",
       "network.ensure_and_cook",
-      "parm.safe_write_and_cook"
+      "parm.safe_write_and_cook",
+      "retarget.fbx_import_to_input_fix"
     ],
     "implemented_capability_count": 50,
     "issue_count": 0,
@@ -30,9 +35,9 @@
     "ok": true,
     "project_scoped_promoted_recipes": [],
     "promoted_guidance_count": 5,
-    "recipe_count": 6,
-    "recipe_lifecycle_count": 6
+    "recipe_count": 9,
+    "recipe_lifecycle_count": 9
   },
-  "source_root": "ai_bridge_houdini/knowledge",
+  "source_root": "D:\\a\\AI-Bridge\\AI-Bridge\\runtime\\houdini_adapter\\python\\ai_bridge_houdini\\knowledge",
   "template_count": 1
 }
