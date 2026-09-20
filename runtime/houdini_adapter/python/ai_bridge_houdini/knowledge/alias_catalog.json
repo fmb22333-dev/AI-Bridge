@@ -1,103 +1,119 @@
 {
+  "schema_version": "1.0",
   "alias_sets": [
     {
+      "id": "fbx_character_import.file_parameters",
+      "state": "validated",
+      "scope": "node_type_version_sensitive",
+      "node_type": "kinefx::Sop/fbxcharacterimport",
       "aliases": [
         {
-          "internal_name": "fbxfile",
           "semantic": "import_file",
+          "internal_name": "fbxfile",
+          "historical_path": "/obj/geo1/IMPORT_ANIM/fbxfile",
           "ui_label": "Import File"
         },
         {
-          "internal_name": "animfbxfile",
           "semantic": "animation_fbx_file",
+          "internal_name": "animfbxfile",
+          "historical_path": "/obj/geo1/IMPORT_ANIM/animfbxfile",
           "ui_label": "Animation FBX File"
         }
-      ],
-      "id": "fbx_character_import.file_parameters",
-      "node_type": "kinefx::Sop/fbxcharacterimport",
-      "scope": "node_type_version_sensitive",
-      "state": "validated",
-      "supported_host_versions": [
-        "21.0.440"
       ],
       "validation_contract": [
         "inspect parm templates on the live node",
         "after changing animation input, read back the actual Animation FBX File value before Cook"
+      ],
+      "supported_host_versions": [
+        "21.0.440"
+      ],
+      "validation_evidence": [
+        "Live inspect.node confirmed fbxfile and animfbxfile on /obj/geo1/IMPORT_ANIM.",
+        "Independent live inspect.node confirmed the same tokens on /obj/geo1/IMPORT_DEFAULT.",
+        "Live parm.read successfully read animfbxfile from IMPORT_ANIM."
       ]
     },
     {
+      "id": "fbx_output.ui_semantics",
+      "state": "validated",
+      "scope": "node_type_version_sensitive",
+      "node_family": "ROP FBX Animation/Character Output",
+      "node_type": "kinefx::Sop/rop_fbxcharacteroutput",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
       "aliases": [
         {
-          "internal_name": "cliprangemode",
           "semantic": "frame_range_mode",
+          "internal_name": "cliprangemode",
           "type": "Menu"
         },
         {
-          "internal_name": "f1",
           "semantic": "frame_start",
+          "internal_name": "f1",
           "type": "Float"
         },
         {
-          "internal_name": "f2",
           "semantic": "frame_end",
+          "internal_name": "f2",
           "type": "Float"
         },
         {
-          "internal_name": "f3",
           "semantic": "frame_increment",
+          "internal_name": "f3",
           "type": "Float"
         },
         {
-          "internal_name": "inputfilepath",
           "semantic": "input_fbx_file",
+          "internal_name": "inputfilepath",
           "type": "String"
         },
         {
-          "internal_name": "outputfilepath",
           "semantic": "output_fbx_file",
+          "internal_name": "outputfilepath",
           "type": "String"
         },
         {
-          "internal_name": "clipname",
           "semantic": "clip_name",
+          "internal_name": "clipname",
           "type": "String"
         }
       ],
-      "id": "fbx_output.ui_semantics",
-      "node_family": "ROP FBX Animation/Character Output",
-      "node_type": "kinefx::Sop/rop_fbxcharacteroutput",
-      "scope": "node_type_version_sensitive",
-      "state": "validated",
-      "supported_host_versions": [
-        "21.0.440"
+      "validation_evidence": [
+        "Live inspect.node on /obj/geo1/FBX_OUT confirmed all internal parameter tokens and node type.",
+        "Live parm.read confirmed cliprangemode, inputfilepath, and outputfilepath are readable.",
+        "Numeric cliprangemode value is not promoted as a semantic menu mapping; inspect the active menu before changing mode."
       ]
     },
     {
+      "id": "houdini.node_type.constructor_tokens",
+      "state": "validated",
+      "scope": "host_version_node_type",
+      "supported_host_versions": [
+        "21.0.440"
+      ],
       "aliases": [
         {
-          "category": "Sop",
-          "constructor_token": "kinefx::fbxcharacterimport",
+          "semantic": "fbx_character_import",
           "inspect_display": "kinefx::Sop/fbxcharacterimport",
-          "semantic": "fbx_character_import"
+          "constructor_token": "kinefx::fbxcharacterimport",
+          "category": "Sop"
         },
         {
-          "category": "Sop",
-          "constructor_token": "null",
+          "semantic": "null",
           "inspect_display": "Sop/null",
-          "semantic": "null"
+          "constructor_token": "null",
+          "category": "Sop"
         }
       ],
-      "id": "houdini.node_type.constructor_tokens",
+      "validation_evidence": [
+        "Live network.validate rejected kinefx::Sop/fbxcharacterimport and accepted kinefx::fbxcharacterimport under /obj/geo1.",
+        "Live network.validate rejected Sop/null and accepted null under /obj/geo1."
+      ],
       "safety": [
         "mapping is host-version scoped",
         "new node types require independent constructor-token validation before adding aliases"
-      ],
-      "scope": "host_version_node_type",
-      "state": "validated",
-      "supported_host_versions": [
-        "21.0.440"
       ]
     }
-  ],
-  "schema_version": "1.0"
+  ]
 }

@@ -1,0 +1,74 @@
+{
+  "id": "network.build_and_cook",
+  "version": "1.0",
+  "description": "Validate, build, then cook a Houdini network; collect host errors if cook fails.",
+  "required": [
+    "parent",
+    "nodes",
+    "connections",
+    "cook_path"
+  ],
+  "optional": [],
+  "steps": [
+    {
+      "op": "network.validate",
+      "save_as": "preflight",
+      "arguments": {
+        "parent": {
+          "$arg": "parent"
+        },
+        "nodes": {
+          "$arg": "nodes"
+        },
+        "connections": {
+          "$arg": "connections"
+        }
+      }
+    },
+    {
+      "op": "network.apply",
+      "save_as": "apply",
+      "arguments": {
+        "parent": {
+          "$arg": "parent"
+        },
+        "nodes": {
+          "$arg": "nodes"
+        },
+        "connections": {
+          "$arg": "connections"
+        },
+        "layout": false,
+        "allow_update_existing": false
+      }
+    },
+    {
+      "op": "cook.execute",
+      "save_as": "cook",
+      "arguments": {
+        "path": {
+          "$arg": "cook_path"
+        },
+        "force": true
+      }
+    },
+    {
+      "op": "host.errors",
+      "save_as": "errors",
+      "when": {
+        "$result_equals": {
+          "path": "cook.cook_status",
+          "value": "FAILED"
+        }
+      },
+      "arguments": {
+        "path": {
+          "$arg": "cook_path"
+        }
+      }
+    }
+  ],
+  "lifecycle_state": "deprecated",
+  "superseded_by": "network.ensure_and_cook",
+  "deprecation_reason": "Desired-state create/update/cook semantics are covered more safely and idempotently by network.ensure_and_cook. Keep only as historical fresh-build evidence."
+}

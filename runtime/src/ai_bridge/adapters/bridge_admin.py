@@ -71,6 +71,7 @@ def descriptor() -> AdapterDescriptor:
         CapabilityDescriptor(name="bridge.update.validate", version="1.0", write=False, risk=RiskLevel.L1),
         CapabilityDescriptor(name="bridge.update.publish", version="1.0", write=True, risk=RiskLevel.L1, rollback=True),
         CapabilityDescriptor(name="bridge.supervisor.status", version="1.0", write=False, risk=RiskLevel.L1),
+        CapabilityDescriptor(name="bridge.supervisor.publish", version="1.0", write=True, host_mutation=False, risk=RiskLevel.L2),
         CapabilityDescriptor(name="bridge.supervisor.upgrade", version="1.0", write=True, risk=RiskLevel.L2, rollback=True, manages_checkpoint=True),
         CapabilityDescriptor(name="bridge.adapter.stage_houdini", version="1.0", write=True, risk=RiskLevel.L1),
         CapabilityDescriptor(name="bridge.plugin.status", version="1.0", write=False, risk=RiskLevel.L1),
@@ -954,13 +955,6 @@ class BridgeAdminExecutor:
             raise RuntimeError("Unable to update pyproject version")
         pyproject.write_text(text, encoding="utf-8")
 
-        controller = self.staging / "src" / "ai_bridge" / "transport" / "remote_controller.py"
-        text = controller.read_text(encoding="utf-8")
-        text, count = re.subn(r'"bridge_version":\s*"[^"]+"', f'"bridge_version": "{version}"', text, count=1)
-        if count != 1:
-            raise RuntimeError("Unable to update presence version")
-        controller.write_text(text, encoding="utf-8")
-
         index = self.staging / "src" / "ai_bridge" / "web" / "templates" / "index.html"
         text = index.read_text(encoding="utf-8")
         text, count = re.subn(r'AI Bridge <small>V[^<]+</small>', f'AI Bridge <small>V{version}</small>', text, count=1)
@@ -1351,6 +1345,122 @@ class BridgeAdminExecutor:
             raise RuntimeError("Staging is not initialized; call bridge.update.begin first")
         self._set_version(version)
         return self._publish_via_staging_worker(version, notes)
+
+    def _publish_supervisor_release(
+        self,
+        *,
+        notes: str = "",
+        min_runtime_version: str = "",
+    ) -> dict:
+        source = self._update_source()
+        repository = str(source["repository"])
+        branch = str(source.get("branch") or PRODUCT_REF)
+        token = self._token()
+
+        supervisor_path = self.root / "_System" / "supervisor.py"
+        if not supervisor_path.is_file():
+            raise RuntimeError("Supervisor source is missing")
+        supervisor_text = supervisor_path.read_text(encoding="utf-8")
+        version = self._supervisor_version_from_source(supervisor_path)
+        self._version_tuple(version)
+
+        upgrade_protocol = "runtime_detached_worker_v1"
+        for line in supervisor_text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("SUPERVISOR_UPDATE_PROTOCOL") and "=" in stripped:
+                upgrade_protocol = stripped.split("=", 1)[1].strip().strip("\"'")
+                break
+        if upgrade_protocol != "runtime_detached_worker_v1":
+            raise RuntimeError("Unsupported Supervisor upgrade protocol: " + upgrade_protocol)
+
+        min_runtime_version = str(min_runtime_version or self._version(self.current)).strip()
+        self._version_tuple(min_runtime_version)
+
+        published_version = None
+        try:
+            current_release = self._fetch_repo_text(
+                repository, branch, "supervisor-release.json", timeout_seconds=8.0
+            )
+            current_manifest = json.loads(current_release["text"])
+            published_version = str(current_manifest.get("version") or "").strip()
+        except RuntimeError as exc:
+            if "HTTP 404" not in str(exc):
+                raise
+        if published_version and self._version_tuple(version) < self._version_tuple(published_version):
+            raise RuntimeError(f"Supervisor source {version} is older than published {published_version}")
+
+        prefix = f"bootstrap/supervisor/{version}/_System"
+        supervisor_release_path = prefix + "/supervisor.py"
+        version_release_path = prefix + "/VERSION.txt"
+        version_text = (
+            f"AI Bridge Supervisor {version}\n"
+            f"Stable shell for replaceable Runtime {min_runtime_version}+\n"
+        )
+
+        with httpx.Client(timeout=httpx.Timeout(60.0, connect=8.0)) as client:
+            supervisor_commit = self._put(
+                client, repository, branch, supervisor_release_path,
+                supervisor_text.encode("utf-8"), token,
+                f"AI Bridge Supervisor {version} source",
+            )
+            version_commit = self._put(
+                client, repository, branch, version_release_path,
+                version_text.encode("utf-8"), token,
+                f"AI Bridge Supervisor {version} version",
+            )
+
+        supervisor_doc = self._fetch_repo_text(repository, branch, supervisor_release_path, timeout_seconds=8.0)
+        version_doc = self._fetch_repo_text(repository, branch, version_release_path, timeout_seconds=8.0)
+        if supervisor_doc["text"] != supervisor_text:
+            raise RuntimeError("Published Supervisor source readback mismatch")
+        if version_doc["text"] != version_text:
+            raise RuntimeError("Published Supervisor VERSION readback mismatch")
+        supervisor_blob = str(supervisor_doc.get("sha") or "").strip()
+        version_blob = str(version_doc.get("sha") or "").strip()
+        if not supervisor_blob or not version_blob:
+            raise RuntimeError("Published Supervisor release is missing Git blob SHA")
+
+        manifest = {
+            "schema_version": "1.0",
+            "channel": "stable",
+            "version": version,
+            "min_runtime_version": min_runtime_version,
+            "upgrade_protocol": upgrade_protocol,
+            "files": [
+                {"target": "_System/supervisor.py", "source_path": supervisor_release_path, "github_sha": supervisor_blob},
+                {"target": "_System/VERSION.txt", "source_path": version_release_path, "github_sha": version_blob},
+            ],
+            "notes": str(notes or ""),
+        }
+        manifest_raw = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        with httpx.Client(timeout=httpx.Timeout(60.0, connect=8.0)) as client:
+            manifest_commit = self._put(
+                client, repository, branch, "supervisor-release.json",
+                manifest_raw, token, f"AI Bridge Supervisor {version} manifest",
+            )
+
+        readback = self._fetch_repo_text(repository, branch, "supervisor-release.json", timeout_seconds=8.0)
+        readback_manifest = json.loads(readback["text"])
+        if str(readback_manifest.get("version") or "") != version:
+            raise RuntimeError("Supervisor release manifest readback version mismatch")
+        readback_files = readback_manifest.get("files") or []
+        if [item.get("github_sha") for item in readback_files] != [supervisor_blob, version_blob]:
+            raise RuntimeError("Supervisor release manifest readback SHA mismatch")
+
+        return {
+            "published": True,
+            "repository": repository,
+            "branch": branch,
+            "version": version,
+            "min_runtime_version": min_runtime_version,
+            "upgrade_protocol": upgrade_protocol,
+            "supervisor_source_commit": supervisor_commit,
+            "version_file_commit": version_commit,
+            "manifest_commit": manifest_commit,
+            "supervisor_blob_sha": supervisor_blob,
+            "version_blob_sha": version_blob,
+            "release_path": "supervisor-release.json",
+        }
 
     def _supervisor_upgrade_status(self, recovery_id: str | None = None) -> dict:
         supervisor_source = self.root / "_System" / "supervisor.py"
@@ -1744,6 +1854,14 @@ class BridgeAdminExecutor:
                     command.command_id,
                     self._supervisor_upgrade_status(
                         str(args.get("recovery_id") or "").strip() or None
+                    ),
+                )
+            if op == "bridge.supervisor.publish":
+                return self._success(
+                    command.command_id,
+                    self._publish_supervisor_release(
+                        notes=str(args.get("notes") or ""),
+                        min_runtime_version=str(args.get("min_runtime_version") or ""),
                     ),
                 )
             if op == "bridge.supervisor.upgrade":

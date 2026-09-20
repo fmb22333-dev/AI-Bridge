@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from queue import Empty, Queue
 from threading import Event, RLock
+from typing import Callable
 import time
 
 from ai_bridge.protocol.command import CommandEnvelope
@@ -22,7 +23,26 @@ class AdapterCommandBus:
         self._queues: dict[str, Queue[CommandEnvelope]] = {}
         self._pending: dict[str, PendingResult] = {}
         self._canceled: set[str] = set()
+        self._timed_out: dict[str, dict] = {}
+        self._timeout_handler: Callable | None = None
+        self._late_completion_handler: Callable | None = None
         self._lock = RLock()
+
+    def set_timeout_handler(self, handler) -> None:
+        with self._lock:
+            self._timeout_handler = handler
+
+    def set_late_completion_handler(self, handler) -> None:
+        with self._lock:
+            self._late_completion_handler = handler
+
+    def busy_source(self, session_id: str) -> dict | None:
+        with self._lock:
+            rows = [dict(item) for item in self._timed_out.values() if item.get("session_id") == session_id]
+        if not rows:
+            return None
+        rows.sort(key=lambda item: float(item.get("timed_out_at") or 0.0), reverse=True)
+        return rows[0]
 
     def ensure_session(self, session_id: str) -> None:
         with self._lock:
@@ -37,6 +57,16 @@ class AdapterCommandBus:
         if not pending.event.wait(timeout):
             with self._lock:
                 self._pending.pop(command.command_id, None)
+                state = {
+                    "session_id": session_id,
+                    "command_id": command.command_id,
+                    "operation": command.operation,
+                    "timed_out_at": time.monotonic(),
+                }
+                self._timed_out[command.command_id] = state
+                handler = self._timeout_handler
+                if callable(handler):
+                    handler(session_id, command)
             return None
         with self._lock:
             done = self._pending.pop(command.command_id, None)
@@ -66,9 +96,17 @@ class AdapterCommandBus:
                 return command
 
     def complete(self, result: ExecutionResult) -> bool:
+        # Result delivery is idempotent from the Adapter sender's perspective.
+        # A Runtime restart can erase the in-memory pending map while an Adapter
+        # still holds the already-finished result. Treat that stale result as
+        # consumed instead of returning 409 and wedging the sender forever.
         with self._lock:
             pending = self._pending.get(result.command_id)
             if pending is None:
+                timed_out = self._timed_out.pop(result.command_id, None)
+                handler = self._late_completion_handler
+                if timed_out is not None and callable(handler):
+                    handler(str(timed_out.get("session_id") or ""), result.command_id, result)
                 return True
             if pending.result is not None or pending.event.is_set():
                 return True

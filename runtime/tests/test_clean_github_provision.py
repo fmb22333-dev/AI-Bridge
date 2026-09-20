@@ -80,7 +80,19 @@ def test_clean_bus_provision_creates_repo_ai_entrypoints_and_issue_one():
     assert index["repository"] == "alice/ai-bridge-bus"
     assert index["bridge"]["runtime_source"]["repository"] == "fmb22333-dev/AI-Bridge"
     assert index["bridge"]["runtime_source"]["ref"] == "main"
+    assert index["bridge"]["live_runtime_status"]["semantics"] == "last_published_durable_state"
+    assert index["bridge"]["live_runtime_status"]["live_probe"] == {"adapter": "bridge_transport", "operation": "transport.ping"}
     assert index["bridge"]["normative_specs"]["ai_protocol"]["path"] == "specs/AI_AGENT_PROTOCOL.md"
+    authority = index["bridge"]["realtime_transport_authority"]
+    assert authority["canonical"]["repository"] == "fmb22333-dev/AI-Bridge"
+    assert authority["canonical"]["ref"] == "main"
+    assert authority["canonical"]["path"] == "docs/SUPABASE_PRIMARY_TRANSPORT.md"
+    assert "高速通道" in authority["aliases"]
+    assert index["bridge"]["presence_version_authority"]["runtime_version_source"] == "active Runtime pyproject.toml"
+    read_first = writes["AI_BRIDGE_READ_FIRST.md"].decode("utf-8")
+    assert "高速通道" in read_first
+    assert "transport.ping" in read_first
+    assert "pyproject.toml" in read_first
     assert "AUTO_UV" not in writes["PROJECT_STATE_INDEX.json"].decode("utf-8")
 
     readme = writes["README.md"].decode("utf-8")

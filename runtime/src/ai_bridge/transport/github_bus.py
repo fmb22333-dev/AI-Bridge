@@ -570,7 +570,6 @@ RESULT_MARKER_V4 = 'AI_BRIDGE_RESULT_V4'
 _p0_fetch_mailbox_commands_v3 = GitHubBusTransport._fetch_mailbox_commands
 _p0_publish_result_v3 = GitHubBusTransport.publish_result
 
-
 def _p0_fetch_mailbox_commands(self):
     if self._mailbox_comment_id is None:
         return _p0_fetch_mailbox_commands_v3(self)
@@ -633,7 +632,6 @@ def _p0_fetch_mailbox_commands(self):
     }
     return [command]
 
-
 def _p0_publish_result(self, result):
     ref = self._comment_refs.get(result.command_id)
     if ref is not None and ref.get('mode') == 'issue_mailbox_v4':
@@ -657,7 +655,6 @@ def _p0_publish_result(self, result):
             return
         self._comment_write_ok = False
     return _p0_publish_result_v3(self,result)
-
 
 GitHubBusTransport._fetch_mailbox_commands = _p0_fetch_mailbox_commands
 GitHubBusTransport.publish_result = _p0_publish_result
@@ -916,6 +913,8 @@ def _v5_fetch_channel_commands(self) -> list[CommandEnvelope] | None:
         items = payload if isinstance(payload, list) else []
 
     commands = _v5_comments_to_commands(self, items)
+    # Compatibility for the first poll after activation: older tests/clients may
+    # have changed the fixed mailbox immediately after the initialization list GET.
     if used_cache and not commands and self._mailbox_comment_id is not None:
         legacy = _p0_fetch_mailbox_commands(self)
         if legacy is not None:
@@ -1088,3 +1087,103 @@ GitHubBusTransport.initialize_message_mode = _v5_initialize_message_mode
 GitHubBusTransport.message_state = _v5_message_state
 GitHubBusTransport.fetch_commands = _v5_fetch_commands
 GitHubBusTransport.publish_result = _v5_publish_result
+
+# AI_BRIDGE_TRANSPORT_ERGONOMICS_P1_FULL_RESULT
+from collections import OrderedDict as _P1OrderedDict
+
+_P1_FULL_RESULT_LIMIT = 128
+_p1_publish_result_base = GitHubBusTransport.publish_result
+
+
+def _p1_full_result_store(self):
+    store = getattr(self, "_p1_full_result_sources", None)
+    if store is None:
+        store = _P1OrderedDict()
+        self._p1_full_result_sources = store
+    return store
+
+
+def _p1_remember_full_result(self, result: ExecutionResult) -> None:
+    store = _p1_full_result_store(self)
+    command_id = str(result.command_id)
+    store.pop(command_id, None)
+    store[command_id] = result.model_copy(deep=True)
+    while len(store) > _P1_FULL_RESULT_LIMIT:
+        store.popitem(last=False)
+
+
+def _p1_full_result_for(self, command_id: str, fallback: ExecutionResult) -> ExecutionResult:
+    source = _p1_full_result_store(self).get(str(command_id))
+    return source.model_copy(deep=True) if source is not None else fallback
+
+
+def _p1_forget_full_result(self, command_id: str) -> None:
+    _p1_full_result_store(self).pop(str(command_id), None)
+
+
+def _p1_publish_result(self, result: ExecutionResult) -> None:
+    ref = self._comment_refs.get(result.command_id)
+    if ref is None or ref.get("mode") not in {"issue_channel_v5", "issue_mailbox_v4"}:
+        return _p1_publish_result_base(self, result)
+
+    full_result = _p1_full_result_for(self, result.command_id, result)
+    owner_state = _v5_result_owner_state(self, ref, result.command_id)
+    if owner_state == "already_result":
+        self._comment_write_ok = True
+        return
+    if owner_state != "owned":
+        _v5_publish_durable_result(self, ref, full_result, "channel_generation_changed")
+        return
+
+    if ref.get("mode") == "issue_channel_v5":
+        marker = CHANNEL_RESULT_MARKER_V5
+        envelope = {
+            "bridge_id": self.config.bridge_id,
+            "channel_id": ref["channel_id"],
+            "generation": ref["generation"],
+            "command_id": result.command_id,
+            "command": ref["command"],
+            "result": json.loads(result.model_dump_json()),
+        }
+    else:
+        marker = RESULT_MARKER_V4
+        envelope = {
+            "bridge_id": self.config.bridge_id,
+            "generation": ref["generation"],
+            "command_id": result.command_id,
+            "command": ref["command"],
+            "result": json.loads(result.model_dump_json()),
+        }
+
+    body = marker + "\n" + json.dumps(
+        envelope,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    response = self.client.patch(
+        self._comment_url(int(ref["comment_id"])),
+        headers=self.headers,
+        json={"body": body},
+    )
+    self._observe_response(response)
+    if response.status_code < 400:
+        self._comment_write_ok = True
+        self._comments_etag = None
+        if ref.get("mode") == "issue_mailbox_v4":
+            self._mailbox_etag = response.headers.get("ETag") or None
+        return
+
+    self._comment_write_ok = False
+    _v5_publish_durable_result(
+        self,
+        ref,
+        full_result,
+        f"comment_patch_http_{response.status_code}",
+    )
+
+
+GitHubBusTransport.remember_full_result = _p1_remember_full_result
+GitHubBusTransport.full_result_for_delivery = _p1_full_result_for
+GitHubBusTransport.forget_full_result = _p1_forget_full_result
+GitHubBusTransport.publish_result = _p1_publish_result
+

@@ -39,10 +39,21 @@ class HostProcessController:
 
     @staticmethod
     def _windows_process_is_running(pid: int) -> bool:
+        """Return Windows process execution state, not merely handle existence.
+
+        A terminated Windows process object can remain openable briefly while
+        handles to that object still exist. GetExitCodeProcess is therefore the
+        authority: STILL_ACTIVE (259) means executing; any other exit code means
+        the process has already terminated.
+        """
         kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
         PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
         STILL_ACTIVE = 259
-        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+        handle = kernel32.OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION,
+            False,
+            int(pid),
+        )
         if not handle:
             return False
         try:
@@ -66,7 +77,13 @@ class HostProcessController:
         except (OSError, RuntimeError, ValueError):
             return False
 
-    def close_gracefully(self, pid: int, *, wait_seconds: float = 8.0, force_if_needed: bool = True) -> dict:
+    def close_gracefully(
+        self,
+        pid: int,
+        *,
+        wait_seconds: float = 8.0,
+        force_if_needed: bool = True,
+    ) -> dict:
         pid = int(pid)
         started = time.monotonic()
         requested = False
@@ -74,7 +91,13 @@ class HostProcessController:
         detail = None
 
         if not self.is_running(pid):
-            return {"pid": pid, "close_requested": False, "force_used": False, "terminated": True, "elapsed_ms": 0.0}
+            return {
+                "pid": pid,
+                "close_requested": False,
+                "force_used": False,
+                "terminated": True,
+                "elapsed_ms": 0.0,
+            }
 
         if os.name == "nt":
             completed = subprocess.run(
@@ -116,6 +139,10 @@ class HostProcessController:
     def terminate(self, pid: int, *, force_after_seconds: float = 1.0) -> dict:
         pid = int(pid)
         started = time.monotonic()
+
+        # Termination is intentionally idempotent. The host can exit between a
+        # caller's liveness check and this method (especially after taskkill
+        # without /F). "Already stopped" is a successful terminal state.
         if not self.is_running(pid):
             return {
                 "pid": pid,
@@ -125,6 +152,9 @@ class HostProcessController:
             }
 
         if os.name == "nt":
+            # Budget exhaustion is treated as an algorithm-level hard stop.
+            # /T includes child processes; /F prevents an infinite host compute
+            # from defeating the configured hard deadline.
             completed = subprocess.run(
                 ["taskkill", "/PID", str(pid), "/T", "/F"],
                 capture_output=True,
@@ -164,4 +194,8 @@ class HostProcessController:
             cwd=str(Path(project_file).expanduser().parent),
             close_fds=True,
         )
-        return {"pid": process.pid, "executable": executable, "project_file": project_file}
+        return {
+            "pid": process.pid,
+            "executable": executable,
+            "project_file": project_file,
+        }

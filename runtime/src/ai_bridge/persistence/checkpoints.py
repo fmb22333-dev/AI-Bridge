@@ -16,6 +16,7 @@ class CheckpointStore:
     def read(self, checkpoint_id: str) -> dict:
         return json.loads((self.root / f"{checkpoint_id}.json").read_text(encoding="utf-8"))
 
+
     def recent(self, limit: int = 100) -> list[dict]:
         limit = max(1, min(int(limit), 500))
         items = []

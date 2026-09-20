@@ -14,7 +14,10 @@ class ExecutionOptions(BaseModel):
     verify: bool = True
     checkpoint: str = "auto"
     dry_run: bool = False
+    # Optional caller override. When omitted, Bridge resolves a project/global
+    # default from its local execution-policy store.
     budget_seconds: float | None = Field(default=None, ge=1.0, le=7200.0)
+    # Optional caller override. None means inherit the local Bridge policy.
     auto_recover: bool | None = None
 
 

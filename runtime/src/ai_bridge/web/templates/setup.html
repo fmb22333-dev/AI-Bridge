@@ -69,18 +69,125 @@
 <script>
 const $ = (id) => document.getElementById(id);
 let setupState = null;
-function normalizeRepo(value){let v=(value||'').trim();v=v.replace(/^git@github\.com:/i,'').replace(/^https?:\/\/github\.com\//i,'').replace(/^github\.com\//i,'');v=v.replace(/^\/+|\/+$/g,'').replace(/\.git$/i,'');const parts=v.split('/').filter(Boolean);return parts.length>=2?`${parts[0]}/${parts[1]}`:v;}
-async function parseResponse(response){const text=await response.text();let data={};try{data=text?JSON.parse(text):{};}catch{data={detail:text};}if(!response.ok)throw new Error(data.detail||text||`HTTP ${response.status}`);return data;}
-async function loadState({preserveInput=false}={}){const response=await fetch('/setup/state');setupState=await response.json();if(!preserveInput||!$('repo').value.trim())$('repo').value=setupState.repository||(setupState.gh_login?`${setupState.gh_login}/ai-bridge-bus`:'');if(!preserveInput||!$('branch').value.trim())$('branch').value=setupState.branch||'main';if(!preserveInput||!$('bridgeId').value.trim())$('bridgeId').value=setupState.bridge_id||'local-bridge';if(setupState.gh_cli_authenticated){$('localStatus').innerHTML=`<span class="ok">✓ GitHub CLI 已登录${setupState.gh_login?`：${setupState.gh_login}`:''}</span><br><small>Token 输入框可以留空，Bridge 会直接复用本机 gh 凭据。</small>`;$('credentialHint').textContent='已检测到 GitHub CLI 登录，可直接使用；也可以粘贴单独的 Fine-grained Token。';$('ghWebLogin').style.display='none';$('installGh').style.display='none';}else if(setupState.gh_cli_available){$('localStatus').innerHTML='GitHub CLI 已安装但未登录。可点击“启动 GitHub CLI 网页登录”，无需手敲命令；也可以直接使用 Token。';$('ghWebLogin').style.display='inline-block';$('installGh').style.display='none';}else{$('localStatus').innerHTML='未检测到 GitHub CLI。可直接使用下方 Token 流程，不需要安装额外工具。';$('ghWebLogin').style.display='none';$('installGh').style.display='inline-block';}if(setupState.configured){$('dashboard').style.display='inline-block';$('out').textContent=`当前配置：${setupState.repository} · ${setupState.status}`;}}
-$('repo').addEventListener('blur',()=>{$('repo').value=normalizeRepo($('repo').value);});
-$('githubLogin').onclick=()=>window.open('/setup/github-login','_blank','noopener');$('installGh').onclick=()=>window.open('/setup/github-cli','_blank','noopener');$('createRepo').onclick=()=>window.open('/setup/github-repository','_blank','noopener');
-$('provisionRepo').onclick=async()=>{$('provisionRepo').disabled=true;$('save').disabled=true;$('out').className='status muted';$('out').textContent='正在创建/检查干净 Bus 仓库、初始化 Issue #1 与 mailbox…';try{const repository=normalizeRepo($('repo').value);$('repo').value=repository;const data=await parseResponse(await fetch('/setup/provision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repository,bridge_id:$('bridgeId').value.trim(),runtime_source_repository:setupState?.runtime_source_repository||'fmb22333-dev/AI-Bridge',token:$('token').value.trim(),private:true})}));$('token').value='';$('repo').value=data.provisioned?.repository||repository;$('out').className='status ok';$('out').textContent='✓ 干净 Bus 已初始化并连接。projects={}，未继承任何现有项目。正在进入 Dashboard…';setTimeout(()=>{window.location.href='/';},900);}catch(error){$('out').className='status error';$('out').textContent='一键部署失败：'+error.message+'\n你仍可使用下方“连接已有 GitHub Bus”流程。';}finally{$('provisionRepo').disabled=false;$('save').disabled=false;}};
-$('openRepo').onclick=()=>{const repo=normalizeRepo($('repo').value);$('repo').value=repo;window.open('/setup/github-open-repository?repository='+encodeURIComponent(repo),'_blank','noopener');};
-$('createToken').onclick=()=>{const owner=(normalizeRepo($('repo').value).split('/')[0]||setupState?.gh_login||'').trim();window.open('/setup/github-token?owner='+encodeURIComponent(owner),'_blank','noopener');};$('manageToken').onclick=()=>window.open('/setup/github-token-settings','_blank','noopener');$('dashboard').onclick=()=>window.location.href='/';$('refreshState').onclick=()=>loadState({preserveInput:true}).catch((error)=>{$('localStatus').textContent=error.message;});
-$('copyBridgeId').onclick=async()=>{try{await navigator.clipboard.writeText($('bridgeId').value.trim());$('copyBridgeId').textContent='已复制';setTimeout(()=>$('copyBridgeId').textContent='复制 ID',900);}catch{$('out').textContent='浏览器不允许直接复制，请手动复制 Bridge ID。';}};
-$('ghWebLogin').onclick=async()=>{$('ghWebLogin').disabled=true;$('localStatus').textContent='正在启动 GitHub CLI 网页登录窗口…';try{await parseResponse(await fetch('/setup/github-cli-login',{method:'POST'}));$('localStatus').innerHTML='已启动 GitHub CLI 登录窗口。完成浏览器授权后，点击“重新检测登录状态”。';}catch(error){$('localStatus').className='status error';$('localStatus').textContent='启动失败：'+error.message;}finally{$('ghWebLogin').disabled=false;}};
-$('save').onclick=async()=>{$('save').disabled=true;$('out').className='status muted';$('out').textContent='正在验证仓库、分支和写入权限…';try{const repository=normalizeRepo($('repo').value);$('repo').value=repository;await parseResponse(await fetch('/setup/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repository,branch:$('branch').value.trim(),bridge_id:$('bridgeId').value.trim(),token:$('token').value.trim()})}));$('token').value='';$('out').className='status ok';$('out').textContent='✓ GitHub Bus 已连接，配置已安全保存。正在进入 Dashboard…';setTimeout(()=>{window.location.href='/';},700);}catch(error){$('out').className='status error';$('out').textContent='连接失败：'+error.message;}finally{$('save').disabled=false;}};
-loadState().catch((error)=>{$('localStatus').className='status error';$('localStatus').textContent='环境检测失败：'+error.message;});
+
+function normalizeRepo(value) {
+  let v = (value || '').trim();
+  v = v.replace(/^git@github\.com:/i, '').replace(/^https?:\/\/github\.com\//i, '').replace(/^github\.com\//i, '');
+  v = v.replace(/^\/+|\/+$/g, '').replace(/\.git$/i, '');
+  const parts = v.split('/').filter(Boolean);
+  return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : v;
+}
+
+async function parseResponse(response) {
+  const text = await response.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { data = {detail: text}; }
+  if (!response.ok) throw new Error(data.detail || text || `HTTP ${response.status}`);
+  return data;
+}
+
+async function loadState({preserveInput=false} = {}) {
+  const response = await fetch('/setup/state');
+  setupState = await response.json();
+  if (!preserveInput || !$('repo').value.trim()) $('repo').value = setupState.repository || (setupState.gh_login ? `${setupState.gh_login}/ai-bridge-bus` : '');
+  if (!preserveInput || !$('branch').value.trim()) $('branch').value = setupState.branch || 'main';
+  if (!preserveInput || !$('bridgeId').value.trim()) $('bridgeId').value = setupState.bridge_id || 'local-bridge';
+  if (setupState.gh_cli_authenticated) {
+    $('localStatus').innerHTML = `<span class="ok">✓ GitHub CLI 已登录${setupState.gh_login ? `：${setupState.gh_login}` : ''}</span><br><small>Token 输入框可以留空，Bridge 会直接复用本机 gh 凭据。</small>`;
+    $('credentialHint').textContent = '已检测到 GitHub CLI 登录，可直接使用；也可以粘贴单独的 Fine-grained Token。';
+    $('ghWebLogin').style.display = 'none'; $('installGh').style.display = 'none';
+  } else if (setupState.gh_cli_available) {
+    $('localStatus').innerHTML = 'GitHub CLI 已安装但未登录。可点击“启动 GitHub CLI 网页登录”，无需手敲命令；也可以直接使用 Token。';
+    $('ghWebLogin').style.display = 'inline-block'; $('installGh').style.display = 'none';
+  } else {
+    $('localStatus').innerHTML = '未检测到 GitHub CLI。可直接使用下方 Token 流程，不需要安装额外工具。';
+    $('ghWebLogin').style.display = 'none'; $('installGh').style.display = 'inline-block';
+  }
+  if (setupState.configured) {
+    $('dashboard').style.display = 'inline-block';
+    $('out').textContent = `当前配置：${setupState.repository} · ${setupState.status}`;
+  }
+}
+
+$('repo').addEventListener('blur', () => { $('repo').value = normalizeRepo($('repo').value); });
+$('githubLogin').onclick = () => window.open('/setup/github-login', '_blank', 'noopener');
+$('installGh').onclick = () => window.open('/setup/github-cli', '_blank', 'noopener');
+$('createRepo').onclick = () => window.open('/setup/github-repository', '_blank', 'noopener');
+$('provisionRepo').onclick = async () => {
+  $('provisionRepo').disabled = true;
+  $('save').disabled = true;
+  $('out').className = 'status muted';
+  $('out').textContent = '正在创建/检查干净 Bus 仓库、初始化 Issue #1 与 mailbox…';
+  try {
+    const repository = normalizeRepo($('repo').value); $('repo').value = repository;
+    const data = await parseResponse(await fetch('/setup/provision', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        repository,
+        bridge_id: $('bridgeId').value.trim(),
+        runtime_source_repository: setupState?.runtime_source_repository || 'fmb22333-dev/AI-Bridge',
+        token: $('token').value.trim(),
+        private: true,
+      }),
+    }));
+    $('token').value = '';
+    $('repo').value = data.provisioned?.repository || repository;
+    $('out').className = 'status ok';
+    $('out').textContent = '✓ 干净 Bus 已初始化并连接。projects={}，未继承任何现有项目。正在进入 Dashboard…';
+    setTimeout(() => { window.location.href = '/'; }, 900);
+  } catch (error) {
+    $('out').className = 'status error';
+    $('out').textContent = '一键部署失败：' + error.message + '\n你仍可使用下方“连接已有 GitHub Bus”流程。';
+  } finally {
+    $('provisionRepo').disabled = false;
+    $('save').disabled = false;
+  }
+};
+$('openRepo').onclick = () => {
+  const repo = normalizeRepo($('repo').value); $('repo').value = repo;
+  window.open('/setup/github-open-repository?repository=' + encodeURIComponent(repo), '_blank', 'noopener');
+};
+$('createToken').onclick = () => {
+  const owner = (normalizeRepo($('repo').value).split('/')[0] || setupState?.gh_login || '').trim();
+  window.open('/setup/github-token?owner=' + encodeURIComponent(owner), '_blank', 'noopener');
+};
+$('manageToken').onclick = () => window.open('/setup/github-token-settings', '_blank', 'noopener');
+$('dashboard').onclick = () => window.location.href = '/';
+$('refreshState').onclick = () => loadState({preserveInput:true}).catch((error) => { $('localStatus').textContent = error.message; });
+$('copyBridgeId').onclick = async () => {
+  try { await navigator.clipboard.writeText($('bridgeId').value.trim()); $('copyBridgeId').textContent = '已复制'; setTimeout(() => $('copyBridgeId').textContent='复制 ID', 900); } catch { $('out').textContent='浏览器不允许直接复制，请手动复制 Bridge ID。'; }
+};
+$('ghWebLogin').onclick = async () => {
+  $('ghWebLogin').disabled = true;
+  $('localStatus').textContent = '正在启动 GitHub CLI 网页登录窗口…';
+  try {
+    await parseResponse(await fetch('/setup/github-cli-login', {method:'POST'}));
+    $('localStatus').innerHTML = '已启动 GitHub CLI 登录窗口。完成浏览器授权后，点击“重新检测登录状态”。';
+  } catch (error) {
+    $('localStatus').className='status error'; $('localStatus').textContent='启动失败：'+error.message;
+  } finally { $('ghWebLogin').disabled=false; }
+};
+
+$('save').onclick = async () => {
+  $('save').disabled = true;
+  $('out').className = 'status muted';
+  $('out').textContent = '正在验证仓库、分支和写入权限…';
+  try {
+    const repository = normalizeRepo($('repo').value); $('repo').value = repository;
+    const data = await parseResponse(await fetch('/setup/save', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({repository, branch: $('branch').value.trim(), bridge_id: $('bridgeId').value.trim(), token: $('token').value.trim()}),
+    }));
+    $('token').value = '';
+    $('out').className = 'status ok';
+    $('out').textContent = '✓ GitHub Bus 已连接，配置已安全保存。正在进入 Dashboard…';
+    setTimeout(() => { window.location.href = '/'; }, 700);
+  } catch (error) {
+    $('out').className = 'status error'; $('out').textContent = '连接失败：' + error.message;
+  } finally { $('save').disabled = false; }
+};
+
+loadState().catch((error) => { $('localStatus').className='status error'; $('localStatus').textContent='环境检测失败：'+error.message; });
 </script>
 </body>
 </html>

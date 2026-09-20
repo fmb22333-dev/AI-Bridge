@@ -8,26 +8,72 @@ def _node(hou, path):
     return node
 
 
+def _node_rollback_state(node):
+    try:
+        code = node.asCode(recurse=True)
+    except TypeError:
+        code = node.asCode()
+    identity = {
+        "exists": True,
+        "path": node.path(),
+        "type": node.type().name(),
+        "name": node.name(),
+        "code_hash": stable_hash(code),
+    }
+    identity["hash"] = stable_hash(identity)
+    return identity
+
+
 def create(hou, parent_path, node_type, name):
     parent = _node(hou, parent_path)
-    existing = parent.node(name) if hasattr(parent, "node") else hou.node(parent_path.rstrip("/") + "/" + name)
+    requested_path = parent.path().rstrip("/") + "/" + name
+    existing = parent.node(name) if hasattr(parent, "node") else hou.node(requested_path)
     if existing is not None:
         return {"conflict": True, "reason": "NODE_NAME_EXISTS", "path": existing.path()}
+    before = {"exists": False, "path": requested_path}
     node = parent.createNode(
         node_type,
         name,
         exact_type_name=True,
         force_valid_node_name=False,
     )
-    exact_type = node.type().name()
-    verified = node.name() == name and exact_type == node_type
-    return {
-        "conflict": False,
-        "path": node.path(),
-        "type": exact_type,
-        "name": node.name(),
-        "verified": verified,
-    }
+    try:
+        after = _node_rollback_state(node)
+        verified = (
+            node.name() == name
+            and node.type().name() == node_type
+            and node.path() == requested_path
+        )
+        if not verified:
+            node.destroy()
+            return {
+                "conflict": False,
+                "path": requested_path,
+                "type": after["type"],
+                "name": after["name"],
+                "before": before,
+                "after": after,
+                "verified": False,
+                "rolled_back": hou.node(requested_path) is None,
+                "failure": {"code": "NODE_CREATE_READBACK_MISMATCH"},
+            }
+        return {
+            "conflict": False,
+            "path": node.path(),
+            "type": after["type"],
+            "name": after["name"],
+            "before": before,
+            "after": after,
+            "verified": True,
+            "rolled_back": False,
+        }
+    except Exception:
+        try:
+            if hou.node(node.path()) is not None:
+                node.destroy()
+        except Exception:
+            pass
+        raise
 
 
 def _input_output_index(target, input_index):
@@ -55,23 +101,61 @@ def input_state(hou, target_path, input_index):
     return state
 
 
+def _restore_input_state(hou, snapshot):
+    target = _node(hou, snapshot["target"])
+    if snapshot["source"] is None:
+        target.setInput(int(snapshot["input_index"]), None)
+    else:
+        source = _node(hou, snapshot["source"])
+        target.setInput(
+            int(snapshot["input_index"]),
+            source,
+            0 if snapshot.get("output_index") is None else int(snapshot["output_index"]),
+        )
+    restored = input_state(hou, snapshot["target"], snapshot["input_index"])
+    verified = (
+        restored["source"] == snapshot["source"]
+        and restored["output_index"] == snapshot["output_index"]
+    )
+    return {"verified": verified, "state": restored}
+
+
 def connect(hou, target_path, input_index, source_path, output_index, expected_hash):
     before = input_state(hou, target_path, input_index)
     if expected_hash is None:
         raise ValueError("EXPECTED_HASH_REQUIRED")
     if before["hash"] != expected_hash:
         return {"conflict": True, "before": before}
+    current = input_state(hou, target_path, input_index)
+    if current["hash"] != expected_hash:
+        return {"conflict": True, "late_conflict": True, "before": current}
     target = _node(hou, target_path)
     source = _node(hou, source_path)
     output_index = int(output_index)
-    target.setInput(int(input_index), source, output_index)
-    after = input_state(hou, target_path, input_index)
-    return {
-        "conflict": False,
-        "before": before,
-        "after": after,
-        "verified": after["source"] == source_path and after["output_index"] == output_index,
-    }
+    try:
+        target.setInput(int(input_index), source, output_index)
+        after = input_state(hou, target_path, input_index)
+        verified = after["source"] == source_path and after["output_index"] == output_index
+        if verified:
+            return {
+                "conflict": False, "before": before, "after": after,
+                "verified": True, "rolled_back": False,
+            }
+        rollback = _restore_input_state(hou, before)
+        return {
+            "conflict": False, "before": before, "after": after,
+            "verified": False, "rolled_back": rollback["verified"],
+            "rollback": rollback,
+            "failure": {"code": "NODE_CONNECT_READBACK_MISMATCH"},
+        }
+    except Exception as exc:
+        rollback = _restore_input_state(hou, before)
+        return {
+            "conflict": False, "before": before, "after": None,
+            "verified": False, "rolled_back": rollback["verified"],
+            "rollback": rollback,
+            "failure": {"code": "NODE_CONNECT_FAILED", "message": str(exc)},
+        }
 
 
 def disconnect(hou, target_path, input_index, expected_hash):
@@ -80,15 +164,34 @@ def disconnect(hou, target_path, input_index, expected_hash):
         raise ValueError("EXPECTED_HASH_REQUIRED")
     if before["hash"] != expected_hash:
         return {"conflict": True, "before": before}
+    current = input_state(hou, target_path, input_index)
+    if current["hash"] != expected_hash:
+        return {"conflict": True, "late_conflict": True, "before": current}
     target = _node(hou, target_path)
-    target.setInput(int(input_index), None)
-    after = input_state(hou, target_path, input_index)
-    return {
-        "conflict": False,
-        "before": before,
-        "after": after,
-        "verified": after["source"] is None and after["output_index"] is None,
-    }
+    try:
+        target.setInput(int(input_index), None)
+        after = input_state(hou, target_path, input_index)
+        verified = after["source"] is None and after["output_index"] is None
+        if verified:
+            return {
+                "conflict": False, "before": before, "after": after,
+                "verified": True, "rolled_back": False,
+            }
+        rollback = _restore_input_state(hou, before)
+        return {
+            "conflict": False, "before": before, "after": after,
+            "verified": False, "rolled_back": rollback["verified"],
+            "rollback": rollback,
+            "failure": {"code": "NODE_DISCONNECT_READBACK_MISMATCH"},
+        }
+    except Exception as exc:
+        rollback = _restore_input_state(hou, before)
+        return {
+            "conflict": False, "before": before, "after": None,
+            "verified": False, "rolled_back": rollback["verified"],
+            "rollback": rollback,
+            "failure": {"code": "NODE_DISCONNECT_FAILED", "message": str(exc)},
+        }
 
 
 def normalize_batch_connect_args(args):
@@ -300,7 +403,7 @@ def batch_connect(hou, items):
     }
 
 
-def delete(hou, path, expected_type, expected_name):
+def delete(hou, path, expected_type, expected_name, expected_hash=None):
     node = _node(hou, path)
     actual_type = node.type().name()
     actual_name = node.name()
@@ -311,5 +414,21 @@ def delete(hou, path, expected_type, expected_name):
             "actual_type": actual_type,
             "actual_name": actual_name,
         }
+    before = _node_rollback_state(node)
+    if expected_hash is not None and before["hash"] != expected_hash:
+        return {
+            "conflict": True,
+            "reason": "NODE_STATE_CHANGED",
+            "expected_hash": expected_hash,
+            "actual_hash": before["hash"],
+            "before": before,
+        }
     node.destroy()
-    return {"conflict": False, "verified": hou.node(path) is None, "path": path}
+    after = {"exists": False, "path": path}
+    return {
+        "conflict": False,
+        "verified": hou.node(path) is None,
+        "path": path,
+        "before": before,
+        "after": after,
+    }

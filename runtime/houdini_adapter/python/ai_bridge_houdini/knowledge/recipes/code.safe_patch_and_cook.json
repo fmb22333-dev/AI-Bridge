@@ -1,7 +1,7 @@
 {
-  "description": "Transactional code patch: optimistic read/patch, Cook, collect host errors on Cook failure, with Core checkpoint rollback on failed recipe.apply.",
   "id": "code.safe_patch_and_cook",
-  "optional": [],
+  "version": "1.0",
+  "description": "Transactional code patch: optimistic read/patch, Cook, collect host errors on Cook failure, with Core checkpoint rollback on failed recipe.apply.",
   "required": [
     "path",
     "parameter",
@@ -9,57 +9,53 @@
     "new_text",
     "cook_path"
   ],
+  "optional": [],
   "steps": [
     {
+      "op": "code.read",
+      "save_as": "read",
       "arguments": {
-        "parameter": {
-          "$arg": "parameter"
-        },
         "path": {
           "$arg": "path"
+        },
+        "parameter": {
+          "$arg": "parameter"
         }
-      },
-      "op": "code.read",
-      "save_as": "read"
+      }
     },
     {
+      "op": "code.patch",
+      "save_as": "patch",
       "arguments": {
-        "expected_hash": {
-          "$result": "read.hash"
+        "path": {
+          "$arg": "path"
         },
-        "new_text": {
-          "$arg": "new_text"
+        "parameter": {
+          "$arg": "parameter"
         },
         "old_text": {
           "$arg": "old_text"
         },
-        "parameter": {
-          "$arg": "parameter"
+        "new_text": {
+          "$arg": "new_text"
         },
-        "path": {
-          "$arg": "path"
+        "expected_hash": {
+          "$result": "read.hash"
         }
-      },
-      "op": "code.patch",
-      "save_as": "patch"
+      }
     },
     {
-      "arguments": {
-        "force": true,
-        "path": {
-          "$arg": "cook_path"
-        }
-      },
       "op": "cook.execute",
       "save_as": "cook",
+      "arguments": {
+        "path": {
+          "$arg": "cook_path"
+        },
+        "force": true
+      },
       "stop_on_failure": false
     },
     {
-      "arguments": {
-        "path": {
-          "$arg": "cook_path"
-        }
-      },
       "op": "host.errors",
       "save_as": "errors",
       "when": {
@@ -67,8 +63,12 @@
           "path": "cook.cook_status",
           "value": "FAILED"
         }
+      },
+      "arguments": {
+        "path": {
+          "$arg": "cook_path"
+        }
       }
     }
-  ],
-  "version": "1.0"
+  ]
 }

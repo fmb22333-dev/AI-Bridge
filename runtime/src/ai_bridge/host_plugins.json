@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "hosts": [
     {
       "id": "houdini",
@@ -24,10 +24,11 @@
     {
       "id": "unreal",
       "display_name": "Unreal Engine",
-      "state": "scaffold",
+      "state": "ready",
       "bundled": true,
-      "adapter_dir": "unreal_adapter",
-      "supports_install": false,
+      "adapter_dir": "unreal_adapter/AIBridgeUE",
+      "installer": "unreal_adapter/install_plugin.py",
+      "supports_install": true,
       "supports_restart_apply": false
     }
   ]

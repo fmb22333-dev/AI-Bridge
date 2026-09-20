@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -27,10 +26,10 @@ METADATA_KEYS_TO_STRIP = {
     "provenance",
 }
 
-DISTRIBUTABLE_SCOPE_PREFIXES = (
-    "universal_",
-    "houdini_",
-    "kinefx_",
+PROJECT_RECIPE_PREFIXES = (
+    "retarget.",
+    "autouv.",
+    "auto_uv.",
 )
 
 
@@ -57,10 +56,10 @@ def _read_json(path: Path) -> dict:
 
 def _write_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    serialized = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    # Distribution artifacts are byte-stable across platforms. Path.write_text()
-    # may translate LF to CRLF on Windows, which previously changed release digests.
-    path.write_bytes(serialized.encode("utf-8"))
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _scope_is_project_specific(value: Any) -> bool:
@@ -70,11 +69,6 @@ def _scope_is_project_specific(value: Any) -> bool:
     if scope in PROJECT_SCOPES:
         return True
     return scope.endswith("_project_family") or scope.startswith("project_family")
-
-
-def _scope_is_distribution_generic(value: Any) -> bool:
-    scope = str(value or "").strip().lower()
-    return bool(scope) and scope.startswith(DISTRIBUTABLE_SCOPE_PREFIXES)
 
 
 def _strip_metadata(value: Any) -> Any:
@@ -103,9 +97,6 @@ def _filter_promotion_registry(source: dict) -> dict:
             continue
         if _scope_is_project_specific(item.get("scope")):
             continue
-        if str(item.get("kind") or "") == "recipe":
-            if not _scope_is_distribution_generic(item.get("scope")):
-                continue
         entries.append(_strip_metadata(item))
     return {
         "schema_version": str(source.get("schema_version") or "1.0"),
@@ -125,7 +116,8 @@ def _filter_templates(source: dict) -> dict:
             continue
         if _scope_is_project_specific(item.get("scope")):
             continue
-        if not _scope_is_distribution_generic(item.get("scope")):
+        executable_scope = str(item.get("executable_scope") or "").lower()
+        if executable_scope.startswith(("retarget_", "autouv_", "auto_uv_")):
             continue
         templates.append(_strip_metadata(item))
     return {
@@ -178,8 +170,8 @@ def _filter_rule_document(source: dict) -> dict:
     }
 
 
-def _promoted_recipe_scopes(promotion: dict) -> dict[str, str]:
-    out = {}
+def _promoted_recipe_ids(promotion: dict) -> set[str]:
+    out = set()
     for item in promotion.get("entries") or []:
         if not isinstance(item, dict) or str(item.get("kind") or "") != "recipe":
             continue
@@ -187,40 +179,22 @@ def _promoted_recipe_scopes(promotion: dict) -> dict[str, str]:
             continue
         target = str(item.get("target") or "").strip()
         if target.startswith("recipe:"):
-            recipe_id = target.split(":", 1)[1].strip().lower()
-            out[recipe_id] = str(item.get("scope") or "").strip().lower()
+            out.add(target.split(":", 1)[1].strip().lower())
     return out
 
 
-def _promoted_recipe_ids(promotion: dict) -> set[str]:
-    return set(_promoted_recipe_scopes(promotion))
-
-
-def _recipe_is_distributable(recipe: dict, promoted_recipe_scopes: dict[str, str]) -> bool:
+def _recipe_is_distributable(recipe: dict, promoted_recipe_ids: set[str]) -> bool:
     recipe_id = str(recipe.get("id") or "").strip().lower()
-    if not recipe_id or recipe_id not in promoted_recipe_scopes:
+    if not recipe_id or recipe_id not in promoted_recipe_ids:
         return False
-    scope = recipe.get("scope") or promoted_recipe_scopes.get(recipe_id)
-    if _scope_is_project_specific(scope):
+    if recipe_id.startswith(PROJECT_RECIPE_PREFIXES):
         return False
-    if not _scope_is_distribution_generic(scope):
+    if _scope_is_project_specific(recipe.get("scope")):
+        return False
+    scope = str(recipe.get("scope") or "").lower()
+    if scope.startswith(("retarget_", "autouv_", "auto_uv_")):
         return False
     return True
-
-
-def _canonical_text_bytes(path: Path) -> bytes:
-    # Clean Knowledge is UTF-8 JSON. Normalize legacy/worktree newline variants
-    # before hashing so LF/CRLF checkout policy cannot change release identity.
-    text = path.read_text(encoding="utf-8")
-    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
-
-
-def _portable_source_label(source_root: Path) -> str:
-    parts = list(source_root.parts)
-    if "ai_bridge_houdini" in parts:
-        index = parts.index("ai_bridge_houdini")
-        return "/".join(parts[index:])
-    return source_root.name
 
 
 def _content_digest(root: Path) -> str:
@@ -229,7 +203,7 @@ def _content_digest(root: Path) -> str:
         relative = path.relative_to(root).as_posix()
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(_canonical_text_bytes(path))
+        digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
 
@@ -239,8 +213,7 @@ def validate_distribution(root: Path) -> dict:
     promotion = _read_json(root / "promotion_registry.json")
     templates = _read_json(root / "template_catalog.json")
     guidance = _read_json(root / "capability_guidance.json")
-    promoted_recipe_scopes = _promoted_recipe_scopes(promotion)
-    promoted_recipe_ids = set(promoted_recipe_scopes)
+    promoted_recipe_ids = _promoted_recipe_ids(promotion)
 
     violations = []
     for item in promotion.get("entries") or []:
@@ -248,20 +221,16 @@ def validate_distribution(root: Path) -> dict:
             violations.append(f"non-promoted registry entry: {item.get('id')}")
         if _scope_is_project_specific(item.get("scope")):
             violations.append(f"project-family registry entry: {item.get('id')}")
-        if item.get("kind") == "recipe" and not _scope_is_distribution_generic(item.get("scope")):
-            violations.append(f"non-generic recipe scope: {item.get('id')}")
     for item in templates.get("templates") or []:
         if _scope_is_project_specific(item.get("scope")):
             violations.append(f"project-family template: {item.get('id')}")
-        if not _scope_is_distribution_generic(item.get("scope")):
-            violations.append(f"non-generic template scope: {item.get('id')}")
     for item in guidance.get("entries") or []:
         if item.get("state") != "promoted":
             violations.append(f"non-promoted guidance: {item.get('id')}")
 
     for path in sorted((root / "recipes").glob("*.json")):
         recipe = _read_json(path)
-        if not _recipe_is_distributable(recipe, promoted_recipe_scopes):
+        if not _recipe_is_distributable(recipe, promoted_recipe_ids):
             violations.append(f"unpromoted/project recipe: {recipe.get('id') or path.name}")
 
     serialized = "\n".join(
@@ -271,6 +240,7 @@ def validate_distribution(root: Path) -> dict:
     )
     forbidden_literals = (
         "SOURCE_DEFAULT_GEOMETRY",
+        "AUTO_UV_CURRENT_STATE",
         '"scope": "project_family"',
         '"scope": "animation_project_family"',
         '"historical_path"',
@@ -279,8 +249,6 @@ def validate_distribution(root: Path) -> dict:
     for literal in forbidden_literals:
         if literal in serialized:
             violations.append(f"forbidden distribution literal: {literal}")
-    if re.search(r'"[A-Z0-9_]+_CURRENT_STATE"', serialized):
-        violations.append("forbidden distribution literal: project current-state key")
 
     return {
         "ok": not violations,
@@ -320,8 +288,7 @@ def build_distribution_knowledge(
         _filter_rule_document(_read_json(source_root / "host_rules.json")),
     )
     promotion_source = _read_json(source_root / "promotion_registry.json")
-    promoted_recipe_scopes = _promoted_recipe_scopes(promotion_source)
-    promoted_recipe_ids = set(promoted_recipe_scopes)
+    promoted_recipe_ids = _promoted_recipe_ids(promotion_source)
     _write_json(
         destination / "promotion_registry.json",
         _filter_promotion_registry(promotion_source),
@@ -343,7 +310,7 @@ def build_distribution_knowledge(
     excluded_recipes = []
     for source_path in sorted((source_root / "recipes").glob("*.json")):
         recipe = _read_json(source_path)
-        if not _recipe_is_distributable(recipe, promoted_recipe_scopes):
+        if not _recipe_is_distributable(recipe, promoted_recipe_ids):
             excluded_recipes.append(str(recipe.get("id") or source_path.stem))
             continue
         cleaned = _strip_metadata(recipe)
@@ -360,7 +327,7 @@ def build_distribution_knowledge(
     manifest = {
         "schema_version": "1.0",
         "mode": "clean_distribution",
-        "source_root": _portable_source_label(source_root),
+        "source_root": str(source_root),
         "included_recipes": included_recipes,
         "excluded_recipes": excluded_recipes,
         "promotion_entry_count": len(_read_json(destination / "promotion_registry.json").get("entries") or []),

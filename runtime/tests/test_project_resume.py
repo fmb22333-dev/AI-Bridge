@@ -13,25 +13,25 @@ from ai_bridge.protocol.command import CommandEnvelope
 from ai_bridge.protocol.result import ExecutionResult, ExecutionStatus, FailureInfo, FailureOrigin
 
 
-PROJECT_A_HIP = "E:/Generic/ProjectA.hip"
-PROJECT_B_HIP = "E:/Generic/ProjectB.hip"
+AUTO_HIP = "E:/Houdini/AutoUV/AutoUV_R2.hip"
+RETARGET_HIP = "E:/Houdini/Retarget/Retarget_common.hip"
 
 
 def _index():
     return {
         "projects": {
-            "project_a": {
-                "display_name": "ProjectA",
-                "current_hip": PROJECT_A_HIP,
+            "auto_uv": {
+                "display_name": "AutoUV_R2",
+                "current_hip": AUTO_HIP,
                 "host": "Houdini 21.0.440",
-                "authority": {"ref": "main", "path": "PROJECT_A_CURRENT_STATE.md"},
+                "authority": {"ref": "bridge-runtime", "path": "AUTO_UV_CURRENT_STATE.md"},
                 "recovery_rule": "trust current state",
             },
-            "project_b": {
-                "display_name": "ProjectB",
-                "current_hip": PROJECT_B_HIP,
+            "retarget_v19": {
+                "display_name": "HoudiniRetarget_V19",
+                "current_hip": RETARGET_HIP,
                 "host": "Houdini 21.0.440",
-                "authority": {"ref": "main", "path": "PROJECT_B_CURRENT_STATE.md"},
+                "authority": {"ref": "bridge-runtime", "path": "HOUDINI_RETARGET_V19_CURRENT_STATE.md"},
                 "recovery_rule": "trust current state",
             },
         }
@@ -61,12 +61,12 @@ def _session(service, session_id, project_file, *, pid=100, adapter_version="0.5
     ), preserve_timestamps=True)
 
 
-def _command(command_id, project_file=PROJECT_A_HIP, *, operation="inspect.node"):
+def _command(command_id, project_file=AUTO_HIP, *, operation="inspect.node"):
     return CommandEnvelope.model_validate({
         "command_id": command_id,
         "workspace": "Bridge",
         "adapter": "houdini",
-        "session": "HOU-A",
+        "session": "HOU-AUTO",
         "project_file": project_file,
         "operation": operation,
         "arguments": {},
@@ -75,7 +75,7 @@ def _command(command_id, project_file=PROJECT_A_HIP, *, operation="inspect.node"
     })
 
 
-def _terminal(service, command_id, status="success", *, project_file=PROJECT_A_HIP, failure_code=None):
+def _terminal(service, command_id, status="success", *, project_file=AUTO_HIP, failure_code=None):
     command = _command(command_id, project_file)
     service.db.insert_command(command)
     failure = None
@@ -96,7 +96,7 @@ def _resume_command(arguments=None):
         "workspace": "Bridge",
         "adapter": "bridge_admin",
         "operation": "bridge.project.resume",
-        "arguments": arguments or {"project": "project_a"},
+        "arguments": arguments or {"project": "auto_uv"},
         "execution": {"verify": True, "checkpoint": "none", "dry_run": False},
         "risk": "L1",
     })
@@ -117,18 +117,18 @@ def _executor(tmp_path, service, monkeypatch, *, authority_text="# Authority\nNe
     )
     executor.current = current
     monkeypatch.setattr(executor, "_bus_source", lambda: {
-        "repository": "example/user-bus",
+        "repository": "fmb22333-dev/ai-bridge-bus",
         "branch": "main",
     })
     docs = {
         ("main", "PROJECT_STATE_INDEX.json"): {
             "text": json.dumps(_index()), "sha": "index-sha"
         },
-        ("main", "PROJECT_A_CURRENT_STATE.md"): {
+        ("bridge-runtime", "AUTO_UV_CURRENT_STATE.md"): {
             "text": authority_text, "sha": "authority-sha"
         },
-        ("main", "PROJECT_B_CURRENT_STATE.md"): {
-            "text": "# Project B", "sha": "retarget-sha"
+        ("bridge-runtime", "HOUDINI_RETARGET_V19_CURRENT_STATE.md"): {
+            "text": "# Retarget", "sha": "retarget-sha"
         },
     }
     monkeypatch.setattr(
@@ -147,33 +147,33 @@ def test_bridge_project_resume_is_read_only_l1():
 
 def test_explicit_project_matches_windows_path_alias(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", r"e:\Generic\ProjectA.hip")
-    result = service.project_resume_local(index=_index(), project="project_a")
-    assert result["project"]["key"] == "project_a"
+    _session(service, "HOU-AUTO", r"e:\Houdini\AutoUV\AutoUV_R2.hip")
+    result = service.project_resume_local(index=_index(), project="auto_uv")
+    assert result["project"]["key"] == "auto_uv"
     assert result["live"]["connected"] is True
-    assert result["live"]["session_id"] == "HOU-A"
+    assert result["live"]["session_id"] == "HOU-AUTO"
 
 
 def test_single_live_project_can_be_inferred(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     result = service.project_resume_local(index=_index(), project=None)
-    assert result["project"]["key"] == "project_a"
+    assert result["project"]["key"] == "auto_uv"
 
 
 def test_multiple_live_projects_fail_closed(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
-    _session(service, "HOU-B", PROJECT_B_HIP, pid=200)
+    _session(service, "HOU-AUTO", AUTO_HIP)
+    _session(service, "HOU-RETARGET", RETARGET_HIP, pid=200)
     result = service.project_resume_local(index=_index(), project=None)
     assert result["failure"]["code"] == "PROJECT_RESUME_AMBIGUOUS"
-    assert set(result["candidates"]) == {"project_a", "project_b"}
+    assert set(result["candidates"]) == {"auto_uv", "retarget_v19"}
 
 
 def test_offline_project_returns_authority_target_but_not_safe(tmp_path):
     service = _service(tmp_path)
-    result = service.project_resume_local(index=_index(), project="project_a")
-    assert result["project"]["authority"]["path"] == "PROJECT_A_CURRENT_STATE.md"
+    result = service.project_resume_local(index=_index(), project="auto_uv")
+    assert result["project"]["authority"]["path"] == "AUTO_UV_CURRENT_STATE.md"
     assert result["live"]["connected"] is False
     assert result["resume"]["safe_to_continue"] is False
     assert "PROJECT_HOST_OFFLINE" in result["resume"]["warnings"]
@@ -181,9 +181,9 @@ def test_offline_project_returns_authority_target_but_not_safe(tmp_path):
 
 def test_last_terminal_and_success_are_recovered(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     _terminal(service, "cmd-success")
-    result = service.project_resume_local(index=_index(), project="project_a")
+    result = service.project_resume_local(index=_index(), project="auto_uv")
     assert result["execution"]["last_terminal"]["command_id"] == "cmd-success"
     assert result["execution"]["last_success"]["command_id"] == "cmd-success"
     assert result["execution"]["last_failure"] is None
@@ -191,18 +191,18 @@ def test_last_terminal_and_success_are_recovered(tmp_path):
 
 def test_terminal_failure_code_is_preserved(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     _terminal(service, "cmd-failed", "failed", failure_code="NODE_NOT_FOUND")
-    result = service.project_resume_local(index=_index(), project="project_a")
+    result = service.project_resume_local(index=_index(), project="auto_uv")
     assert result["execution"]["last_failure"]["command_id"] == "cmd-failed"
     assert result["execution"]["last_failure"]["failure_code"] == "NODE_NOT_FOUND"
 
 
 def test_inflight_command_blocks_safe_continue(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     service.db.insert_command(_command("cmd-inflight"))
-    result = service.project_resume_local(index=_index(), project="project_a")
+    result = service.project_resume_local(index=_index(), project="auto_uv")
     assert result["execution"]["inflight"][0]["command_id"] == "cmd-inflight"
     assert result["execution"]["inflight"][0]["terminal"] is False
     assert result["resume"]["safe_to_continue"] is False
@@ -210,10 +210,10 @@ def test_inflight_command_blocks_safe_continue(tmp_path):
 
 def test_prior_terminal_result_is_reused_without_reexecution(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     _terminal(service, "cmd-before-interruption")
     before = len(service.db.list_command_records())
-    result = service.project_resume_local(index=_index(), project="project_a")
+    result = service.project_resume_local(index=_index(), project="auto_uv")
     after = len(service.db.list_command_records())
     assert before == after
     assert result["execution"]["last_terminal"]["command_id"] == "cmd-before-interruption"
@@ -221,28 +221,28 @@ def test_prior_terminal_result_is_reused_without_reexecution(tmp_path):
 
 def test_checkpoint_and_recovery_follow_logical_windows_project(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     service.checkpoints.write("cp-auto", {
         "checkpoint_id": "cp-auto",
-        "original_hip": r"e:\GENERIC\ProjectA.hip",
-        "checkpoint_path": "E:/Generic/backup/cp.hip",
+        "original_hip": r"e:\HOUDINI\AUTOUV\AutoUV_R2.hip",
+        "checkpoint_path": "E:/Houdini/AutoUV/backup/cp.hip",
         "verified": True,
     })
     service.recoveries.write("force-auto", {
         "recovery_id": "force-auto",
         "kind": "force_host_recovery",
         "status": "restarted_checkpoint_safe",
-        "project_file": r"E:\Generic\ProjectA.hip",
+        "project_file": r"E:\Houdini\AutoUV\AutoUV_R2.hip",
         "new_session_id": "HOU-NEW",
     })
     service.recoveries.write("plugin-auto", {
         "recovery_id": "plugin-auto",
         "kind": "plugin_restart",
         "status": "applied",
-        "project_file": PROJECT_A_HIP,
+        "project_file": AUTO_HIP,
         "rollback_verified": True,
     })
-    result = service.project_resume_local(index=_index(), project="project_a")
+    result = service.project_resume_local(index=_index(), project="auto_uv")
     assert result["recovery"]["latest_checkpoint"]["checkpoint_id"] == "cp-auto"
     assert result["recovery"]["latest_host_recovery"]["recovery_id"] == "force-auto"
     assert result["recovery"]["latest_plugin_restart"]["recovery_id"] == "plugin-auto"
@@ -250,22 +250,22 @@ def test_checkpoint_and_recovery_follow_logical_windows_project(tmp_path):
 
 def test_runtime_replacement_stale_session_is_not_authority(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-OLD", PROJECT_A_HIP, pid=100, stale=True)
-    _session(service, "HOU-NEW", PROJECT_A_HIP, pid=200)
-    result = service.project_resume_local(index=_index(), project="project_a")
+    _session(service, "HOU-OLD", AUTO_HIP, pid=100, stale=True)
+    _session(service, "HOU-NEW", AUTO_HIP, pid=200)
+    result = service.project_resume_local(index=_index(), project="auto_uv")
     assert result["live"]["session_id"] == "HOU-NEW"
     assert result["live"]["matching_session_count"] == 1
 
 
 def test_multiple_ai_histories_remain_distinct(tmp_path):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     _terminal(service, "channel-a-command")
     _terminal(service, "channel-b-command", "failed", failure_code="AUDIT_FAIL")
     records = service.db.list_command_records()
     ids = {row["command_id"] for row in records}
     assert {"channel-a-command", "channel-b-command"}.issubset(ids)
-    result = service.project_resume_local(index=_index(), project="project_a")
+    result = service.project_resume_local(index=_index(), project="auto_uv")
     terminal_ids = {
         item["command_id"] for item in (
             result["execution"]["last_success"],
@@ -277,7 +277,7 @@ def test_multiple_ai_histories_remain_distinct(tmp_path):
 
 def test_authority_content_digest_and_resume_token(tmp_path, monkeypatch):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     _terminal(service, "cmd-success")
     executor = _executor(tmp_path, service, monkeypatch, authority_text="# Authority\nNext Action: iterate")
     result = executor.execute(_resume_command())
@@ -287,7 +287,7 @@ def test_authority_content_digest_and_resume_token(tmp_path, monkeypatch):
     assert authority["content"].startswith("# Authority")
     assert len(authority["digest"]) == 64
     token = result.result["resume"]["resume_token"]
-    assert token["project"] == "project_a"
+    assert token["project"] == "auto_uv"
     assert token["last_terminal_command"] == "cmd-success"
     assert token["authority_digest"] == authority["digest"]
     assert token["runtime_version"] == "0.2.6.32"
@@ -296,12 +296,12 @@ def test_authority_content_digest_and_resume_token(tmp_path, monkeypatch):
 
 def test_authority_fetch_failure_is_partial_and_fail_closed(tmp_path, monkeypatch):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     executor = _executor(tmp_path, service, monkeypatch)
     original = executor._fetch_repo_text
 
     def fail_authority(repository, ref, path, timeout_seconds=5.0):
-        if path == "PROJECT_A_CURRENT_STATE.md":
+        if path == "AUTO_UV_CURRENT_STATE.md":
             raise TimeoutError("authority timeout")
         return original(repository, ref, path, timeout_seconds=timeout_seconds)
 
@@ -315,13 +315,13 @@ def test_authority_fetch_failure_is_partial_and_fail_closed(tmp_path, monkeypatc
 
 def test_resume_token_stale_detection_returns_conflict(tmp_path, monkeypatch):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     executor = _executor(tmp_path, service, monkeypatch)
     first = executor.execute(_resume_command())
     token = dict(first.result["resume"]["resume_token"])
     token["state_digest"] = "0" * 64
     second = executor.execute(_resume_command({
-        "project": "project_a",
+        "project": "auto_uv",
         "expected_resume_token": token,
     }))
     assert second.status.value == "conflict"
@@ -352,7 +352,7 @@ def test_project_index_fetch_failure_returns_specific_failure(tmp_path, monkeypa
 
 def test_default_authority_budget_is_bounded_for_comment_fast_path(tmp_path, monkeypatch):
     service = _service(tmp_path)
-    _session(service, "HOU-A", PROJECT_A_HIP)
+    _session(service, "HOU-AUTO", AUTO_HIP)
     executor = _executor(tmp_path, service, monkeypatch, authority_text="A" * 20000)
     result = executor.execute(_resume_command())
     authority = result.result["project"]["authority"]

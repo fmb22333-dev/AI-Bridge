@@ -103,7 +103,7 @@ def test_runtime_stages_verified_supervisor_release_and_schedules_worker(tmp_pat
     monkeypatch.setattr(
         executor,
         "_update_source",
-        lambda: {"repository": "owner/repo", "branch": "main"},
+        lambda: {"repository": "owner/repo", "branch": "bridge-runtime"},
     )
     monkeypatch.setattr(
         executor,
@@ -147,7 +147,7 @@ def test_runtime_rejects_supervisor_release_outside_version_authority(tmp_path, 
     monkeypatch.setattr(
         executor,
         "_update_source",
-        lambda: {"repository": "owner/repo", "branch": "main"},
+        lambda: {"repository": "owner/repo", "branch": "bridge-runtime"},
     )
     monkeypatch.setattr(
         executor,

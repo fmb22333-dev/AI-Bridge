@@ -143,7 +143,10 @@ class BridgeService:
         if checkpoint_id:
             bridge_meta["checkpoint_id"] = checkpoint_id
         if write:
-            rollback_supported = checkpoint_id is not None or command.operation in {"code.write", "code.patch", "parm.write"}
+            rollback_supported = checkpoint_id is not None or command.operation in {
+                "code.write", "code.patch", "parm.write",
+                "node.create", "node.connect", "node.disconnect",
+            }
             if rollback_supported:
                 snap = self.snapshots.capture(command, result, checkpoint_id=checkpoint_id)
                 result.rollback_available = snap is not None
@@ -635,6 +638,9 @@ class BridgeService:
                 raise RuntimeError("host process termination was not verified")
 
             report["status"] = "restarting"
+            # Start from the verified checkpoint itself. Starting the original
+            # project first could immediately re-enter the bad graph before
+            # Bridge has a chance to restore the checkpoint.
             launch = self.host_process.launch(executable, checkpoint_path)
             report["launch"] = launch
 
@@ -656,6 +662,9 @@ class BridgeService:
                 workspace=command.workspace,
                 adapter=command.adapter,
                 session=replacement.session_id,
+                # Use the freshly registered project spelling as the write
+                # precondition. Equivalent Windows path spellings may differ
+                # after Houdini normalizes the launched checkpoint path.
                 project_file=replacement.project_file,
                 operation="rollback.execute",
                 arguments={
@@ -714,6 +723,8 @@ class BridgeService:
             raise RuntimeError("SESSION_DISCONNECTED")
         self.workspaces.get(workspace)
 
+        # Always stage from the bundled Runtime before deciding whether a
+        # restart is necessary. This remains offline/self-contained.
         install_result = self.plugins.install(host_id, host_running=True)
         plugin_status = next(
             item
@@ -868,6 +879,9 @@ class BridgeService:
                 workspace=workspace,
                 adapter=host_id,
                 session=replacement.session_id,
+                # Use the freshly registered project spelling as the write
+                # precondition. Equivalent Windows path spellings may differ
+                # after Houdini normalizes the launched checkpoint path.
                 project_file=replacement.project_file,
                 operation="rollback.execute",
                 arguments={
@@ -1159,6 +1173,12 @@ class BridgeService:
         executor: AdapterExecutor,
         timeout_seconds: float = 60.0,
     ) -> dict:
+        """Immediately restore a verified pre-command checkpoint after failure.
+
+        This is intentionally direct-to-adapter: it is part of the source
+        command's transaction boundary and must not create a second externally
+        visible command lifecycle or checkpoint.
+        """
         report = {
             "attempted": True,
             "checkpoint_id": checkpoint_id,
@@ -1294,7 +1314,9 @@ class BridgeService:
         checkpoint_id = None
         checkpoint_required = not bool(getattr(cap, "manages_checkpoint", False)) and (
             (
-                cap.write and cap.risk in (RiskLevel.L2, RiskLevel.L3)
+                cap.write
+                and cap.host_mutation
+                and cap.risk in (RiskLevel.L2, RiskLevel.L3)
             ) or (
                 bool(budget and budget.auto_recover)
                 and bool(getattr(cap, "long_running", False))
@@ -1476,6 +1498,43 @@ class BridgeService:
                 operation="parm.write",
                 arguments={"path": args["path"], "parameter": args["parameter"], "value": before["value"], "expected_hash": after["hash"]},
             )
+        elif op == "node.create":
+            command = CommandEnvelope(
+                command_id=rb_id, workspace=req["workspace"], adapter=req["adapter"], session=req.get("session"), project_file=req.get("project_file"),
+                operation="node.delete",
+                arguments={
+                    "path": after["path"],
+                    "expected_type": after["type"],
+                    "expected_name": after["name"],
+                    "expected_hash": after["hash"],
+                },
+                risk=RiskLevel.L2,
+            )
+        elif op in {"node.connect", "node.disconnect"}:
+            if before["source"] is None:
+                command = CommandEnvelope(
+                    command_id=rb_id, workspace=req["workspace"], adapter=req["adapter"], session=req.get("session"), project_file=req.get("project_file"),
+                    operation="node.disconnect",
+                    arguments={
+                        "target": before["target"],
+                        "input_index": before["input_index"],
+                        "expected_hash": after["hash"],
+                    },
+                    risk=RiskLevel.L2,
+                )
+            else:
+                command = CommandEnvelope(
+                    command_id=rb_id, workspace=req["workspace"], adapter=req["adapter"], session=req.get("session"), project_file=req.get("project_file"),
+                    operation="node.connect",
+                    arguments={
+                        "target": before["target"],
+                        "input_index": before["input_index"],
+                        "source": before["source"],
+                        "output_index": 0 if before.get("output_index") is None else before["output_index"],
+                        "expected_hash": after["hash"],
+                    },
+                    risk=RiskLevel.L2,
+                )
         else:
             return ExecutionResult(
                 command_id=rb_id,

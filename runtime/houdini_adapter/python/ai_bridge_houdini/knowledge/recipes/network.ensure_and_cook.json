@@ -1,8 +1,48 @@
 {
+  "id": "network.ensure_and_cook",
+  "version": "1.1",
+  "description": "Idempotently reconcile a declarative Houdini network, optionally guard a prior Ensure Plan with expected_plan_hash, then Cook inside the same rollback boundary.",
+  "required": [
+    "parent",
+    "nodes",
+    "connections",
+    "cook_path"
+  ],
+  "optional": [
+    "expected_plan_hash"
+  ],
+  "supported_host_versions": [
+    "21.0.440"
+  ],
+  "promotion_state": "promoted",
+  "scope": "houdini_declarative_network_21_0_440",
   "assumptions": [
     "Existing nodes are matched by explicit child name under parent and must retain the declared constructor type.",
     "Only explicitly declared parms, node-state fields, and target inputs are authoritative for this call."
   ],
+  "heuristics": [
+    "Use this recipe for installer/reconciliation style graph edits that should be safe to run repeatedly.",
+    "Use expected-hash parm/connection operations instead when a write must remain conditional on an earlier external read.",
+    "When a separate network.ensure_plan was used for review/preflight, pass its plan_hash as expected_plan_hash to guard the Plan -> Ensure handoff."
+  ],
+  "validation_status": {
+    "regression": {
+      "targeted": "7/7 PASS",
+      "full": "128/128 PASS",
+      "semantic_completeness_p0": "pending branch regression"
+    },
+    "live": {
+      "adapter": "0.5.7",
+      "runtime": "0.2.4.0",
+      "primitive_idempotent_existing_graph": "PASS: written=0, created=0, updated=0, changed_parameters=0, changed_state=0, changed_connections=0",
+      "cook": "PASS: SOURCE_DEFAULT_GEOMETRY, 0 errors, 0 warnings",
+      "recipe_get": "PASS",
+      "recipe_validate": "PASS",
+      "recipe_apply": "PASS: verified=true, written=0"
+    },
+    "host": "Houdini 21.0.440",
+    "project": "E:/AA/SpeedUP.hip"
+  },
   "compression": {
     "caller_operations": 1,
     "expanded_phases": [
@@ -15,50 +55,34 @@
       "rollback_on_failure"
     ]
   },
-  "description": "Idempotently reconcile a declarative Houdini network, optionally guard a prior Ensure Plan with expected_plan_hash, then Cook inside the same rollback boundary.",
-  "heuristics": [
-    "Use this recipe for installer/reconciliation style graph edits that should be safe to run repeatedly.",
-    "Use expected-hash parm/connection operations instead when a write must remain conditional on an earlier external read.",
-    "When a separate network.ensure_plan was used for review/preflight, pass its plan_hash as expected_plan_hash to guard the Plan -> Ensure handoff."
+  "provenance": [
+    "repeated_retarget_installer_patterns_v10_v11_2_v12_v14_1",
+    "idempotent_installation_requirement",
+    "cook_and_error_fail_closed_requirement",
+    "p1_phase6a"
   ],
-  "id": "network.ensure_and_cook",
-  "optional": [
-    "expected_plan_hash"
-  ],
-  "promotion_state": "promoted",
-  "required": [
-    "parent",
-    "nodes",
-    "connections",
-    "cook_path"
-  ],
-  "scope": "houdini_declarative_network_21_0_440",
   "steps": [
     {
+      "op": "network.ensure_transactional",
+      "save_as": "ensure",
       "arguments": {
+        "parent": {
+          "$arg": "parent"
+        },
+        "nodes": {
+          "$arg": "nodes"
+        },
         "connections": {
           "$arg": "connections"
         },
         "cook_path": {
           "$arg": "cook_path"
         },
+        "layout": false,
         "expected_plan_hash": {
           "$arg_optional": "expected_plan_hash"
-        },
-        "layout": false,
-        "nodes": {
-          "$arg": "nodes"
-        },
-        "parent": {
-          "$arg": "parent"
         }
-      },
-      "op": "network.ensure_transactional",
-      "save_as": "ensure"
+      }
     }
-  ],
-  "supported_host_versions": [
-    "21.0.440"
-  ],
-  "version": "1.1"
+  ]
 }

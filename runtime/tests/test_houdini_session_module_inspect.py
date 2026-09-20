@@ -31,7 +31,7 @@ class BatchHelper:
 
 class FakeHipFile:
     def path(self):
-        return "E:/Generic/Project.hip"
+        return "E:/Houdini/Retarget/Retarget_common.hip"
 
 
 class FakeHou:
@@ -92,7 +92,7 @@ def test_session_module_dispatch_is_read_only_and_registered():
     assert cap["risk"] == "L1"
     assert cap["rollback"] is False
     assert compat_ops.ARGUMENT_SCHEMAS["inspect.session_module"]["write"] is False
-    assert ai_bridge_houdini.__version__ == "0.5.26"
+    assert ai_bridge_houdini.__version__ == "0.5.27"
 
     hou = FakeHou()
     out = dispatch(

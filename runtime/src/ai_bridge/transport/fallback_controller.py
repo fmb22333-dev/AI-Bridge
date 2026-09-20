@@ -15,8 +15,6 @@ from .supabase_bus import SupabaseBusConfig, SupabaseBusTransport
 
 @dataclass(frozen=True)
 class SupabaseFallbackConfig:
-    """Compatibility config name retained through Runtime 0.2.6.x."""
-
     project_url: str
     bridge_id: str
     table: str = "ai_bridge_commands"
@@ -25,11 +23,7 @@ class SupabaseFallbackConfig:
 
 
 class SupabaseFallbackController:
-    """Runs Supabase as the primary fast ingress while GitHub stays fallback/authority.
-
-    The class/config/file names retain ``fallback`` for 0.2.6.x compatibility.
-    Runtime state exposes the current semantic role explicitly.
-    """
+    """Runs the Supabase primary realtime ingress; legacy class/config names remain for saved-config compatibility."""
 
     SECRET_NAME = "supabase_bus"
 
@@ -53,7 +47,6 @@ class SupabaseFallbackController:
         self._stop: threading.Event | None = None
         self._thread: threading.Thread | None = None
         self._transport = None
-        self._runner: TransportRunner | None = None
         self.runtime_state.setdefault(
             "fallback_transport",
             {"configured": False, "status": "unconfigured", "kind": "none"},
@@ -68,7 +61,7 @@ class SupabaseFallbackController:
         state = {
             "configured": config is not None,
             "status": status,
-            "kind": config.kind if config is not None else "none",
+            "kind": "supabase_primary" if config is not None else "none",
         }
         if config is not None:
             state.update(
@@ -78,9 +71,15 @@ class SupabaseFallbackController:
                     "table": config.table,
                     "poll_interval_seconds": config.poll_interval_seconds,
                     "credential_saved": bool(self.secret_store.get(self.SECRET_NAME)),
-                    "parallel_with_primary": True,  # compatibility field through 0.2.6.x
+                    "parallel_with_primary": True,
                     "parallel_with_fallback": True,
-                    "role": "primary_fast",
+                    "role": "primary_realtime_command_transport",
+                    "compatibility": {
+                        "deprecated_fields": {
+                            "kind": config.kind,
+                            "role": "primary_fast",
+                        }
+                    },
                     "multi_channel": True,
                     "multi_ai": True,
                     "same_session_serial": True,
@@ -157,7 +156,7 @@ class SupabaseFallbackController:
         transport = self._make_transport(config, secret_key)
         health = transport.health()
         if not health.ok:
-            raise RuntimeError("Supabase primary connection failed: " + health.detail)
+            raise RuntimeError("Supabase fallback connection failed: " + health.detail)
 
         self.stop()
         self.secret_store.set(self.SECRET_NAME, secret_key)
@@ -170,10 +169,10 @@ class SupabaseFallbackController:
     def test_saved_connection(self) -> dict:
         config = self._load_config()
         if config is None:
-            raise ValueError("Supabase primary transport is not configured")
+            raise ValueError("Supabase fallback is not configured")
         secret_key = self.secret_store.get(self.SECRET_NAME)
         if not secret_key:
-            raise ValueError("Supabase primary credential is missing")
+            raise ValueError("Supabase fallback credential is missing")
         transport = self._make_transport(config, secret_key)
         health = transport.health()
         result = {
@@ -184,12 +183,9 @@ class SupabaseFallbackController:
             "table": config.table,
             "poll_interval_seconds": config.poll_interval_seconds,
             "credential_saved": True,
-            "role": "primary_fast",
-            "multi_ai": True,
-            "multi_channel": True,
         }
         if not health.ok:
-            raise RuntimeError("Supabase primary connection failed: " + health.detail)
+            raise RuntimeError("Supabase fallback connection failed: " + health.detail)
         return result
 
     def disconnect(self) -> None:
@@ -209,40 +205,36 @@ class SupabaseFallbackController:
         stop = threading.Event()
         self._stop = stop
         runner = TransportRunner(self.service, transport)
-        self._runner = runner
 
         def loop() -> None:
             last_health = 0.0
-            try:
-                while not stop.is_set():
-                    try:
-                        now = time.monotonic()
-                        if now - last_health > 300.0:
-                            health = transport.health()
-                            last_health = now
-                            if not health.ok:
-                                self.runtime_state["fallback_transport"] = self._state(
-                                    "error", config, health.detail
-                                )
-                                stop.wait(config.poll_interval_seconds)
-                                continue
-                        runner.poll_once()
-                        self.runtime_state["fallback_transport"] = self._state(
-                            "connected", config
-                        )
-                    except Exception as exc:
-                        self.runtime_state["fallback_transport"] = self._state(
-                            "error",
-                            config,
-                            f"{type(exc).__name__}: {exc}",
-                        )
-                    stop.wait(config.poll_interval_seconds)
-            finally:
-                runner.shutdown(wait=False)
+            while not stop.is_set():
+                try:
+                    now = time.monotonic()
+                    if now - last_health > 300.0:
+                        health = transport.health()
+                        last_health = now
+                        if not health.ok:
+                            self.runtime_state["fallback_transport"] = self._state(
+                                "error", config, health.detail
+                            )
+                            stop.wait(config.poll_interval_seconds)
+                            continue
+                    runner.poll_once()
+                    self.runtime_state["fallback_transport"] = self._state(
+                        "connected", config
+                    )
+                except Exception as exc:
+                    self.runtime_state["fallback_transport"] = self._state(
+                        "error",
+                        config,
+                        f"{type(exc).__name__}: {exc}",
+                    )
+                stop.wait(config.poll_interval_seconds)
 
         self._thread = threading.Thread(
             target=loop,
-            name="AI-Bridge-SupabasePrimary",
+            name="AI-Bridge-SupabaseFallback",
             daemon=True,
         )
         self._thread.start()
@@ -317,5 +309,4 @@ class SupabaseFallbackController:
             self._thread.join(timeout=2.0)
         self._stop = None
         self._thread = None
-        self._runner = None
         self._transport = None

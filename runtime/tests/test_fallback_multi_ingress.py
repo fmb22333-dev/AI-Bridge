@@ -210,7 +210,9 @@ def test_v5_healthy_comment_mode_also_polls_contents_and_merges_same_command():
     assert transport.command_receipts("cmd-contents")[0]["ingress_kind"] == "contents"
     state = transport.message_state()
     assert state["multi_ingress"] is True
-    assert state["fallback_ingress"] == "contents"
+    assert state["github_fallback_ingress"] == "contents"
+    assert "fallback_ingress" not in state
+    assert state["compatibility"]["deprecated_fields"]["fallback_ingress"] == "contents"
 
 
 def test_v5_same_command_id_with_divergent_comment_and_contents_payload_fails_closed():
@@ -225,4 +227,41 @@ def test_v5_same_command_id_with_divergent_comment_and_contents_payload_fails_cl
 
     assert transport.initialize_message_mode() == "issue_channel_v5"
     with pytest.raises(RuntimeError, match="COMMAND_IDENTITY_CONFLICT"):
+        transport.fetch_commands()
+
+
+def test_v5_total_ingress_failure_raises_instead_of_returning_idle():
+    def handler(request):
+        path = request.url.path
+        if request.method == "GET" and path.endswith("/issues/comments"):
+            raise httpx.ReadError("comment ingress down", request=request)
+        if request.method == "GET" and path.endswith("/contents/.ai-bridge/commands/bridge-test"):
+            raise httpx.ConnectError("contents ingress down", request=request)
+        raise AssertionError(f"unexpected {request.method} {request.url}")
+
+    transport = gb.GitHubBusTransport(
+        gb.GitHubBusConfig(repository="owner/repo", token="x", bridge_id="bridge-test"),
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    transport._message_mode = "issue_channel_v5"
+    transport.restore_contents_command_index({})
+
+    with pytest.raises(RuntimeError, match="GITHUB_INGRESS_UNAVAILABLE"):
+        transport.fetch_commands()
+
+
+def test_contents_only_failure_raises_instead_of_returning_idle():
+    def handler(request):
+        if request.method == "GET" and request.url.path.endswith("/contents/.ai-bridge/commands/bridge-test"):
+            raise httpx.ConnectError("contents ingress down", request=request)
+        raise AssertionError(f"unexpected {request.method} {request.url}")
+
+    transport = gb.GitHubBusTransport(
+        gb.GitHubBusConfig(repository="owner/repo", token="x", bridge_id="bridge-test"),
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    transport._message_mode = "contents"
+    transport.restore_contents_command_index({})
+
+    with pytest.raises(RuntimeError, match="GITHUB_INGRESS_UNAVAILABLE"):
         transport.fetch_commands()

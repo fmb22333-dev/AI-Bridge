@@ -8,16 +8,10 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 
 from ai_bridge.transport.remote_controller import RemoteConfigurationError
-from ai_bridge.transport.supabase_primary_extension import install_supabase_primary_extension
-
-
-# Install before the RemoteController instance is constructed by app.py.
-install_supabase_primary_extension()
+from ai_bridge.transport import supabase_extension as _supabase_extension  # noqa: F401
 
 
 class SupabaseFallbackRequest(BaseModel):
-    """Compatibility request name retained through Runtime 0.2.6.x."""
-
     project_url: str = Field(min_length=8)
     secret_key: str = ""
     poll_interval_seconds: float = Field(default=0.5, ge=0.25, le=60.0)
@@ -30,11 +24,12 @@ def install_fallback_routes(
     auth_token: str,
     web_root: Path,
 ) -> None:
-    """Install Supabase Primary UI/API while preserving fallback-named routes.
+    """Install the optional Supabase UI/API surface before the base web routes.
 
-    Existing `/control/fallback/*` and `supabaseBackupCard` names remain stable
-    compatibility surfaces. Runtime semantics are Supabase primary command bus,
-    GitHub V5 fallback command transport + durable authority.
+    The setup/dashboard HTML remains owned by the existing product UI. This
+    module injects one isolated script into Setup and appends dashboard behavior
+    to the existing app.js response, keeping the backup transport feature
+    removable and independently testable.
     """
 
     web_root = Path(web_root)
@@ -52,7 +47,7 @@ def install_fallback_routes(
     @app.get("/setup", include_in_schema=False)
     def setup_page_with_fallback():
         html = (web_root / "templates" / "setup.html").read_text(encoding="utf-8")
-        script = '<script src="/setup/fallback.js?v=0.2.6.56"></script>'
+        script = '<script src="/setup/fallback.js?v=0.2.6.55"></script>'
         if script not in html:
             html = html.replace("</body>", script + "\n</body>")
         response = HTMLResponse(html)
@@ -69,12 +64,11 @@ def install_fallback_routes(
     @app.get("/setup/supabase/state", include_in_schema=False)
     def setup_supabase_state():
         remote = getattr(app.state.remote_controller, "runtime_state", {}).get("remote", {}) if getattr(app.state, "remote_controller", None) is not None else {}
-        primary = controller().supabase_state()
+        fallback = controller().supabase_state()
         return {
             "primary_configured": bool(remote.get("configured")),
             "primary_bridge_id": remote.get("bridge_id"),
-            "fallback": primary,  # compatibility response key through 0.2.6.x
-            "supabase": primary,
+            "fallback": fallback,
         }
 
     @app.post("/setup/supabase", include_in_schema=False)
@@ -86,7 +80,7 @@ def install_fallback_routes(
                 poll_interval_seconds=body.poll_interval_seconds,
                 table=body.table,
             )
-            return {"ok": True, "fallback": result, "supabase": result}
+            return {"ok": True, "fallback": result}
         except RemoteConfigurationError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
@@ -94,8 +88,8 @@ def install_fallback_routes(
     def dashboard_js(ai_bridge_token: str | None = Cookie(default=None)):
         check_cookie(ai_bridge_token)
         base = (web_root / "static" / "app.js").read_text(encoding="utf-8")
-        primary = (web_root / "static" / "fallback_dashboard.js").read_text(encoding="utf-8")
-        response = Response(base + "\n\n" + primary, media_type="application/javascript")
+        fallback = (web_root / "static" / "fallback_dashboard.js").read_text(encoding="utf-8")
+        response = Response(base + "\n\n" + fallback, media_type="application/javascript")
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         return response
 

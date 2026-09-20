@@ -93,6 +93,7 @@ class WindowsDpapiSecretStore:
         raw = value.encode("utf-8")
         in_blob, keepalive = self._blob(raw)
         out_blob = _DATA_BLOB()
+        # CRYPTPROTECT_UI_FORBIDDEN = 0x1
         if not _crypt32.CryptProtectData(
             ctypes.byref(in_blob), "AI Bridge credential", None, None, None, 0x1, ctypes.byref(out_blob)
         ):
