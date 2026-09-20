@@ -116,10 +116,9 @@ def _executor(tmp_path, service, monkeypatch, *, authority_text="# Authority\nNe
         encoding="utf-8",
     )
     executor.current = current
-    monkeypatch.setattr(executor, "_update_source", lambda: {
+    monkeypatch.setattr(executor, "_bus_source", lambda: {
         "repository": "fmb22333-dev/ai-bridge-bus",
-        "branch": "bridge-runtime",
-        "base_branch": "main",
+        "branch": "main",
     })
     docs = {
         ("main", "PROJECT_STATE_INDEX.json"): {
