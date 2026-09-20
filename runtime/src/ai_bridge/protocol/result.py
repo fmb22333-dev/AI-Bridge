@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ExecutionStatus(str, Enum):
     SUCCESS = "success"
     FAILED = "failed"
+    SKIPPED = "skipped"
     DENIED = "denied"
     CONFLICT = "conflict"
     UNKNOWN = "unknown"
@@ -22,6 +23,9 @@ class FailureOrigin(str, Enum):
 
 
 class FailureInfo(BaseModel):
+    # Failure diagnostics are intentionally forwards-compatible. Adapters may
+    # add machine-actionable diagnostic metadata without making result ingress
+    # reject the entire terminal result.
     model_config = ConfigDict(extra="allow")
     origin: FailureOrigin
     stage: str | None = None
@@ -49,3 +53,4 @@ class ExecutionResult(BaseModel):
     rollback_available: bool = False
     last_known_state: dict[str, Any] = Field(default_factory=dict)
     evidence_id: str | None = None
+    guidance: dict[str, Any] | None = None

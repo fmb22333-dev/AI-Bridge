@@ -111,19 +111,33 @@ def _v5_patch_body(transport, comment_id: int, body: str, *, label: str) -> None
     transport._comments_etag = None
 
 
-def _v5_nack(transport, item: dict, envelope: dict, message: str) -> None:
-    if str(envelope.get("bridge_id") or "") != transport.config.bridge_id:
-        return
-    channel_id = str(envelope.get("channel_id") or "").strip()
-    generation = str(envelope.get("generation") or "").strip()
-    if not channel_id or not generation:
+def _v5_nack(
+    transport,
+    item: dict,
+    envelope: dict,
+    message: str,
+    *,
+    error_code: str = "INVALID_COMMAND_ENVELOPE",
+    received_marker: str = _github_bus.CHANNEL_COMMAND_MARKER_V5,
+) -> None:
+    target_bridge_id = str(envelope.get("bridge_id") or "").strip()
+    if target_bridge_id and target_bridge_id != transport.config.bridge_id:
         return
     try:
         comment_id = int(item["id"])
     except Exception:
         return
+    channel_id = str(envelope.get("channel_id") or "").strip() or None
+    generation = str(envelope.get("generation") or "").strip() or None
     command = _normalize_v5_command(envelope)
     command_id = str(command.get("command_id") or envelope.get("command_id") or "").strip() or None
+    error = {
+        "code": error_code,
+        "message": message[:500],
+        "expected_marker": _github_bus.CHANNEL_COMMAND_MARKER_V5,
+    }
+    if received_marker:
+        error["received_marker"] = received_marker
     body = CHANNEL_NACK_MARKER_V5 + "\n" + json.dumps(
         {
             "bridge_id": transport.config.bridge_id,
@@ -131,7 +145,7 @@ def _v5_nack(transport, item: dict, envelope: dict, message: str) -> None:
             "generation": generation,
             "command_id": command_id,
             "state": "rejected",
-            "error": {"code": "INVALID_COMMAND_ENVELOPE", "message": message[:500]},
+            "error": error,
         },
         ensure_ascii=False,
         separators=(",", ":"),
@@ -143,11 +157,28 @@ def _v5_deferred_channel_item(transport, item: dict, body: str):
     try:
         envelope = json.loads(body.split("\n", 1)[1])
         if not isinstance(envelope, dict):
-            return None
-    except Exception:
+            raise ValueError("V5 envelope must be a JSON object")
+    except Exception as exc:
+        _v5_nack(
+            transport,
+            item,
+            {},
+            f"{type(exc).__name__}: {exc}",
+            received_marker=_github_bus.CHANNEL_COMMAND_MARKER_V5,
+        )
         return None
 
-    if str(envelope.get("bridge_id") or "") != transport.config.bridge_id:
+    target_bridge_id = str(envelope.get("bridge_id") or "").strip()
+    if target_bridge_id and target_bridge_id != transport.config.bridge_id:
+        return None
+    if not target_bridge_id:
+        _v5_nack(
+            transport,
+            item,
+            envelope,
+            "ValueError: bridge_id is required",
+            received_marker=_github_bus.CHANNEL_COMMAND_MARKER_V5,
+        )
         return None
     channel_id = str(envelope.get("channel_id") or "").strip()
     generation = str(envelope.get("generation") or "").strip()
@@ -163,6 +194,27 @@ def _v5_deferred_channel_item(transport, item: dict, body: str):
         _v5_nack(transport, item, envelope, f"{type(exc).__name__}: {exc}")
         return None
 
+    predecessor = envelope.get("predecessor")
+    normalized_predecessor = None
+    if predecessor is not None:
+        try:
+            if not isinstance(predecessor, dict):
+                raise ValueError("predecessor must be an object")
+            if set(predecessor) - {"command_id", "require"}:
+                raise ValueError("predecessor supports only command_id and require")
+            predecessor_id = str(predecessor.get("command_id") or "").strip()
+            require = str(predecessor.get("require") or "success").strip().lower()
+            if not predecessor_id or len(predecessor_id) > 128:
+                raise ValueError("predecessor.command_id is required and must be <= 128 characters")
+            if predecessor_id == command.command_id:
+                raise ValueError("predecessor cannot reference the successor command itself")
+            if require not in {"terminal", "success"}:
+                raise ValueError("predecessor.require must be terminal or success")
+            normalized_predecessor = {"command_id": predecessor_id, "require": require}
+        except Exception as exc:
+            _v5_nack(transport, item, envelope, f"{type(exc).__name__}: {exc}", error_code="INVALID_PREDECESSOR")
+            return None
+
     ref = {
         "comment_id": comment_id,
         "mode": "issue_channel_v5",
@@ -170,6 +222,8 @@ def _v5_deferred_channel_item(transport, item: dict, body: str):
         "generation": generation,
         "command": command_payload,
     }
+    if normalized_predecessor is not None:
+        ref["predecessor"] = normalized_predecessor
     transport._comment_refs.setdefault(command.command_id, ref)
     _record_receipt(
         transport,
@@ -207,6 +261,12 @@ def _v5_recover_ack_item(transport, item: dict, body: str):
         "generation": generation,
         "command": command_payload,
     }
+    predecessor = envelope.get("predecessor")
+    if isinstance(predecessor, dict):
+        predecessor_id = str(predecessor.get("command_id") or "").strip()
+        require = str(predecessor.get("require") or "success").strip().lower()
+        if predecessor_id and require in {"terminal", "success"}:
+            ref["predecessor"] = {"command_id": predecessor_id, "require": require}
     transport._comment_refs.setdefault(command.command_id, ref)
     _record_receipt(
         transport,
@@ -227,10 +287,33 @@ def _v5_reliable_comments_to_commands(transport, items: list[dict]):
             residual.append(item)
             continue
         body = str(item.get("body") or "")
-        if body.startswith(_github_bus.CHANNEL_COMMAND_MARKER_V5 + "\n"):
+        marker = body.split("\n", 1)[0].strip()
+        if marker == _github_bus.CHANNEL_COMMAND_MARKER_V5:
             command = _v5_deferred_channel_item(transport, item, body)
             if command is not None:
                 commands.append(command)
+            continue
+        supported_command_markers = {
+            _github_bus.COMMAND_MARKER,
+            _github_bus.COMMAND_MARKER_V3,
+            _github_bus.COMMAND_MARKER_V4,
+            _github_bus.CHANNEL_COMMAND_MARKER_V5,
+        }
+        if marker.startswith("AI_BRIDGE_COMMAND_") and marker not in supported_command_markers:
+            try:
+                envelope = json.loads(body.split("\n", 1)[1])
+                if not isinstance(envelope, dict):
+                    envelope = {}
+            except Exception:
+                envelope = {}
+            _v5_nack(
+                transport,
+                item,
+                envelope,
+                f"Unsupported command marker: {marker}",
+                error_code="UNSUPPORTED_COMMAND_MARKER",
+                received_marker=marker,
+            )
             continue
         if body.startswith(_github_bus.CHANNEL_ACK_MARKER_V5 + "\n"):
             command = _v5_recover_ack_item(transport, item, body)
@@ -300,7 +383,10 @@ def _contents_commands_with_receipts(transport) -> list[CommandEnvelope]:
         transport._v52_contents_ingress_detail = "invalid_command"
         raise
     except Exception as exc:
-        transport._v52_contents_ingress_detail = f"unavailable: {type(exc).__name__}: {exc}"
+        detail = f"unavailable: {type(exc).__name__}: {exc}"
+        transport._v52_contents_ingress_detail = detail
+        if str(getattr(transport, "_message_mode", "")) == "contents":
+            raise RuntimeError("GITHUB_INGRESS_UNAVAILABLE: contents=" + detail) from exc
         return []
     for command in commands:
         _record_receipt(
@@ -363,6 +449,13 @@ def _v5_reliable_fetch_channel_commands(transport):
             comment_commands = legacy
 
     contents_commands = _contents_commands_with_receipts(transport)
+    comment_detail = str(getattr(transport, "_v52_comment_ingress_detail", ""))
+    contents_detail = str(getattr(transport, "_v52_contents_ingress_detail", ""))
+    if comment_detail.startswith("unavailable:") and contents_detail.startswith("unavailable:"):
+        raise RuntimeError(
+            "GITHUB_INGRESS_UNAVAILABLE: comment=" + comment_detail
+            + "; contents=" + contents_detail
+        )
     return _merge_commands(comment_commands, contents_commands)
 
 
@@ -455,10 +548,18 @@ def _publish_result_for_receipt(transport, result, receipt: dict) -> None:
 def _v52_message_state(transport) -> dict:
     state = _original_message_state(transport)
     mode = str(transport._message_mode or state.get("mode") or "contents")
+    state["role"] = "fallback_command_transport"
+    deprecated_fields = {}
     if mode == "issue_channel_v5":
         state["multi_ingress"] = True
-        state["primary_ingress"] = "issue_comment_v5"
-        state["fallback_ingress"] = "contents"
+        state["github_primary_ingress"] = "issue_comment_v5"
+        state["github_fallback_ingress"] = "contents"
+        deprecated_fields.update(
+            {
+                "primary_ingress": "issue_comment_v5",
+                "fallback_ingress": "contents",
+            }
+        )
         state["comment_ingress_detail"] = getattr(
             transport, "_v52_comment_ingress_detail", "available"
         )
@@ -467,8 +568,14 @@ def _v52_message_state(transport) -> dict:
         )
     elif mode == "contents":
         state["multi_ingress"] = False
-        state["active_ingress"] = "contents"
-        state["fallback_ingress"] = "contents"
+        state["github_active_ingress"] = "contents"
+        state["github_fallback_ingress"] = "contents"
+        deprecated_fields.update(
+            {
+                "active_ingress": "contents",
+                "fallback_ingress": "contents",
+            }
+        )
         state["comment_ingress_detail"] = getattr(
             transport, "_v52_comment_ingress_detail", "inactive"
         )
@@ -477,7 +584,9 @@ def _v52_message_state(transport) -> dict:
         )
     else:
         state["multi_ingress"] = False
-        state["active_ingress"] = mode
+        state["github_active_ingress"] = mode
+        deprecated_fields["active_ingress"] = mode
+    state["compatibility"] = {"deprecated_fields": deprecated_fields}
     return state
 
 
@@ -490,7 +599,28 @@ _github_bus.GitHubBusTransport.restore_contents_command_index = _restore_content
 _github_bus.GitHubBusTransport.contents_command_index_snapshot = _contents_command_index_snapshot
 _github_bus.GitHubBusTransport.requires_durable_ack = _v5_requires_durable_ack
 _github_bus.GitHubBusTransport.ack_command = _v5_ack_command
+
+
+def _v5_command_predecessor(transport, command_id: str):
+    ref = transport._comment_refs.get(str(command_id))
+    if not isinstance(ref, dict):
+        return None
+    predecessor = ref.get("predecessor")
+    return dict(predecessor) if isinstance(predecessor, dict) else None
+
+
+def _v5_nack_command(transport, command, code: str, message: str) -> None:
+    ref = transport._comment_refs.get(command.command_id)
+    if not isinstance(ref, dict) or ref.get("mode") != "issue_channel_v5":
+        raise RuntimeError("V5 predecessor rejection requires an owning issue channel")
+    envelope = {"bridge_id": transport.config.bridge_id, "channel_id": ref.get("channel_id"), "generation": ref.get("generation"), "command": ref.get("command")}
+    if isinstance(ref.get("predecessor"), dict):
+        envelope["predecessor"] = dict(ref["predecessor"])
+    _v5_nack(transport, {"id": ref["comment_id"]}, envelope, message, error_code=code, received_marker=_github_bus.CHANNEL_COMMAND_MARKER_V5)
+
 _github_bus.GitHubBusTransport.command_receipts = _command_receipts
+_github_bus.GitHubBusTransport.command_predecessor = _v5_command_predecessor
+_github_bus.GitHubBusTransport.nack_command = _v5_nack_command
 _github_bus.GitHubBusTransport.publish_result_for_receipt = _publish_result_for_receipt
 _github_bus.GitHubBusTransport.message_state = _v52_message_state
 

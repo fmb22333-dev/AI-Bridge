@@ -375,6 +375,46 @@ class BridgeDB:
                 (transport_key, command_id),
             )
 
+    def task_idle_snapshot(self) -> dict[str, Any]:
+        """Return minimal command activity needed by the desktop idle notifier.
+
+        Transport control-plane probes are excluded so health/status checks do
+        not postpone a user-facing "task finished" notification.
+        """
+        terminal_statuses = (
+            "success",
+            "failed",
+            "skipped",
+            "denied",
+            "conflict",
+            "unknown",
+        )
+        placeholders = ",".join("?" for _ in terminal_statuses)
+        business_filter = (
+            "NOT (adapter='bridge_transport' "
+            "AND operation IN ('transport.ping','command.status'))"
+        )
+        with self._connect() as conn:
+            pending = conn.execute(
+                f"SELECT COUNT(*) AS count FROM commands "
+                f"WHERE {business_filter} AND status NOT IN ({placeholders})",
+                terminal_statuses,
+            ).fetchone()
+            latest = conn.execute(
+                f"""SELECT command_id, workspace_id, adapter, session_id,
+                           operation, status, created_at, updated_at
+                    FROM commands
+                    WHERE {business_filter}
+                      AND status IN ({placeholders})
+                    ORDER BY updated_at DESC, rowid DESC
+                    LIMIT 1""",
+                terminal_statuses,
+            ).fetchone()
+        return {
+            "pending_count": int(pending["count"] if pending is not None else 0),
+            "latest_terminal": dict(latest) if latest is not None else None,
+        }
+
     def list_commands(self, limit: int = 20) -> list[dict[str, Any]]:
         limit = max(1, min(int(limit), 200))
         with self._connect() as conn:
