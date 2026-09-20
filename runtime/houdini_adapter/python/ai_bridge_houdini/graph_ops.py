@@ -217,6 +217,7 @@ def apply_spec(hou,parent_path:str,nodes:list[dict],connections:list[dict]|None=
                 _set_state(hou,node,dict(spec.get("state") or {}))
                 updated.append(node.path())
             refs[ref]=node
+
         applied=[]
         for connection in connections or []:
             source=_resolve(hou,parent,refs,str(connection["source"]))
@@ -386,6 +387,7 @@ def apply_transactional(hou, parent_path, nodes, connections=None, *, layout=Fal
     }
 
 
+
 def _plain_value(value):
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
@@ -481,6 +483,7 @@ def _restore_ensure_transaction(hou, node_snapshots, connection_snapshots, creat
         "connections": connection_restore,
         "cleanup": cleanup,
     }
+
 
 
 def _ensure_plan_summary(*, would_cook=False):

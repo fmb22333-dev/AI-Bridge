@@ -269,7 +269,17 @@ def _dispatch_raw(hou, command: dict, session_info: dict) -> dict:
                 stages={"EXECUTE": "PASS", "READBACK": "VERIFIED"},
             )
         if op == "node.delete":
-            return _result(command_id, session_id, node_ops.delete(hou, args["path"], args["expected_type"], args["expected_name"]))
+            return _result(
+                command_id,
+                session_id,
+                node_ops.delete(
+                    hou,
+                    args["path"],
+                    args["expected_type"],
+                    args["expected_name"],
+                    args.get("expected_hash"),
+                ),
+            )
         if op == "node.connect":
             return _result(command_id, session_id, node_ops.connect(hou, args["target"], args["input_index"], args["source"], args.get("output_index", 0), args.get("expected_hash")))
         if op == "node.disconnect":
