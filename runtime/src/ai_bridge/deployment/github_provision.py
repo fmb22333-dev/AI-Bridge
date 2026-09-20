@@ -50,6 +50,7 @@ def _render_index(*, repository: str, branch: str, bridge_id: str,
         "ref": runtime_source_ref,
         "path": path,
     }
+    primary_transport = spec("docs/SUPABASE_PRIMARY_TRANSPORT.md")
     return {
         "schema_version": "1.0",
         "index_role": "single_machine_entrypoint",
@@ -71,6 +72,8 @@ def _render_index(*, repository: str, branch: str, bridge_id: str,
             "live_runtime_status": {
                 "ref": branch,
                 "path": f".ai-bridge/status/{bridge_id}.json",
+                "semantics": "last_published_durable_state",
+                "live_probe": {"adapter": "bridge_transport", "operation": "transport.ping"},
             },
             "read_first": {"ref": branch, "path": "AI_BRIDGE_READ_FIRST.md"},
             "runtime_source": {
@@ -79,9 +82,31 @@ def _render_index(*, repository: str, branch: str, bridge_id: str,
             },
             "normative_specs": {
                 "execution": spec("specs/AI_BRIDGE_EXECUTION_SPEC.md"),
+                "primary_realtime_transport": dict(primary_transport),
                 "learning_policy": spec("specs/AI_BRIDGE_LEARNING_POLICY.md"),
                 "deployment": spec("specs/AI_BRIDGE_DEPLOYMENT_SPEC.md"),
                 "ai_protocol": spec("specs/AI_AGENT_PROTOCOL.md"),
+            },
+            "realtime_transport_authority": {
+                "canonical": dict(primary_transport),
+                "aliases": [
+                    "高速通道",
+                    "high_speed_channel",
+                    "fast_channel",
+                    "primary_realtime",
+                    "supabase_primary",
+                    "Supabase高速通道",
+                ],
+                "discovery_rule": (
+                    "Resolve fast/high-speed channel terms here first. Read Presence to "
+                    "select the currently available primary/fallback transport; do not "
+                    "assume GitHub V5 is primary."
+                ),
+            },
+            "presence_version_authority": {
+                "runtime_version_source": "active Runtime pyproject.toml",
+                "supabase_override_allowed": False,
+                "publisher_transport_source_rewrite_allowed": False,
             },
         },
         "projects": {},
@@ -89,12 +114,12 @@ def _render_index(*, repository: str, branch: str, bridge_id: str,
             "bridge_modify": [
                 f"fetch {branch}:PROJECT_STATE_INDEX.json",
                 "fetch live runtime status",
+                "fetch primary realtime transport authority from runtime_source",
                 "fetch normative Bridge specifications from runtime_source",
                 "inspect only source files relevant to the requested modification",
             ]
         },
     }
-
 
 def _read_first(repository: str, branch: str) -> str:
     return f"""# AI Bridge — READ THIS FIRST
@@ -102,20 +127,34 @@ def _read_first(repository: str, branch: str) -> str:
 This repository is a clean per-install AI Bridge Bus.
 
 Mandatory entrypoint:
-- `{branch}:PROJECT_STATE_INDEX.json`
+1. `{branch}:PROJECT_STATE_INDEX.json`
+2. the durable Presence path declared by that index
+3. the primary realtime transport authority declared by that index
 
-Read that file before any Bridge or project operation.
+High-speed channel aliases:
+- 高速通道 / fast channel / primary realtime / Supabase primary
+- resolve these names through `bridge.realtime_transport_authority`; do not assume GitHub V5 is primary.
 
-Use the authority order and pointers declared by the index. Do not infer volatile
-runtime/session/workspace state from static documentation. Do not replay mutations
-merely because a previous chat response is missing; recover durable state first.
+Routing:
+- read Presence fields `realtime_command_primary`, `realtime_command_fallback`, and transport status;
+- use Supabase when Presence declares it primary and connected;
+- otherwise use the declared fallback while preserving the same command_id;
+- GitHub remains durable project/document/release authority.
 
-This Bus starts with `projects={{}}`. Do not infer or import projects from the
-shared Runtime/product repository.
+Liveness:
+- durable Presence is a last-published snapshot;
+- use `bridge_transport / transport.ping` for current reachability.
+
+Runtime version authority:
+- durable Presence `bridge_version` is derived from the active Runtime `pyproject.toml`;
+- transport extensions must not hard-code or override Runtime release identity.
+
+Use the authority order and pointers declared by the index. Do not perform repository-wide discovery unless the index cannot resolve the required information.
+
+This Bus starts with `projects={{}}`. Do not infer or import projects from the shared Runtime/product repository.
 
 Repository: `{repository}`
 """
-
 
 def _bus_readme(repository: str) -> str:
     return f"""{BUS_README_MARKER}

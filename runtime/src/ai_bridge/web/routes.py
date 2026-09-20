@@ -285,6 +285,7 @@ def install_control_routes(
                 "repository": runtime_source,
                 "branch": "main",
                 "manifest_path": "runtime-release.json",
+                "publish_source_mirror": False,
                 "bootstrap_from_bus": False,
             }
             (workspaces_file.parent / "update_source.json").write_text(
@@ -422,7 +423,8 @@ def install_control_routes(
                 for session_status in [service.sessions.status(session.session_id)]
             ],
             "plugins": service.plugins.status(
-                live_sessions=service.active_sessions()
+                live_sessions=service.active_sessions(),
+                unreal_projects=_unreal_project_files(),
             ),
             "commands": service.db.list_commands(5),
             "recoveries": [
@@ -557,33 +559,78 @@ def install_control_routes(
             "removed": service.execution_policy.remove_project(project_file),
         }
 
+    def _unreal_project_files() -> list[str]:
+        projects: dict[str, str] = {}
+        for session in service.sessions.list(adapter="unreal"):
+            value = str(session.project_file or "").strip()
+            if value and Path(value).suffix.lower() == ".uproject":
+                resolved = str(Path(value).expanduser().resolve())
+                projects[resolved.casefold()] = resolved
+        for workspace in service.workspaces.list():
+            if workspace.workspace_id.startswith("__"):
+                continue
+            try:
+                candidates = workspace.root.glob("*.uproject")
+            except OSError:
+                continue
+            for project in candidates:
+                try:
+                    resolved = str(project.resolve())
+                except OSError:
+                    continue
+                projects[resolved.casefold()] = resolved
+        return [projects[key] for key in sorted(projects)]
+
     @app.get("/control/plugins", include_in_schema=False)
     def plugin_status(ai_bridge_token: str | None = Cookie(default=None)):
         check_cookie(ai_bridge_token)
-        return service.plugins.status(live_sessions=service.active_sessions())
+        return service.plugins.status(
+            live_sessions=service.active_sessions(),
+            unreal_projects=_unreal_project_files(),
+        )
 
     @app.post("/control/plugins/install-all", include_in_schema=False)
     def plugin_install_all(ai_bridge_token: str | None = Cookie(default=None)):
         check_cookie(ai_bridge_token)
-        return service.plugins.install_all(live_sessions=service.active_sessions())
+        return service.plugins.install_all(
+            live_sessions=service.active_sessions(),
+            unreal_projects=_unreal_project_files(),
+        )
 
     @app.post("/control/plugins/{host_id}/install", include_in_schema=False)
-    def plugin_install(host_id: str, ai_bridge_token: str | None = Cookie(default=None)):
+    def plugin_install(
+        host_id: str,
+        project_file: str = Query(default=""),
+        ai_bridge_token: str | None = Cookie(default=None),
+    ):
         check_cookie(ai_bridge_token)
         host_id = host_id.strip().lower()
+        project_file = project_file.strip()
+        if host_id == "unreal" and not project_file:
+            candidates = _unreal_project_files()
+            if len(candidates) != 1:
+                raise HTTPException(status_code=400, detail="UNREAL_PROJECT_SELECTION_REQUIRED")
+            project_file = candidates[0]
         host_running = any(
             session.adapter == host_id and service.sessions.is_active(session.session_id)
             for session in service.sessions.list(adapter=host_id)
         )
         try:
-            result = service.plugins.install(host_id, host_running=host_running)
+            result = service.plugins.install(
+                host_id,
+                host_running=host_running,
+                project_file=project_file or None,
+            )
         except KeyError:
             raise HTTPException(status_code=404, detail="PLUGIN_HOST_NOT_FOUND")
         except (ValueError, RuntimeError, FileNotFoundError) as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         return {
             "install": result,
-            "plugins": service.plugins.status(live_sessions=service.active_sessions()),
+            "plugins": service.plugins.status(
+                live_sessions=service.active_sessions(),
+                unreal_projects=_unreal_project_files(),
+            ),
         }
 
     @app.post("/control/plugins/{host_id}/restart-apply", include_in_schema=False)
