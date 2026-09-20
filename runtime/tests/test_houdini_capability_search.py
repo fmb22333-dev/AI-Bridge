@@ -49,7 +49,7 @@ def test_capability_search_finds_reconciliation_before_low_level_composition():
     assert result["integrity"]["issue_count"] == 0
 
 
-def test_capability_search_exposes_only_distributable_network_recipe_authority():
+def test_capability_search_exposes_deprecated_supersession():
     result = compat_ops.capability_search(
         FakeHou(),
         _session(),
@@ -58,11 +58,14 @@ def test_capability_search_exposes_only_distributable_network_recipe_authority()
     )
     rows = {item["name"]: item for item in result["results"]}
 
-    assert "network.build_and_cook" not in rows
-    assert "network.build" not in rows
-    current = rows["network.ensure_and_cook"]
-    assert current["promotion_state"] == "promoted"
-    assert current["execution_authorized"] is True
+    old = rows["network.build_and_cook"]
+    assert old["promotion_state"] == "deprecated"
+    assert old["execution_authorized"] is False
+    assert old["superseded_by"] == "network.ensure_and_cook"
+
+    strict = rows["network.build"]
+    assert strict["promotion_state"] == "candidate"
+    assert strict["execution_authorized"] is False
 
 
 def test_capability_search_finds_callback_introspection():
