@@ -16,7 +16,7 @@ BUNDLE = ROOT / "runtime_bundle.zip"
 INSTALLER_BUNDLE = ROOT / "AI_Bridge_Installer.zip"
 PRODUCT_REPOSITORY = "fmb22333-dev/AI-Bridge"
 PRODUCT_REF = "main"
-SUPERVISOR_VERSION = "0.1.4"
+SUPERVISOR_VERSION = "0.1.5"
 TEXT_SUFFIXES = {".py", ".json", ".toml", ".html", ".css", ".js", ".md", ".txt", ".bat", ".ps1"}
 
 
@@ -219,8 +219,8 @@ def main() -> None:
             "path": "AI_Bridge_Installer.zip",
             "sha256": installer_bundle_sha256,
         },
-        "supported_hosts": ["houdini"],
-        "unimplemented_hosts": ["unreal", "blender"],
+        "supported_hosts": ["houdini", "unreal"],
+        "unimplemented_hosts": ["blender"],
         "runtime_bundle_sha256": bundle_sha256,
         "knowledge_digest": knowledge["content_digest"],
     }

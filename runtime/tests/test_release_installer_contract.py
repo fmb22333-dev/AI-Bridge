@@ -19,11 +19,11 @@ def test_installer_consumes_release_authority_and_verifies_hashes():
     assert "ai-bridge-bus" not in text.lower()
 
 
-def test_release_builder_is_deterministic_and_houdini_only_for_now():
+def test_release_builder_is_deterministic_and_supports_houdini_and_unreal():
     text = BUILDER.read_text(encoding="utf-8")
     assert "date_time=(1980, 1, 1, 0, 0, 0)" in text
-    assert 'supported_hosts": ["houdini"]' in text
-    assert 'unimplemented_hosts": ["unreal", "blender"]' in text
+    assert 'supported_hosts": ["houdini", "unreal"]' in text
+    assert 'unimplemented_hosts": ["blender"]' in text
     assert "bundle_sha256" in text
     assert "knowledge_digest" in text
     assert "AI_Bridge_Installer.zip" in text

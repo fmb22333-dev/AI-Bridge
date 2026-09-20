@@ -67,7 +67,8 @@ def main() -> None:
         if canonical_text_sha256(path) != item.get("sha256"):
             fail(f"Supervisor install file digest mismatch: {path}")
     routes = (RUNTIME / "src" / "ai_bridge" / "web" / "routes.py").read_text(encoding="utf-8")
-    supervisor_py = (ROOT / "bootstrap" / "supervisor" / "0.1.4" / "_System" / "supervisor.py").read_text(encoding="utf-8")
+    supervisor_version = str(supervisor.get("version") or "")
+    supervisor_py = (ROOT / "bootstrap" / "supervisor" / supervisor_version / "_System" / "supervisor.py").read_text(encoding="utf-8")
     combined = routes + supervisor_py
     if "ai-bridge-bus" in combined.lower():
         fail("Developer Bus leaked into product update authority")
