@@ -69,3 +69,12 @@ main.shell{max-width:1320px;margin:0 auto;padding:26px}
   .historyToolbar input{min-width:100%;flex-basis:100%}
   .historyStats{margin-left:0;width:100%}
 }
+
+/* Session panel shows only live host sessions; historical rows remain available to Bridge internals. */
+#sessions .historyHeader,
+#sessions .session.offline{display:none}
+
+/* BUSY_UNKNOWN is a live-but-uncertain Host state and must remain visible. */
+#sessions .session.busyUnknown{display:block;border-left:2px solid #9a7548;padding-left:10px}
+#sessions .session.busyUnknown .dot{background:#9a7548}
+#sessions .session.busyUnknown .stateText{color:#d6aa72}
