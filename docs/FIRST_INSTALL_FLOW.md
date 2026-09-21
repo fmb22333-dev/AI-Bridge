@@ -1,114 +1,59 @@
 # First Install Flow
 
-This is the target end-user flow for AI Bridge.
+This document describes the current end-user installation path.
 
-## What the user does
+## User flow
 
-1. Download the latest AI Bridge installer/release package.
-2. Run `INSTALL_AI_BRIDGE` / the packaged installer.
-3. The Setup UI opens locally.
-4. Authorize GitHub for a dedicated AI Bridge Bus repository.
-5. Click **Create & Connect Bus**.
-6. Select which host adapters to install (Houdini / Unreal / Blender).
-7. Finish setup.
+1. Download the latest public AI Bridge installer.
+2. Run `INSTALL_AI_BRIDGE.bat`.
+3. The installer places the current Runtime and Supervisor under the local AI Bridge install directory.
+4. Start AI Bridge; Setup opens locally.
+5. Authorize GitHub and create or connect a dedicated per-install Bus.
+6. Configure **Supabase Primary Bus** if realtime transport is required.
+7. Install the desired Host plugins:
+   - Houdini — supported.
+   - Unreal Engine — project-scoped AIBridgeUE installation supported.
+   - Blender — scaffold only.
 
-The user should not manually create GitHub JSON files, status folders, issues, comments, Bridge IDs, or project records.
+Users should not manually create Bridge JSON, status folders, transport comments, Bridge IDs or project-index records.
 
-## What Bridge does automatically
+## Local state created on the target machine
 
-### A. Local initialization
+- unique Bridge ID;
+- local config/data directory;
+- credential storage;
+- Runtime connection state;
+- Workspace registry;
+- Host-plugin installation state.
 
-Generate local-only state:
+No developer-machine state is copied into a clean installation.
 
-- Bridge ID
-- local data/config directory
-- credential/secret storage
-- Runtime connection config
-- host adapter installation state
-- Workspace registry
+## GitHub Bus created/connected by Setup
 
-None of this machine-specific state is copied from the maintainer/developer installation.
+A clean Bus contains the machine entrypoint and durable authority needed by AI clients, including:
 
-### B. GitHub Bus provisioning
+- `PROJECT_STATE_INDEX.json`;
+- `AI_BRIDGE_READ_FIRST.md`;
+- `.ai-bridge/status/<bridge_id>.json`;
+- GitHub fallback transport resources;
+- project authority documents only after projects are explicitly registered.
 
-Create or connect a clean dedicated user repository, then initialize:
+The generated index points to this shared product repository for Runtime/protocol/spec authority.
 
-- `PROJECT_STATE_INDEX.json`
-- `AI_BRIDGE_READ_FIRST.md`
-- `.ai-bridge/status/<bridge_id>.json`
-- required GitHub transport resources
+## Transport roles
 
-The generated index points back to the shared product repository `fmb22333-dev/AI-Bridge` for normative protocol/specification/runtime source.
+GitHub is durable authority and GitHub V5 fallback transport. Supabase is the primary realtime command/result path when configured and connected. Both converge on the same local BridgeDB command identity.
 
-### C. AI onboarding
+## Security
 
-A user can then give an AI access to the Bus repository.
+GitHub and Supabase credentials remain in local secret storage and are never committed to either repository. A clean installation starts with `projects={}`.
 
-The only mandatory onboarding rule is:
+## Current validated package
 
-> Read `PROJECT_STATE_INDEX.json` first.
+- Runtime **0.2.6.86**
+- Supervisor **0.1.6**
+- Houdini Adapter **0.5.27**
+- AIBridgeUE **0.5.3**
+- bundled Windows wheelhouse for offline first-launch dependency bootstrap
 
-From there the AI can discover:
-
-- the live Runtime status;
-- available host sessions/workspaces;
-- registered projects;
-- project authority documents;
-- the shared Runtime/product repository;
-- AI/Bridge protocol and execution/learning/deployment specifications.
-
-The AI must not rely on previous chat memory as state authority.
-
-## Repository split
-
-```text
-fmb22333-dev/AI-Bridge
-  shared product/runtime
-  installer
-  adapters
-  clean generic knowledge
-  protocol/specs
-          |
-          | first-run setup
-          v
-user/ai-bridge-bus
-  PROJECT_STATE_INDEX.json
-  AI_BRIDGE_READ_FIRST.md
-  .ai-bridge/status/...
-  transport resources
-  user project authority docs
-          |
-          v
-local AI Bridge
-          |
-          v
-Houdini / Unreal / Blender
-```
-
-## Security boundary
-
-GitHub access is always performed through the user's authorized GitHub identity/app/token. Credentials stay in local secret storage and are never committed to the Bus or public product repository.
-
-A third-party AI can only modify what its authorized GitHub identity is allowed to modify.
-
-## Project creation
-
-A clean installation starts with `projects={}`.
-
-Project authority documents and project entries are created only when the user explicitly registers/starts a project. Installing AI Bridge must never import the maintainer's ProjectFamilyA, ProjectFamilyB, local HIP paths, command history, or other project state.
-
-## Implementation / validation status — 2026-09-10
-
-The installer and release assembly described above are implemented for the current Houdini + Unreal product slice:
-
-- Runtime 0.2.6.85
-- Houdini Adapter 0.5.27
-- AIBridgeUE 0.5.3
-- Supervisor 0.1.6
-- `AI_Bridge_Installer.zip` containing the one-click BAT/PowerShell entrypoints
-- deterministic Runtime/release manifests with SHA-256 verification
-- bundled Windows Python wheelhouse for offline first-launch dependency bootstrap
-
-Automated Windows validation has passed a clean GitHub re-download/install smoke test.
-
-**Still pending:** explicit real-environment end-user acceptance on a genuinely fresh machine/account. This should cover clean Bus authorization, Houdini Adapter activation/live round-trip, and project-scoped AIBridgeUE one-click installation. It remains separate from the automated installer smoke test.
+Automated Windows validation covers clean GitHub re-download/install and offline Python dependency bootstrap. Interactive fresh-account Bus authorization plus real Houdini/Unreal host acceptance remains a separate end-user acceptance gate.

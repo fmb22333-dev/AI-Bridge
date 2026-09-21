@@ -1,4 +1,5 @@
--- AI Bridge Supabase fallback transport schema
+-- AI Bridge Supabase primary realtime transport schema.
+-- Historical filename retained for Runtime 0.2.6.x compatibility.
 -- Apply to a dedicated Supabase project.
 
 create table if not exists public.ai_bridge_commands (
@@ -27,4 +28,4 @@ revoke all on table public.ai_bridge_commands from anon, authenticated;
 grant select, insert, update on table public.ai_bridge_commands to service_role;
 
 comment on table public.ai_bridge_commands is
-    'Secondary AI Bridge command/result transport. GitHub remains primary.';
+    'AI Bridge primary realtime command/result transport; GitHub V5 is fallback and GitHub remains durable authority.';
