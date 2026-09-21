@@ -8,6 +8,12 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Installer public-repository 403 fallback — 2026-09-21
+
+- Fixed fresh/public installation on machines with a stale, invalid, or unrelated `AI_BRIDGE_PRODUCT_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`.
+- Product downloads now try the configured authenticated GitHub API path first, then retry the public repository anonymously, then fall back to `raw.githubusercontent.com` for public distribution files.
+- The existing Git Blobs fallback for >1 MB Runtime archives and all SHA-256 verification remain intact.
+
 ### Runtime 0.2.6.84 public synchronization + Unreal one-click install — 2026-09-20
 
 - Reconciled the shared product Runtime with the live-verified development baseline **0.2.6.84** while preserving the standalone product boundary: public Runtime/update authority remains `fmb22333-dev/AI-Bridge:main`; a user's Bus remains transport/project authority and is never an implicit Runtime release source.

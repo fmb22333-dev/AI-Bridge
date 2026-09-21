@@ -42,3 +42,10 @@ def test_installer_falls_back_to_git_blob_for_large_runtime_archives():
     assert "GitHub Contents API omits inline content for files larger than 1 MB" in text
     assert '$blob.encoding -ne "base64"' in text
     assert "$blob.content" in text
+
+
+def test_installer_recovers_from_bad_local_token_for_public_repo():
+    text = INSTALLER.read_text(encoding="utf-8")
+    assert "$AnonymousHeaders" in text
+    assert "raw.githubusercontent.com" in text
+    assert "authenticated API, anonymous API, and raw download" in text

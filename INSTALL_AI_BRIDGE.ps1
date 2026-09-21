@@ -34,13 +34,46 @@ function Get-ProductToken {
 }
 
 $Token = Get-ProductToken
-$Headers = @{
+$AnonymousHeaders = @{
     "Accept" = "application/vnd.github+json"
     "User-Agent" = "AI-Bridge-Installer"
     "X-GitHub-Api-Version" = "2022-11-28"
 }
+$Headers = @{}
+foreach ($key in $AnonymousHeaders.Keys) {
+    $Headers[$key] = $AnonymousHeaders[$key]
+}
 if ($Token) {
     $Headers["Authorization"] = "Bearer $Token"
+}
+
+function Convert-RepoResponseToBytes($Response, [hashtable]$RequestHeaders, [string]$Path) {
+    if ($Response.content) {
+        return [Convert]::FromBase64String(($Response.content -replace "\s", ""))
+    }
+
+    # GitHub Contents API omits inline content for files larger than 1 MB.
+    $gitUrl = [string]$Response.git_url
+    if (-not [string]::IsNullOrWhiteSpace($gitUrl)) {
+        $blob = Invoke-RestMethod -Uri $gitUrl -Headers $RequestHeaders -Method Get
+        if ($blob.encoding -ne "base64" -or -not $blob.content) {
+            throw "GitHub blob response was not base64 content for '$Path'."
+        }
+        return [Convert]::FromBase64String(($blob.content -replace "\s", ""))
+    }
+    throw "GitHub returned no inline content or git_url for '$Path'."
+}
+
+function Get-PublicRawBytes([string]$EscapedPath, [string]$EncodedRef) {
+    $rawUrl = "https://raw.githubusercontent.com/${ProductRepository}/${EncodedRef}/${EscapedPath}"
+    $client = New-Object System.Net.WebClient
+    try {
+        $client.Headers["User-Agent"] = "AI-Bridge-Installer"
+        return $client.DownloadData($rawUrl)
+    }
+    finally {
+        $client.Dispose()
+    }
 }
 
 function Get-RepoBytes([string]$Path) {
@@ -51,30 +84,31 @@ function Get-RepoBytes([string]$Path) {
     for ($attempt = 1; $attempt -le 6; $attempt++) {
         try {
             $response = Invoke-RestMethod -Uri $url -Headers $Headers -Method Get
-            if ($response.content) {
-                return [Convert]::FromBase64String(($response.content -replace "\s", ""))
-            }
-
-            # GitHub Contents API omits inline content for files larger than 1 MB.
-            # Reuse the authenticated Git blob URL so public and private product
-            # repositories follow the same bounded credential path.
-            $gitUrl = [string]$response.git_url
-            if (-not [string]::IsNullOrWhiteSpace($gitUrl)) {
-                $blob = Invoke-RestMethod -Uri $gitUrl -Headers $Headers -Method Get
-                if ($blob.encoding -ne "base64" -or -not $blob.content) {
-                    throw "GitHub blob response was not base64 content for '$Path'."
-                }
-                return [Convert]::FromBase64String(($blob.content -replace "\s", ""))
-            }
-            throw "GitHub returned no inline content or git_url for '$Path'."
+            return Convert-RepoResponseToBytes $response $Headers $Path
         } catch {
             $lastError = $_
+
+            if ($Token) {
+                try {
+                    $response = Invoke-RestMethod -Uri $url -Headers $AnonymousHeaders -Method Get
+                    return Convert-RepoResponseToBytes $response $AnonymousHeaders $Path
+                } catch {
+                    $lastError = $_
+                }
+            }
+
+            try {
+                return Get-PublicRawBytes $escaped $encodedRef
+            } catch {
+                $lastError = $_
+            }
+
             if ($attempt -lt 6) {
                 Start-Sleep -Seconds ([Math]::Min(5, $attempt))
             }
         }
     }
-    throw "Unable to download '$Path' from $ProductRepository@$Ref after bounded retries. If the product repository is private, sign in with GitHub CLI or set AI_BRIDGE_PRODUCT_TOKEN/GH_TOKEN. $($lastError.Exception.Message)"
+    throw "Unable to download '$Path' from $ProductRepository@$Ref after bounded retries. Public installation tried authenticated API, anonymous API, and raw download. $($lastError.Exception.Message)"
 }
 
 function Get-RepoJson([string]$Path) {
