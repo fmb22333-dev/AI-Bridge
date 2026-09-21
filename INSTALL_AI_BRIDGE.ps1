@@ -51,10 +51,22 @@ function Get-RepoBytes([string]$Path) {
     for ($attempt = 1; $attempt -le 6; $attempt++) {
         try {
             $response = Invoke-RestMethod -Uri $url -Headers $Headers -Method Get
-            if (-not $response.content) {
-                throw "GitHub returned no content for '$Path'."
+            if ($response.content) {
+                return [Convert]::FromBase64String(($response.content -replace "\s", ""))
             }
-            return [Convert]::FromBase64String(($response.content -replace "\s", ""))
+
+            # GitHub Contents API omits inline content for files larger than 1 MB.
+            # Reuse the authenticated Git blob URL so public and private product
+            # repositories follow the same bounded credential path.
+            $gitUrl = [string]$response.git_url
+            if (-not [string]::IsNullOrWhiteSpace($gitUrl)) {
+                $blob = Invoke-RestMethod -Uri $gitUrl -Headers $Headers -Method Get
+                if ($blob.encoding -ne "base64" -or -not $blob.content) {
+                    throw "GitHub blob response was not base64 content for '$Path'."
+                }
+                return [Convert]::FromBase64String(($blob.content -replace "\s", ""))
+            }
+            throw "GitHub returned no inline content or git_url for '$Path'."
         } catch {
             $lastError = $_
             if ($attempt -lt 6) {

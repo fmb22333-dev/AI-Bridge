@@ -34,3 +34,11 @@ def test_release_verifier_checks_product_authority_boundaries():
     assert "Developer Bus leaked into product update authority" in text
     assert "Runtime bundle SHA-256 mismatch" in text
     assert "Clean Knowledge manifest digest mismatch" in text
+
+
+def test_installer_falls_back_to_git_blob_for_large_runtime_archives():
+    text = INSTALLER.read_text(encoding="utf-8")
+    assert "$response.git_url" in text
+    assert "GitHub Contents API omits inline content for files larger than 1 MB" in text
+    assert '$blob.encoding -ne "base64"' in text
+    assert "$blob.content" in text
