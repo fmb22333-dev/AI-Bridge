@@ -57,3 +57,12 @@ def test_setup_can_defer_message_mode_probe_from_connection_critical_path(tmp_pa
     assert result["status"] == "connected"
     assert transport.initialize_calls == 0
     assert transport.presence
+
+
+def test_supabase_extension_wrapper_preserves_configure_keyword_options():
+    source = (
+        __import__("pathlib").Path(__file__).resolve().parents[1]
+        / "src" / "ai_bridge" / "transport" / "supabase_extension.py"
+    ).read_text(encoding="utf-8")
+    assert "def _extended_configure_github(self, config, token, **kwargs):" in source
+    assert "_original_configure_github(self, config, token, **kwargs)" in source
