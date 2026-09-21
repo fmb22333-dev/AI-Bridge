@@ -7,7 +7,7 @@ from pathlib import Path
 
 def _load_supervisor():
     root = Path(__file__).resolve().parents[2]
-    path = root / "bootstrap" / "supervisor" / "0.1.5" / "_System" / "supervisor.py"
+    path = root / "bootstrap" / "supervisor" / "0.1.6" / "_System" / "supervisor.py"
     spec = importlib.util.spec_from_file_location("ai_bridge_supervisor_watchdog_test", path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None

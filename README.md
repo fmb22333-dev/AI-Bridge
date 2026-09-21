@@ -1,123 +1,90 @@
 # AI Bridge
 
-> **AI / Agent:** Before changing this repository, read `AGENTS.md`. Before changing a generated user Bus, read that Bus repository's `PROJECT_STATE_INDEX.json` first. Do not start with repository-wide discovery when the index already provides authoritative pointers.
+> **AI / Agent:** In a user Bus, read `PROJECT_STATE_INDEX.json` first. In this product repository, read `AGENTS.md` before modifying source.
 
-AI Bridge is a distributable local bridge/runtime for AI-assisted control of host applications such as Houdini, Unreal Engine, and Blender.
+AI Bridge is a distributable local Runtime for AI-assisted control of host applications. The shared product repository and each installation's Bus repository have deliberately different authority.
 
-## Product requirements
+## Authority model
 
-AI Bridge is organized around these requirements:
+- **This repository** — Runtime, Supervisor, host adapters, installer, protocol/specifications, clean generic Knowledge and release artifacts.
+- **Per-install GitHub Bus** — `PROJECT_STATE_INDEX.json`, durable Presence, project authority and GitHub V5 fallback transport.
+- **Supabase** — primary realtime command/result transport when Presence reports it connected.
+- **BridgeDB** — local command identity/idempotency authority keyed by canonical `command_id`.
 
-1. **GitHub authority binding** — each installation connects to GitHub through the user's own authorization for durable Presence, project authority, Runtime/release metadata, documentation, Knowledge and audit/recovery.
-2. **Supabase primary realtime transport** — normal interactive command/result traffic uses Supabase when configured and connected.
-3. **GitHub V5 fallback command transport** — GitHub remains a fully supported command path when Supabase is unavailable.
-4. **Independent Knowledge Pack** — generic validated knowledge is distributed independently from private project history.
-5. **Automatic Bus initialization** — first-run setup creates or connects a clean per-install GitHub Bus repository automatically.
-6. **AI self-onboarding** — an authorized AI reads `PROJECT_STATE_INDEX.json` and Presence first, then follows `command_transport_policy` instead of relying on chat memory.
-7. **Cross-transport idempotency** — failover preserves the same canonical `command_id`; BridgeDB remains the execution authority.
+A transport failover never creates a second execution identity. Preserve the same `command_id`.
 
-## Repository role
-
-This repository is the shared **Runtime / Adapter / Installer / Generic Knowledge / Protocol** source.
-
-It is intentionally separate from each user's per-install **Bus repository**.
-
-A user installation creates its own Bus repository containing runtime Presence, transport discovery resources, project authority documents, and the machine entrypoint `PROJECT_STATE_INDEX.json`.
-
-## Changelog / audit
-
-Meaningful product changes are recorded in [`CHANGELOG.md`](CHANGELOG.md) and release-specific documents under `docs/`.
-
-Logging rules are defined in [`docs/CHANGE_POLICY.md`](docs/CHANGE_POLICY.md).
-
-## Target first-run flow
-
-`download -> install -> Setup UI -> authorize GitHub authority/fallback Bus -> configure Supabase Primary Bus -> install host adapters -> ready`
-
-The user should not manually create Bridge JSON files, issues/comments, status folders, Bridge IDs, project index records, or AI onboarding instructions.
-
-Every provisioned Bus receives a root README that tells AI agents to read `PROJECT_STATE_INDEX.json` and Presence before searching the repository or sending commands.
-
-See [`docs/FIRST_INSTALL_FLOW.md`](docs/FIRST_INSTALL_FLOW.md).
-
-## Transport model
-
-Runtime **0.2.6.56+** uses this role split:
+## Normal command path
 
 ```text
-GitHub Presence / PROJECT_STATE_INDEX  -> discovery + durable authority
-                    |
-                    v
-Supabase PRIMARY_FAST                 -> normal command/result traffic
-                    |
-          unavailable / degraded
-                    v
-GitHub V5 FALLBACK                    -> fallback command/result traffic
+GitHub PROJECT_STATE_INDEX / Presence
+              |
+              v
+      discover current routing
+              |
+      +-------+--------+
+      |                |
+      v                v
+Supabase PRIMARY   GitHub V5 FALLBACK
+      \                /
+       \              /
+        v            v
+          Bridge Runtime
+               |
+          Host Adapter
+               |
+        Houdini / Unreal
 ```
 
-Both transports carry the same canonical `CommandEnvelope` and converge on the same local Bridge command database. `command_id` remains the single execution identity, so transport failover never authorizes a second Host mutation merely because a different bus was used.
+Blender remains scaffold-only.
 
-Supabase uses one row per command, which allows independent AI conversations to submit without sharing a comment/mailbox. The Runtime uses bounded execution lanes: same Host Session is FIFO/serialized; different Host Sessions or unrelated Runtime adapter lanes may progress concurrently; result publication remains serialized at the transport boundary.
+## First install
 
-Runtime 0.2.6.x retains historical fallback-named configuration/API surfaces for compatibility. New integrations should discover roles from `supabase_transport` and `command_transport_policy`, not from legacy names.
+`download -> INSTALL_AI_BRIDGE.bat -> Setup UI -> connect/create GitHub Bus -> configure Supabase Primary -> install host plugins`
 
-See [`docs/SUPABASE_PRIMARY_TRANSPORT.md`](docs/SUPABASE_PRIMARY_TRANSPORT.md). The older [`docs/SUPABASE_FALLBACK_TRANSPORT.md`](docs/SUPABASE_FALLBACK_TRANSPORT.md) is retained as implementation history and compatibility documentation.
+The installer must not import developer machine state, Bridge IDs, credentials, workspaces, sessions, command history or project documents.
+
+See [docs/FIRST_INSTALL_FLOW.md](docs/FIRST_INSTALL_FLOW.md).
 
 ## AI integration
 
-AI agents working on this product repository should read `AGENTS.md` first.
+An authorized AI entering a generated Bus should:
 
-AI agents entering a generated user Bus repository must read that Bus repository's `PROJECT_STATE_INDEX.json` and current Presence before any project or Bridge operation.
+1. read `PROJECT_STATE_INDEX.json`;
+2. read the indexed durable Presence;
+3. use `transport.ping` when current reachability matters;
+4. follow `command_transport_policy` / `supabase_transport`;
+5. read project authority only for the selected project;
+6. read normative product specs from this repository.
 
-Normal routing is:
+Do not recover live state from chat memory or static release documents.
 
-1. discover through GitHub authority;
-2. use Supabase for commands when Presence reports it connected and primary;
-3. use GitHub V5 only as fallback or for explicit GitHub transport testing;
-4. preserve the same `command_id` across failover.
+Normative integration contract: [specs/AI_AGENT_PROTOCOL.md](specs/AI_AGENT_PROTOCOL.md).
 
-The public integration contract is [`specs/AI_AGENT_PROTOCOL.md`](specs/AI_AGENT_PROTOCOL.md).
+## Repository contents
 
-## Update and collaboration rule
+This repository may contain Runtime/Core source, Supervisor bootstrap, Houdini/Unreal adapter payloads, installer/release tooling, normative specs, clean generic Knowledge and deterministic release artifacts.
 
-Bridge Runtime, Adapter, Installer, protocol, and promoted generic Knowledge Pack changes must remain synchronized with this repository.
-
-Required sequence:
-
-`read changelog -> remote preflight -> reconcile -> modify -> validate -> update docs/changelog -> remote recheck -> synchronize/publish`
-
-See [`docs/UPDATE_WORKFLOW.md`](docs/UPDATE_WORKFLOW.md).
-
-## Distribution boundary
-
-This repository may contain:
-
-- Bridge Core and Supervisor
-- Host adapters
-- Installer/bootstrap assets
-- Protocol and normative specifications
-- Clean generic Knowledge Pack
-- Clean Bus/project templates
-- Release manifests and distributable bundles
-- Generic transport adapters and deployment schema
-
-It must not contain:
-
-- developer-machine Bridge IDs
-- GitHub tokens, Supabase secret keys, or other secret material
-- current workspaces/sessions/PIDs
-- command or recovery history
-- local install paths
-- active project authority documents
-- project-specific HIP/FBX paths
-- private project-family execution recipes
+It must not contain developer credentials, machine Bridge IDs, live workspaces/sessions/PIDs, command/recovery history, local paths, active project authority, project-specific HIP/FBX data or private project-family execution evidence.
 
 ## Current product status
 
-Runtime **0.2.6.85**, Houdini Adapter **0.5.27**, AIBridgeUE **0.5.3**, Supervisor **0.1.6**.
+- Runtime **0.2.6.86**
+- Supervisor **0.1.6**
+- Houdini Adapter **0.5.27**
+- AIBridgeUE **0.5.3**
+- Blender Adapter **scaffold**
 
-Supabase is the default realtime command/result transport when configured. GitHub V5 remains connected as fallback command transport and remains the durable authority. Supabase credentials are stored through the existing local SecretStore/Windows DPAPI path and are never committed.
+The Runtime bundle includes a pinned Windows wheelhouse for offline first-launch dependency bootstrap. Host Plugins supports one-click Houdini install/update and project-scoped Unreal installation.
 
-The release workflow rebuilds and verifies deterministic Runtime/installer artifacts on `main`, including a fresh-install smoke test. The Runtime bundle includes a pinned Windows wheelhouse, so normal first launch installs Python dependencies locally without requiring PyPI access. The Dashboard Host Plugins panel supports one-click Houdini install/update and project-scoped AIBridgeUE install/update; Blender remains scaffold-only.
+## Canonical docs
 
-See [`docs/SUPABASE_PRIMARY_TRANSPORT.md`](docs/SUPABASE_PRIMARY_TRANSPORT.md), [`docs/RELEASE_0.2.6.56.md`](docs/RELEASE_0.2.6.56.md), and [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md).
+- [specs/AI_BRIDGE_EXECUTION_SPEC.md](specs/AI_BRIDGE_EXECUTION_SPEC.md)
+- [specs/AI_AGENT_PROTOCOL.md](specs/AI_AGENT_PROTOCOL.md)
+- [specs/AI_BRIDGE_DEPLOYMENT_SPEC.md](specs/AI_BRIDGE_DEPLOYMENT_SPEC.md)
+- [specs/AI_BRIDGE_LEARNING_POLICY.md](specs/AI_BRIDGE_LEARNING_POLICY.md)
+- [docs/SUPABASE_PRIMARY_TRANSPORT.md](docs/SUPABASE_PRIMARY_TRANSPORT.md)
+- [docs/UPDATE_WORKFLOW.md](docs/UPDATE_WORKFLOW.md)
+- [docs/CHANGE_POLICY.md](docs/CHANGE_POLICY.md)
+- [migration/BASELINE.json](migration/BASELINE.json)
+
+Product history belongs in `CHANGELOG.md` and Git history; current live/project state belongs in the user's Bus.

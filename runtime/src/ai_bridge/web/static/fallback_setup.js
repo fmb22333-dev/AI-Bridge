@@ -61,7 +61,7 @@
 
     if (!fallback.configured) {
       out.className = "status muted";
-      out.textContent = fallback.status === "disabled" ? "备用通道已断开。" : "尚未配置 Supabase Primary Bus。";
+      out.textContent = fallback.status === "disabled" ? "Supabase 主通道已断开。" : "尚未配置 Supabase Primary Bus。";
       return;
     }
     const good = fallback.status === "connected";

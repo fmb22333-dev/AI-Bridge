@@ -1,5 +1,5 @@
-# AI Bridge Unreal C++ Surface
+# AI Bridge Unreal Native Surface
 
-Reserved for the native UE plugin/module transport and editor/runtime operations.
+The native Unreal implementation is active under `AIBridgeUE/Source/AIBridgeUEEditor`.
 
-No implementation is active yet. Keep protocol concepts aligned with the typed capability model used by Houdini.
+This `cpp/` directory is retained only as a compatibility/documentation placeholder and is not a second implementation tree. New native code belongs in the AIBridgeUE module.

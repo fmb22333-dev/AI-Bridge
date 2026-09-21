@@ -1,6 +1,6 @@
 [project]
 name = "ai-bridge"
-version = "0.2.6.85"
+version = "0.2.6.86"
 description = "Local deterministic AI bridge core"
 requires-python = ">=3.11"
 dependencies = [

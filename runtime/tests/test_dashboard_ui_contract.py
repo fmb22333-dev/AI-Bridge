@@ -13,7 +13,8 @@ def test_dashboard_keeps_advanced_budget_collapsed_and_recent_commands_bounded()
     assert '<details class="card collapsibleCard" id="executionBudgetPanel" open' not in html
     assert 'id="budgetSummary"' in html
     assert 'id="openCommandHistory"' in html
-    assert "const RECENT_COMMAND_LIMIT=10" in html
+    assert "const RECENT_COMMAND_LIMIT=5" in html
+    assert "最近 5 条" in html
     assert '"/control/commands?limit="' in html
 
 

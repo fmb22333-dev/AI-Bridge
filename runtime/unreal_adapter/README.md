@@ -1,7 +1,13 @@
 # Unreal Adapter
 
-Reserved adapter surface for Unreal Engine Python/editor integration and UE C++ integration.
+AI Bridge ships **AIBridgeUE 0.5.3** as a project-scoped Unreal Engine editor plugin.
 
-Status: scaffold only. Houdini remains the active compatibility priority.
+Current product status:
 
-Python/editor and C++ surfaces are separated so neither is forced into the other deployment model.
+- Host Plugins reports Unreal as `ready`.
+- The installer copies the bundled plugin into the selected project's `Plugins/AIBridgeUE`.
+- Stale plugin-local `Binaries/` and `Intermediate/` are removed during install/update.
+- Installation fails closed when the target Unreal Editor is running.
+- Bridge does not automatically close or restart Unreal Editor.
+
+The adapter contains the native editor/session integration plus bounded project tooling/resources currently distributed with AIBridgeUE.
