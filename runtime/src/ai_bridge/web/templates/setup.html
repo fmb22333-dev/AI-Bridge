@@ -242,11 +242,26 @@ $('ghWebLogin').onclick = async () => {
   } finally { $('ghWebLogin').disabled=false; }
 };
 
+async function pollProvisionState(stopSignal) {
+  while (!stopSignal.done) {
+    try {
+      const state=await parseResponse(await fetch('/setup/provision/state',{cache:'no-store'}));
+      if (state.status && state.status !== 'idle') {
+        $('out').className='status '+(state.status==='failed'?'error':state.status==='success'?'ok':'muted');
+        $('out').textContent=`Step 2 · ${state.stage}: ${state.detail || ''}`;
+      }
+      if (state.status==='success' || state.status==='failed') return state;
+    } catch {}
+    await sleep(500);
+  }
+}
 $('provisionRepo').onclick = async () => {
   if (!credentialVerified) return updateNextStep();
   $('provisionRepo').disabled = true; $('save').disabled = true;
   $('out').className='status muted';
-  $('out').textContent='正在创建/检查 Private Bus、初始化 PROJECT_STATE_INDEX、Issue #1 与 GitHub fallback…';
+  $('out').textContent='Step 2 · starting: 正在启动 GitHub Bus 配置…';
+  const stopSignal={done:false};
+  const progressPromise=pollProvisionState(stopSignal);
   try {
     const repository=normalizeRepo($('repo').value); $('repo').value=repository;
     const data=await parseResponse(await fetch('/setup/provision',{
@@ -267,7 +282,11 @@ $('provisionRepo').onclick = async () => {
   } catch(error) {
     $('out').className='status error';
     $('out').textContent='创建/连接失败：'+error.message;
-  } finally { updateNextStep(); }
+  } finally {
+    stopSignal.done=true;
+    await progressPromise.catch(()=>null);
+    updateNextStep();
+  }
 };
 
 $('save').onclick = async () => {

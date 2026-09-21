@@ -131,3 +131,19 @@ def test_existing_project_bus_is_not_overwritten():
                 bridge_id="ALICE-123",
             )
         )
+
+
+def test_clean_bus_provision_reports_named_progress_stages():
+    import inspect
+    source = inspect.getsource(GitHubBusProvisioner.provision)
+    for stage in (
+        "identity",
+        "repository",
+        "repository_safety",
+        "state_index",
+        "read_first",
+        "readme",
+        "issue",
+        "provisioned",
+    ):
+        assert f'report("{stage}"' in source

@@ -167,8 +167,8 @@ if not getattr(RemoteController, "_supabase_extension_installed", False):
         _refresh_presence_after_fallback_change(self)
         return self.fallback_controller.public_state()
 
-    def _extended_configure_github(self, config, token):
-        result = _original_configure_github(self, config, token)
+    def _extended_configure_github(self, config, token, **kwargs):
+        result = _original_configure_github(self, config, token, **kwargs)
         if hasattr(self, "fallback_controller"):
             self.fallback_controller.bridge_id_hint = str(config.bridge_id or "").strip()
         return result
