@@ -19,6 +19,9 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Step 1 now explicitly states that identity verification does not prove repository-creation authority. A Fine-grained PAT that can call `/user` may still fail `POST /user/repos`.
 - Repository-create 403 failures are now structured as `REPOSITORY_CREATE_PERMISSION_DENIED`; the failed provisioning stage is preserved instead of being collapsed to a generic `failed` stage, and Setup renders actionable CLI/manual-repository remediation.
 - One-click PAT guidance now distinguishes broad create permission from the least-privilege existing-repository flow. GitHub CLI remains the recommended one-click path; manual repository creation plus repository-scoped Contents/Issues write is the least-privilege PAT path.
+- Updated PR #20 validation Run `35588183334` passed with **521/521 pytest PASS**, release verifier PASS and PowerShell parser PASS after adding structured permission-failure semantics.
+- Main Run `35588333351` passed end-to-end: **521/521 pytest PASS**, release verifier PASS, generated artifact publication PASS, fresh GitHub install PASS and bundled offline dependency bootstrap PASS.
+- Published Runtime bundle SHA-256: `a9bd8a1321bfa34452aa39653c8b4aa05653d42ffd39e11b55ba47dc8505bde8`; generated artifact commit: `4140eb9385f9a8acd3780424343ab65f21df8eb2`.
 
 ### Runtime 0.2.6.88 Step 2 provisioning progress + Step 4 unlock repair — 2026-09-21
 
