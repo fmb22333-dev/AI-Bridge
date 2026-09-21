@@ -20,6 +20,7 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Development-source interval from the prior public baseline `c9be86a58899e581621d30f82a1c5783d30a76f9` to the accepted 0.2.6.84 source mirror `dc9f4ef1ac7111ee86ca6cfaef95f512c4112a8c` was classified before synchronization. Project authority/history, live state, machine paths, credentials, command history and project-family evidence remain **DO NOT DISTRIBUTE**.
 - Live developer validation before public synchronization: Runtime publication/activation **0.2.6.84**, full Runtime **486/486 PASS**, compile PASS, Knowledge publish gate PASS, Supervisor **0.1.5** running, Supabase `transport.ping` SUCCESS, and AIBridgeUE **0.5.3** reported by `bridge.plugin.status`.
 - Public Windows product validation and fresh-install smoke are the release gate for this synchronization. The migration baseline remains unchanged until that gate passes.
+- Fresh-install smoke exposed a GitHub Contents API size edge case after AIBridgeUE expanded `runtime_bundle.zip` to ~2 MB: Contents metadata omits inline `content` above 1 MB. The installer now falls back to the authenticated `git_url` / Git Blobs API path and preserves the same SHA-256 verification and bounded retry behavior.
 
 ### Runtime 0.2.6.55 Supabase Backup Bus UI — 2026-09-17
 
