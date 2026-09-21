@@ -17,6 +17,8 @@ def test_setup_keeps_manual_flow_and_adds_clean_one_click_provision():
     assert 'id="save"' in html
     assert "连接已有 GitHub Bus" in html
     assert '@app.post("/setup/provision", include_in_schema=False)' in routes
+    assert '@app.get("/setup/provision/state", include_in_schema=False)' in routes
+    assert "pollProvisionState" in html
     assert '@app.post("/setup/save", include_in_schema=False)' in routes
     assert "不会复制" in html
 

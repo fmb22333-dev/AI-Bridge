@@ -351,7 +351,7 @@ class RemoteController:
                 pass
         return replacement
 
-    def configure_github(self, config: GitHubRemoteConfig, token: str) -> dict:
+    def configure_github(self, config: GitHubRemoteConfig, token: str, *, initialize_message_mode: bool = True) -> dict:
         repository = config.repository.strip().strip("/")
         branch = config.branch.strip()
         bridge_id = config.bridge_id.strip()
@@ -371,7 +371,7 @@ class RemoteController:
         if not health.ok:
             raise RemoteConfigurationError("GitHub connection failed: " + health.detail)
         try:
-            if hasattr(transport, "initialize_message_mode"):
+            if initialize_message_mode and hasattr(transport, "initialize_message_mode"):
                 transport.initialize_message_mode()
             self._publish_presence_if_changed(transport, normalized, force=True)
         except Exception as exc:

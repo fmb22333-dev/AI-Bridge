@@ -342,15 +342,40 @@ def install_control_routes(
             "source": credential["source"],
         }
 
+    def _set_setup_provision_state(status: str, stage: str, detail: str, **extra) -> None:
+        payload = {
+            "status": status,
+            "stage": stage,
+            "detail": detail,
+            "updated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+        }
+        payload.update(extra)
+        runtime_state["setup_provision"] = payload
+
+    @app.get("/setup/provision/state", include_in_schema=False)
+    def setup_provision_state():
+        return dict(
+            runtime_state.get("setup_provision")
+            or {"status": "idle", "stage": "idle", "detail": "No provisioning task is active."}
+        )
+
     @app.post("/setup/provision", include_in_schema=False)
     def setup_provision(body: GitHubProvisionBody):
+        _set_setup_provision_state("running", "credential", "Resolving GitHub credential")
         try:
             token = _resolve_setup_github_token(body.token)
         except RemoteConfigurationError as exc:
+            _set_setup_provision_state("failed", "credential", str(exc))
             raise HTTPException(status_code=400, detail=str(exc))
         runtime_source = normalize_github_repository(body.runtime_source_repository)
         if runtime_source.count("/") != 1:
-            raise HTTPException(status_code=400, detail="Runtime source must be owner/repository")
+            detail = "Runtime source must be owner/repository"
+            _set_setup_provision_state("failed", "runtime_source", detail)
+            raise HTTPException(status_code=400, detail=detail)
+
+        def progress(stage: str, detail: str) -> None:
+            _set_setup_provision_state("running", stage, detail)
+
         try:
             provisioner = GitHubBusProvisioner(token)
             provisioned = provisioner.provision(
@@ -359,7 +384,14 @@ def install_control_routes(
                     bridge_id=body.bridge_id.strip(),
                     runtime_source_repository=runtime_source,
                     private=bool(body.private),
-                )
+                ),
+                progress=progress,
+            )
+            _set_setup_provision_state(
+                "running",
+                "connect_health",
+                "Checking GitHub Bus branch access",
+                repository=provisioned["repository"],
             )
             remote = controller().configure_github(
                 GitHubRemoteConfig(
@@ -368,6 +400,13 @@ def install_control_routes(
                     bridge_id=body.bridge_id.strip(),
                 ),
                 token,
+                initialize_message_mode=False,
+            )
+            _set_setup_provision_state(
+                "running",
+                "update_source",
+                "Saving public Runtime update authority",
+                repository=provisioned["repository"],
             )
             update_source = {
                 "repository": runtime_source,
@@ -380,6 +419,14 @@ def install_control_routes(
                 json.dumps(update_source, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
+            _set_setup_provision_state(
+                "success",
+                "connected",
+                "GitHub Bus is configured and connected",
+                repository=provisioned["repository"],
+                branch=provisioned["branch"],
+                bridge_id=body.bridge_id.strip(),
+            )
             response = JSONResponse({
                 "ok": True,
                 "provisioned": provisioned,
@@ -389,6 +436,7 @@ def install_control_routes(
             response.set_cookie("ai_bridge_token", auth_token, httponly=True, samesite="strict")
             return response
         except (GitHubProvisionError, RemoteConfigurationError, RuntimeError) as exc:
+            _set_setup_provision_state("failed", "failed", str(exc))
             raise HTTPException(status_code=400, detail=str(exc))
 
     @app.post("/setup/save", include_in_schema=False)

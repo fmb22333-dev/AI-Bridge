@@ -58,6 +58,7 @@
       ? `Bridge ID 自动继承：${state.primary_bridge_id || "当前 GitHub Bus"}`
       : "请先连接 GitHub Bus；Supabase Primary Bus 必须复用 GitHub Authority 的同一个 Bridge ID。";
     connect.disabled = !state.primary_configured;
+    connect.title = state.primary_configured ? "" : "等待 Step 2 GitHub Bus 完成连接";
 
     if (!fallback.configured) {
       out.className = "status muted";
@@ -115,4 +116,5 @@
       out.textContent = "读取失败：" + error.message;
     }
   });
+  setInterval(() => { load().catch(() => {}); }, 1500);
 })();

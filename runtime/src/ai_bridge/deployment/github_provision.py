@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -372,7 +372,17 @@ class GitHubBusProvisioner:
             )
         return issue
 
-    def provision(self, request: GitHubBusProvisionRequest) -> dict:
+    def provision(
+        self,
+        request: GitHubBusProvisionRequest,
+        *,
+        progress: Callable[[str, str], None] | None = None,
+    ) -> dict:
+        def report(stage: str, detail: str) -> None:
+            if progress is not None:
+                progress(stage, detail)
+
+        report("identity", "Validating GitHub identity")
         login = self.authenticated_login()
         owner, name = _clean_repository(request.repository)
         owner = owner or login
@@ -383,13 +393,16 @@ class GitHubBusProvisioner:
             )
 
         repository = f"{owner}/{name}"
+        report("repository", f"Checking repository {repository}")
         repo = self._repo(repository)
         created = repo is None
         if repo is None:
+            report("repository_create", f"Creating private Bus repository {repository}")
             repo = self._create_user_repo(name, private=request.private)
             repository = str(repo.get("full_name") or repository)
 
         branch = str(repo.get("default_branch") or "main")
+        report("repository_safety", f"Checking Bus repository safety on {branch}")
         self._ensure_existing_repo_is_safe(repository, branch)
 
         index = _render_index(
@@ -399,6 +412,7 @@ class GitHubBusProvisioner:
             runtime_source_repository=request.runtime_source_repository,
             runtime_source_ref=request.runtime_source_ref,
         )
+        report("state_index", "Writing PROJECT_STATE_INDEX.json")
         self._put_text(
             repository,
             branch,
@@ -406,6 +420,7 @@ class GitHubBusProvisioner:
             json.dumps(index, ensure_ascii=False, indent=2) + "\n",
             "Initialize clean AI Bridge state index",
         )
+        report("read_first", "Writing AI_BRIDGE_READ_FIRST.md")
         self._put_text(
             repository,
             branch,
@@ -413,8 +428,11 @@ class GitHubBusProvisioner:
             _read_first(repository, branch),
             "Initialize AI Bridge read-first entrypoint",
         )
+        report("readme", "Writing Bus README entrypoint")
         self._ensure_bus_readme(repository, branch)
+        report("issue", "Checking/creating GitHub Issue #1 transport anchor")
         issue = self._ensure_issue_one(repository)
+        report("provisioned", "GitHub Bus repository initialized")
 
         return {
             "ok": True,
