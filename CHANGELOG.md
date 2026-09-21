@@ -8,6 +8,18 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.88 Step 2 provisioning progress + Step 4 unlock repair — 2026-09-21
+
+- Fixed the fresh-install report where Step 2 appeared permanently stuck even after GitHub repository/token work had already succeeded, while Step 4 stayed disabled.
+- Root cause: Step 2 serialized repository initialization plus transport setup behind one opaque request, so the GitHub repository could already exist while later Index/README/Issue/Presence work was still running. Step 4 also loaded GitHub configuration only once.
+- Added explicit Setup provisioning stages for credential resolution, identity, repository check/create, safety check, PROJECT_STATE_INDEX, READ_FIRST, README, Issue #1, GitHub connection and update-source persistence. The Setup page polls this progress every 500 ms.
+- Removed GitHub Issue Comment/mailbox discovery from the first-connect critical path. Initial setup still verifies branch access and writes Presence; message-mode discovery occurs on the transport runner's first poll.
+- Step 4 now rechecks GitHub Bus configuration every 1.5 seconds and automatically enables Supabase setup when Step 2 reaches configured=true; the disabled button explains that it is waiting for Step 2.
+- Updated the Supabase extension wrapper to forward configure_github keyword options, preserving the new deferred-probe setup path through the existing 0.2.6.x compatibility layer.
+- PR #19 validation Run `35576787278` passed all product gates.
+- Main Run `35576925917` passed end-to-end: **516/516 pytest PASS**, release verifier PASS, generated artifact publication PASS, fresh GitHub install PASS and bundled offline dependency bootstrap PASS.
+- Published Runtime bundle SHA-256: `65e2f98c1591107174d671c847fdbe021bb3c8ecd53544eb1be1ab65c3733301`; generated artifact commit: `e786105bc25e11758d2833d61bea428a41ca3fd4`.
+
 ### Runtime 0.2.6.87 GitHub first-run onboarding repair — 2026-09-21
 
 - Audited the real first-run GitHub setup flow after a fresh end-user installation exposed that the UI could report a confusing/false authentication state and did not clearly tell the user how to advance.
