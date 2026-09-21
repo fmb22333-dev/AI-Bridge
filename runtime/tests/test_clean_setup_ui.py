@@ -10,11 +10,15 @@ def test_setup_keeps_manual_flow_and_adds_clean_one_click_provision():
 
     assert 'id="provisionRepo"' in html
     assert "一键创建干净 Bus 并连接" in html
+    assert 'id="verifyCredential"' in html
+    assert 'id="nextStep"' in html
+    assert 'id="githubLogin"' not in html
+    assert '@app.post("/setup/github-credential-test", include_in_schema=False)' in routes
     assert 'id="save"' in html
     assert "连接已有 GitHub Bus" in html
     assert '@app.post("/setup/provision", include_in_schema=False)' in routes
     assert '@app.post("/setup/save", include_in_schema=False)' in routes
-    assert 'projects={}' in html
+    assert "不会复制" in html
 
 
 def test_clean_provision_separates_bus_from_runtime_source():

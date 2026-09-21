@@ -8,6 +8,16 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.87 GitHub first-run onboarding repair — 2026-09-21
+
+- Audited the real first-run GitHub setup flow after a fresh end-user installation exposed that the UI could report a confusing/false authentication state and did not clearly tell the user how to advance.
+- Removed the misleading “Open GitHub Login” action from the Setup workflow: browser login alone does not authorize the local Bridge and therefore must not be presented as a Bridge-connection step.
+- GitHub CLI detection now inspects the credential stored by `gh auth login` with inherited `GH_TOKEN/GITHUB_TOKEN` removed from the CLI subprocess environment, preventing stale process tokens from masquerading as a valid CLI login.
+- Local credential resolution now validates candidates against GitHub and can skip a stale/invalid candidate in favor of a valid dedicated Bridge token, stored GitHub CLI credential or later environment candidate.
+- Added an explicit credential-validation endpoint and a guided Setup state machine: **authorize -> verify identity -> create/connect Bus**. One-click provisioning is disabled until a GitHub identity has been verified and the UI displays the verified login plus the exact next action.
+- GitHub CLI web authorization is automatically re-polled after launch; Fine-grained Token users can paste and validate the token before any repository mutation.
+- The verified GitHub login is used to auto-fill `<login>/ai-bridge-bus`, while the existing manual-repository flow remains available as an advanced fallback.
+
 ### Repository semantic-debt cleanup / Runtime 0.2.6.86 — 2026-09-21
 
 - Audited the public product repository for duplicated authority, stale release semantics and dead migration artifacts instead of treating test success as proof that repository meaning was coherent.
