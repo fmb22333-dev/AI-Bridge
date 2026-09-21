@@ -32,3 +32,16 @@ def test_clean_provision_separates_bus_from_runtime_source():
     assert '"manifest_path": "distribution-release.json"' not in routes
     assert '"bootstrap_from_bus": False' in routes
     assert 'update_source.json' in routes
+
+
+def test_step2_runs_as_background_task_and_client_has_bounded_observation():
+    html = (ROOT / "src" / "ai_bridge" / "web" / "templates" / "setup.html").read_text(encoding="utf-8")
+    routes = (ROOT / "src" / "ai_bridge" / "web" / "routes.py").read_text(encoding="utf-8")
+
+    assert '@app.post("/setup/provision/start", include_in_schema=False)' in routes
+    assert "threading.Thread" in routes
+    assert "already_running" in routes
+    assert 'fetch(\'/setup/provision/start\'' in html
+    assert "120000" in html
+    assert "不会重复创建已存在的安全 Bus" in html
+    assert "require_initial_presence=False" in routes

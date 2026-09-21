@@ -163,3 +163,11 @@ def test_supabase_ui_contract_is_present_on_setup_and_dashboard():
     assert '"/setup/supabase"' in routes
     assert '"/control/fallback/test"' in routes
     assert '"/control/fallback"' in routes
+
+
+def test_setup_step4_unlocks_from_persisted_github_config():
+    root = Path(__file__).resolve().parents[1]
+    routes = (root / "src/ai_bridge/web/fallback_routes.py").read_text(encoding="utf-8")
+    assert "load_remote_config(remote_controller.config_path)" in routes
+    assert "github_config_persisted" in routes
+    assert "primary_configured" in routes
