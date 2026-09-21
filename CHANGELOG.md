@@ -8,6 +8,16 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Repository semantic-debt cleanup / Runtime 0.2.6.86 — 2026-09-21
+
+- Audited the public product repository for duplicated authority, stale release semantics and dead migration artifacts instead of treating test success as proof that repository meaning was coherent.
+- Removed obsolete Supervisor source payloads 0.1.2–0.1.5; the product tree now keeps only the Supervisor version referenced by the current release manifest. Installed rollback remains a local Runtime/Supervisor concern rather than a reason to retain duplicate historical source payloads in the public product tree.
+- Removed 38 dead/obsolete artifacts in the first cleanup pass, including Runtime-bundled historical “authoritative” documents that still described Runtime 0.1.9.2 / Mailbox V3 / bridge-runtime, an unused Supabase-primary monkeypatch that hard-coded bridge_version 0.2.6.56, unused Bus templates, stale migration/release status documents and redundant .gitkeep files.
+- Consolidated current authority to README -> normative specs -> docs/SUPABASE_PRIMARY_TRANSPORT.md. The legacy SUPABASE_FALLBACK_TRANSPORT.md now documents compatibility names only and no longer duplicates current routing/security/schema/setup instructions.
+- Corrected current-product semantic drift: Unreal documentation now matches the ready AIBridgeUE plugin, Supabase UI labels primary transport as primary rather than fallback/backup, the SQL table comment matches current roles, and the public execution specification now models Supabase-primary/GitHub-V5-fallback routing.
+- Removed stale UI cache-version literals (0.2.6.14 / 0.2.6.55 / 0.2.6.84) because the routes already enforce no-store/no-cache. Dashboard recent-command display is consistently five entries, and the displayed product update branch fallback is main rather than bridge-runtime.
+- Added repository-hygiene regression tests so duplicate Supervisor payloads, parallel historical authority docs, the dead Supabase primary extension, hard-coded web cache versions and Unreal scaffold-status drift fail CI if reintroduced.
+
 ### Runtime 0.2.6.85 / Supervisor 0.1.6 offline Python bootstrap — 2026-09-21
 
 - Fixed a real fresh-machine startup failure where installation completed but first launch ran `pip install -e Runtime[test]`; PEP 517 build isolation then required live PyPI access for `setuptools>=68`, so TLS/proxy-restricted machines failed before Runtime startup.
