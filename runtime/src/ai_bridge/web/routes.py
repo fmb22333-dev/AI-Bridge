@@ -445,7 +445,15 @@ def install_control_routes(
             response.set_cookie("ai_bridge_token", auth_token, httponly=True, samesite="strict")
             return response
         except (GitHubProvisionError, RemoteConfigurationError, RuntimeError) as exc:
-            _set_setup_provision_state("failed", "failed", str(exc))
+            prior = dict(runtime_state.get("setup_provision") or {})
+            failed_stage = str(prior.get("stage") or "failed")
+            extra = {}
+            if isinstance(exc, GitHubProvisionError):
+                if exc.code:
+                    extra["error_code"] = exc.code
+                if exc.remediation:
+                    extra["remediation"] = list(exc.remediation)
+            _set_setup_provision_state("failed", failed_stage, str(exc), **extra)
             raise HTTPException(status_code=400, detail=str(exc))
 
 

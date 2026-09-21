@@ -45,3 +45,12 @@ def test_step2_runs_as_background_task_and_client_has_bounded_observation():
     assert "120000" in html
     assert "不会重复创建已存在的安全 Bus" in html
     assert "require_initial_presence=False" in routes
+
+
+def test_step2_failure_keeps_real_stage_and_renders_permission_remediation():
+    html = (ROOT / "src" / "ai_bridge" / "web" / "templates" / "setup.html").read_text(encoding="utf-8")
+    routes = (ROOT / "src" / "ai_bridge" / "web" / "routes.py").read_text(encoding="utf-8")
+    assert 'failed_stage = str(prior.get("stage") or "failed")' in routes
+    assert "REPOSITORY_CREATE_PERMISSION_DENIED" in html
+    assert "GitHub 身份已经验证成功，但当前凭据没有创建这个 Private Repository 的权限" in html
+    assert "尚未验证“创建新仓库”权限" in html

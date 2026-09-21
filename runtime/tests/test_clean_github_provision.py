@@ -147,3 +147,23 @@ def test_clean_bus_provision_reports_named_progress_stages():
         "provisioned",
     ):
         assert f'report("{stage}"' in source
+
+
+def test_repository_creation_403_is_structured_permission_error():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and request.url.path == "/user/repos":
+            return httpx.Response(
+                403,
+                json={"message": "Resource not accessible by personal access token"},
+            )
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    provisioner = GitHubBusProvisioner(
+        "token",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    with pytest.raises(GitHubProvisionError) as caught:
+        provisioner._create_user_repo("ai-bridge-bus", private=True)
+    assert caught.value.code == "REPOSITORY_CREATE_PERMISSION_DENIED"
+    assert "Administration: write" in " ".join(caught.value.remediation)
+    assert "Connect existing GitHub Bus" in " ".join(caught.value.remediation)
