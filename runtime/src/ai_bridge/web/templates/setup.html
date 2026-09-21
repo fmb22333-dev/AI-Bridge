@@ -243,7 +243,8 @@ $('ghWebLogin').onclick = async () => {
 };
 
 async function pollProvisionState(stopSignal) {
-  while (!stopSignal.done) {
+  const deadline=Date.now()+120000;
+  while (!stopSignal.done && Date.now()<deadline) {
     try {
       const state=await parseResponse(await fetch('/setup/provision/state',{cache:'no-store'}));
       if (state.status && state.status !== 'idle') {
@@ -254,17 +255,16 @@ async function pollProvisionState(stopSignal) {
     } catch {}
     await sleep(500);
   }
+  return {status:'failed',stage:'client_timeout',detail:'Step 2 超过 120 秒仍未完成。可以再次点击恢复/重试，不会重复创建已存在的安全 Bus。'};
 }
 $('provisionRepo').onclick = async () => {
   if (!credentialVerified) return updateNextStep();
-  $('provisionRepo').disabled = true; $('save').disabled = true;
+  $('provisionRepo').disabled=true; $('save').disabled=true;
   $('out').className='status muted';
-  $('out').textContent='Step 2 · starting: 正在启动 GitHub Bus 配置…';
-  const stopSignal={done:false};
-  const progressPromise=pollProvisionState(stopSignal);
+  $('out').textContent='Step 2 · queued: 正在提交 GitHub Bus 配置任务…';
   try {
     const repository=normalizeRepo($('repo').value); $('repo').value=repository;
-    const data=await parseResponse(await fetch('/setup/provision',{
+    await parseResponse(await fetch('/setup/provision/start',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         repository,
@@ -274,17 +274,24 @@ $('provisionRepo').onclick = async () => {
         private:true,
       }),
     }));
+
+    const stopSignal={done:false};
+    const state=await pollProvisionState(stopSignal);
+    stopSignal.done=true;
+    if (!state || state.status!=='success') {
+      throw new Error(state?.detail || 'Step 2 provisioning did not reach success');
+    }
+
     $('token').value='';
-    $('repo').value=data.provisioned?.repository||repository;
+    if (state.repository) $('repo').value=state.repository;
     $('out').className='status ok';
-    $('out').textContent='✓ GitHub Bus 已创建并连接。正在进入 Dashboard…';
+    $('out').textContent='✓ GitHub Bus 已持久化并连接。Step 4 现在可以配置；正在进入 Dashboard…';
+    await loadState({preserveInput:true,autoVerify:false}).catch(()=>{});
     setTimeout(()=>{window.location.href='/';},700);
   } catch(error) {
     $('out').className='status error';
-    $('out').textContent='创建/连接失败：'+error.message;
+    $('out').textContent='Step 2 失败：'+error.message+'\n可以直接再次点击，一键流程会从已存在的安全 Bus 状态继续。';
   } finally {
-    stopSignal.done=true;
-    await progressPromise.catch(()=>null);
     updateNextStep();
   }
 };

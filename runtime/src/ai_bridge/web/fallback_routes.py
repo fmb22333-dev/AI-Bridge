@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 
 from ai_bridge.transport.remote_controller import RemoteConfigurationError
+from ai_bridge.transport.remote_config import load_remote_config
 from ai_bridge.transport import supabase_extension as _supabase_extension  # noqa: F401
 
 
@@ -63,11 +64,24 @@ def install_fallback_routes(
 
     @app.get("/setup/supabase/state", include_in_schema=False)
     def setup_supabase_state():
-        remote = getattr(app.state.remote_controller, "runtime_state", {}).get("remote", {}) if getattr(app.state, "remote_controller", None) is not None else {}
-        fallback = controller().supabase_state()
+        remote_controller = controller()
+        remote = getattr(remote_controller, "runtime_state", {}).get("remote", {})
+        try:
+            saved = load_remote_config(remote_controller.config_path)
+        except Exception:
+            saved = None
+        configured = saved is not None or bool(remote.get("configured"))
+        bridge_id = (
+            str(saved.bridge_id)
+            if saved is not None
+            else remote.get("bridge_id")
+        )
+        fallback = remote_controller.supabase_state()
         return {
-            "primary_configured": bool(remote.get("configured")),
-            "primary_bridge_id": remote.get("bridge_id"),
+            "primary_configured": configured,
+            "primary_bridge_id": bridge_id,
+            "github_runtime_status": remote.get("status", "unconfigured"),
+            "github_config_persisted": saved is not None,
             "fallback": fallback,
         }
 

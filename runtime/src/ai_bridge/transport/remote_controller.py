@@ -351,7 +351,7 @@ class RemoteController:
                 pass
         return replacement
 
-    def configure_github(self, config: GitHubRemoteConfig, token: str, *, initialize_message_mode: bool = True) -> dict:
+    def configure_github(self, config: GitHubRemoteConfig, token: str, *, initialize_message_mode: bool = True, require_initial_presence: bool = True) -> dict:
         repository = config.repository.strip().strip("/")
         branch = config.branch.strip()
         bridge_id = config.bridge_id.strip()
@@ -373,7 +373,8 @@ class RemoteController:
         try:
             if initialize_message_mode and hasattr(transport, "initialize_message_mode"):
                 transport.initialize_message_mode()
-            self._publish_presence_if_changed(transport, normalized, force=True)
+            if require_initial_presence:
+                self._publish_presence_if_changed(transport, normalized, force=True)
         except Exception as exc:
             raise RemoteConfigurationError(
                 f"GitHub write test failed: {type(exc).__name__}: {exc}"
