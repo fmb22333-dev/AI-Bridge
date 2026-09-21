@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1",
   "captured_date": "2026-09-21",
-  "purpose": "Anchor the completed Runtime 0.2.6.84 synchronization into the standalone distributable AI-Bridge product. Public source reconciliation, Windows product validation, artifact publication, release verification, and fresh Windows GitHub install smoke have passed. Explicit real end-user environment acceptance remains a separate gate.",
+  "purpose": "Anchor the completed Runtime 0.2.6.84 development-source synchronization plus the public-product-only 0.2.6.85 / Supervisor 0.1.6 offline-bootstrap hotfix. Public source reconciliation, Windows product validation, artifact publication, release verification, fresh Windows GitHub install smoke, and offline first-launch dependency bootstrap have passed. Explicit real end-user account/Host acceptance remains a separate gate.",
   "source": {
     "repository": "<private-development-source>",
     "ref": "<development-ref>",
@@ -37,28 +37,32 @@
     "installer_large_bundle_hotfix_commit": "ce6b9c10b9a25c381568ace4f01c2ef23e6d3980",
     "installer_large_bundle_hotfix_pr": 14,
     "validation_result": "PASS",
-    "runtime_version": "0.2.6.84",
-    "supervisor_version": "0.1.5",
+    "runtime_version": "0.2.6.85",
+    "supervisor_version": "0.1.6",
     "houdini_adapter_version": "0.5.27",
     "aibridgeue_version": "0.5.3",
-    "runtime_bundle_sha256": "1d47db1734d2b9911494e97adbee2a955f23e2dcc7ad24d6680049a7a02242f9",
-    "installer_bundle_sha256": "51c200bfdd37add36f2a7a4b142fcbb3cc8c12a284aa7d1f0b2cd20fd6054911",
+    "runtime_bundle_sha256": "fe2bbe08a7351f3f6d105f935e8c4570f776a897104b26ee45ad7813dabae415",
+    "installer_bundle_sha256": "900b95279341b726295fb3a121b31d971157b395d7af0558f575d280df668697",
     "knowledge_digest": "cdb49df281c07e67b6290fe380ef1e704d1c19ca0ee3c0a129fde40ee1e91841",
-    "runtime_release_source_commit": "fcb2630b80d6c5e0035a34849d7aaa61865a1cdc",
-    "generated_artifact_commit": "f734b9220c3b5f2b45432480dcc9def245513d11",
-    "final_push_validation_run_id": 35564303705,
-    "final_push_validation_attempt": 2
+    "runtime_release_source_commit": "5c1c11a8ca536d6df21bde9328b1962777d45d57",
+    "generated_artifact_commit": "863c42ac1fc8e5a14b45a0332a412813d21cd988",
+    "final_push_validation_run_id": 35567851939,
+    "final_push_validation_attempt": 1,
+    "offline_bootstrap_hotfix_merge_commit": "ae24439bf82713b91ca9a70805e7e5fc0d764e49",
+    "offline_bootstrap_pr": 16
   },
   "validation": {
     "windows_compileall": "PASS",
-    "full_pytest": "PASS (503 passed, 2 warnings)",
+    "full_pytest": "PASS (505 passed, 2 warnings)",
     "release_verifier": "PASS",
     "powershell_parser": "PASS",
     "generated_artifact_publication": "PASS",
     "clean_windows_github_install_smoke": "PASS",
     "pr_product_validation": "PASS",
-    "final_push_product_validation": "PASS",
-    "large_runtime_bundle_download": "PASS via authenticated Git Blobs fallback when Contents inline content is omitted above 1 MB"
+    "final_push_product_validation": "PASS (Run 35567851939)",
+    "large_runtime_bundle_download": "PASS via authenticated Git Blobs fallback when Contents inline content is omitted above 1 MB",
+    "fresh_windows_github_install_smoke": "PASS",
+    "offline_first_launch_bootstrap": "PASS with PIP_NO_INDEX=1 using bundled win_amd64 CPython 3.11-3.14 wheelhouse"
   },
   "acceptance": {
     "state": "PENDING_EXPLICIT_REAL_ENVIRONMENT_ACCEPTANCE",

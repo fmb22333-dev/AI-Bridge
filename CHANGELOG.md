@@ -16,6 +16,11 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Removed the unnecessary editable Runtime install from first-start bootstrap; Runtime continues to execute from its source tree through the Supervisor-managed `PYTHONPATH`.
 - Product CI fresh-install smoke now sets `PIP_NO_INDEX=1`, runs the installed `_System\\bootstrap.bat`, and verifies all Runtime dependency imports, so future releases cannot silently reintroduce a first-launch PyPI dependency.
 - Corrected the prior public-installer regression assertion to follow the refactored Git-blob helper rather than a case-sensitive local PowerShell variable spelling.
+- PR #16 validation Run `35567737329` passed: deterministic release build, compileall, **505/505 pytest PASS**, release verifier PASS, and PowerShell parser PASS.
+- Main validation Run `35567851939` passed end-to-end: **505/505 pytest PASS**, release verifier PASS, generated artifact publication PASS, fresh GitHub installation PASS, and first-launch dependency bootstrap PASS with `PIP_NO_INDEX=1`.
+- The fresh-install smoke installed **Runtime 0.2.6.85 / Supervisor 0.1.6** and then successfully installed the bundled wheelhouse entirely offline. Published Runtime bundle SHA-256: `fe2bbe08a7351f3f6d105f935e8c4570f776a897104b26ee45ad7813dabae415`; installer bundle SHA-256: `900b95279341b726295fb3a121b31d971157b395d7af0558f575d280df668697`.
+- Generated release artifact commit: `863c42ac1fc8e5a14b45a0332a412813d21cd988`. Explicit end-user GitHub/Host acceptance remains a separate gate.
+
 
 ### Installer public-repository 403 fallback — 2026-09-21
 
