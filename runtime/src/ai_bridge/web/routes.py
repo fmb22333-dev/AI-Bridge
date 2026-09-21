@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import httpx
+
 from fastapi import Cookie, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
@@ -22,7 +24,6 @@ from ai_bridge.deployment.github_provision import (
 from ai_bridge.transport.remote_config import (
     GitHubRemoteConfig,
     default_bridge_id,
-    github_login_url,
     github_repository_new_url,
     github_repository_url,
     github_token_settings_url,
@@ -75,24 +76,36 @@ class GitHubProvisionBody(BaseModel):
     private: bool = True
 
 
-def _local_github_token() -> str | None:
-    for name in ("GH_TOKEN", "GITHUB_TOKEN", "AI_BRIDGE_GITHUB_TOKEN"):
-        value = os.environ.get(name)
-        if value and value.strip():
-            return value.strip()
-    if shutil.which("gh"):
-        try:
-            result = subprocess.run(
-                ["gh", "auth", "token"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
-        except (OSError, subprocess.SubprocessError):
-            pass
+class GitHubCredentialTestBody(BaseModel):
+    token: str = ""
+
+
+def _gh_cli_environment() -> dict[str, str]:
+    env = dict(os.environ)
+    # GH_TOKEN/GITHUB_TOKEN override the credential stored by "gh auth login".
+    # Ignore those overrides when explicitly inspecting the CLI credential so a
+    # stale process token cannot make Setup misreport the CLI login state.
+    for name in ("GH_TOKEN", "GITHUB_TOKEN"):
+        env.pop(name, None)
+    return env
+
+
+def _gh_cli_token() -> str | None:
+    if not shutil.which("gh"):
+        return None
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "token", "--hostname", "github.com"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+            env=_gh_cli_environment(),
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
     return None
 
 
@@ -106,6 +119,7 @@ def _local_github_login() -> str | None:
             text=True,
             timeout=5,
             check=False,
+            env=_gh_cli_environment(),
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
@@ -114,7 +128,58 @@ def _local_github_login() -> str | None:
     return None
 
 
+def _github_credential_candidates() -> list[tuple[str, str]]:
+    candidates: list[tuple[str, str]] = []
+    seen: set[str] = set()
 
+    def add(source: str, value: str | None) -> None:
+        token = str(value or "").strip()
+        if not token or token in seen:
+            return
+        seen.add(token)
+        candidates.append((source, token))
+
+    # Dedicated Bridge override is explicit. A stored GitHub CLI credential is
+    # preferred over generic process tokens because GH_TOKEN/GITHUB_TOKEN are
+    # frequently inherited accidentally by desktop launchers.
+    add("bridge_env", os.environ.get("AI_BRIDGE_GITHUB_TOKEN"))
+    add("github_cli", _gh_cli_token())
+    add("gh_token_env", os.environ.get("GH_TOKEN"))
+    add("github_token_env", os.environ.get("GITHUB_TOKEN"))
+    return candidates
+
+
+def _verify_github_credential(token: str) -> str:
+    token = str(token or "").strip()
+    if not token:
+        raise GitHubProvisionError("GitHub credential is empty")
+    with httpx.Client(timeout=httpx.Timeout(12.0, connect=5.0)) as client:
+        return GitHubBusProvisioner(token, client=client).authenticated_login()
+
+
+def _usable_local_github_credential() -> tuple[dict[str, str] | None, list[str]]:
+    errors: list[str] = []
+    for source, token in _github_credential_candidates():
+        try:
+            login = _verify_github_credential(token)
+            return {"source": source, "token": token, "login": login}, errors
+        except Exception as exc:
+            errors.append(f"{source}: {type(exc).__name__}: {exc}")
+    return None, errors
+
+
+def _resolve_setup_github_token(explicit_token: str) -> str:
+    token = str(explicit_token or "").strip()
+    if token:
+        return token
+    credential, errors = _usable_local_github_credential()
+    if credential is not None:
+        return credential["token"]
+    detail = "; ".join(errors[-3:]) if errors else "no credential candidates were found"
+    raise RemoteConfigurationError(
+        "No valid GitHub credential found. Use GitHub CLI login or paste and verify a Fine-grained Token. "
+        + detail
+    )
 
 def _default_houdini_user_dir() -> Path:
     override = os.environ.get("AI_BRIDGE_HOUDINI_USER_DIR")
@@ -238,6 +303,7 @@ def install_control_routes(
     @app.get("/setup/state", include_in_schema=False)
     def setup_state():
         remote = dict(runtime_state.get("remote") or {})
+        gh_login = _local_github_login()
         return {
             "configured": bool(remote.get("configured")),
             "status": remote.get("status", "unconfigured"),
@@ -246,20 +312,42 @@ def install_control_routes(
             "bridge_id": remote.get("bridge_id") or remote.get("suggested_bridge_id") or default_bridge_id(),
             "credential_saved": bool(remote.get("credential_saved")),
             "gh_cli_available": shutil.which("gh") is not None,
-            "gh_cli_authenticated": _local_github_token() is not None,
-            "gh_login": _local_github_login() or "",
+            "gh_cli_authenticated": bool(gh_login),
+            "gh_login": gh_login or "",
+            "credential_candidate_sources": [source for source, _token in _github_credential_candidates()],
             "runtime_source_repository": runtime_source_repository(),
             "clean_provision_supported": True,
         }
 
+    @app.post("/setup/github-credential-test", include_in_schema=False)
+    def setup_github_credential_test(body: GitHubCredentialTestBody):
+        explicit = body.token.strip()
+        if explicit:
+            try:
+                login = _verify_github_credential(explicit)
+                return {"ok": True, "login": login, "source": "token_input"}
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"GitHub credential validation failed: {type(exc).__name__}: {exc}",
+                )
+
+        credential, errors = _usable_local_github_credential()
+        if credential is None:
+            detail = "; ".join(errors[-3:]) if errors else "No local GitHub credential candidate was found."
+            raise HTTPException(status_code=400, detail="No valid local GitHub credential. " + detail)
+        return {
+            "ok": True,
+            "login": credential["login"],
+            "source": credential["source"],
+        }
+
     @app.post("/setup/provision", include_in_schema=False)
     def setup_provision(body: GitHubProvisionBody):
-        token = body.token.strip() or _local_github_token()
-        if not token:
-            raise HTTPException(
-                status_code=400,
-                detail="No GitHub credential found. Paste a token, or sign in with GitHub CLI first.",
-            )
+        try:
+            token = _resolve_setup_github_token(body.token)
+        except RemoteConfigurationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         runtime_source = normalize_github_repository(body.runtime_source_repository)
         if runtime_source.count("/") != 1:
             raise HTTPException(status_code=400, detail="Runtime source must be owner/repository")
@@ -305,12 +393,10 @@ def install_control_routes(
 
     @app.post("/setup/save", include_in_schema=False)
     def setup_save(body: GitHubRemoteRequest):
-        token = body.token.strip() or _local_github_token()
-        if not token:
-            raise HTTPException(
-                status_code=400,
-                detail="No GitHub credential found. Paste a token, or sign in with GitHub CLI first.",
-            )
+        try:
+            token = _resolve_setup_github_token(body.token)
+        except RemoteConfigurationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         try:
             result = controller().configure_github(
                 GitHubRemoteConfig(
@@ -325,10 +411,6 @@ def install_control_routes(
             return response
         except (RemoteConfigurationError, RuntimeError) as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-
-    @app.get("/setup/github-login", include_in_schema=False)
-    def setup_github_login():
-        return RedirectResponse(url=github_login_url())
 
     @app.get("/setup/github-cli", include_in_schema=False)
     def setup_github_cli():

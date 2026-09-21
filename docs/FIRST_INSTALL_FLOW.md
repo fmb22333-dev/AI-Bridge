@@ -50,7 +50,7 @@ GitHub and Supabase credentials remain in local secret storage and are never com
 
 ## Current validated package
 
-- Runtime **0.2.6.86**
+- Runtime **0.2.6.87**
 - Supervisor **0.1.6**
 - Houdini Adapter **0.5.27**
 - AIBridgeUE **0.5.3**
