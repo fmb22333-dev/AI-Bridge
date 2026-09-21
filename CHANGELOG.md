@@ -17,6 +17,11 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Added an explicit credential-validation endpoint and a guided Setup state machine: **authorize -> verify identity -> create/connect Bus**. One-click provisioning is disabled until a GitHub identity has been verified and the UI displays the verified login plus the exact next action.
 - GitHub CLI web authorization is automatically re-polled after launch; Fine-grained Token users can paste and validate the token before any repository mutation.
 - The verified GitHub login is used to auto-fill `<login>/ai-bridge-bus`, while the existing manual-repository flow remains available as an advanced fallback.
+- Initial PR validation exposed two brittle legacy UI assertions (**511 PASS / 2 FAIL**); no product rollback was required. The assertions were changed to semantic checks and the user-visible “does not copy existing projects” guarantee was retained.
+- Final PR #18 validation Run `35575348046` passed with all product gates.
+- Main Run `35575490089` passed end-to-end: **513/513 pytest PASS**, release verifier PASS, generated artifact publication PASS, fresh GitHub install PASS and bundled offline dependency bootstrap PASS.
+- Published Runtime bundle SHA-256: `810e185dd8bf9647c57e0df8a119c930e592a6a471200666aa461e31cf9f64e7`; generated artifact commit: `f9b2565218ec8c35ad32e2460f3977ed881c31f6`.
+
 
 ### Repository semantic-debt cleanup / Runtime 0.2.6.86 — 2026-09-21
 
