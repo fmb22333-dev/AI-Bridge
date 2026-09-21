@@ -178,9 +178,13 @@ async function loadState({preserveInput=false, autoVerify=true} = {}) {
     $('installGh').style.display='none';
   } else {
     $('localStatus').className='status';
-    $('localStatus').textContent='未检测到 GitHub CLI。可以安装 CLI，也可以直接使用下方 Fine-grained Token；不需要额外网页登录步骤。';
+    const candidates=setupState.credential_candidate_sources||[];
+    $('localStatus').textContent=candidates.length
+      ? '未检测到已登录的 GitHub CLI，但发现本机凭据候选。Bridge 将先验证它；也可以直接粘贴新的 Fine-grained Token。'
+      : '未检测到 GitHub CLI。可以安装 CLI，也可以直接使用下方 Fine-grained Token；不需要额外网页登录步骤。';
     $('ghWebLogin').style.display='none';
     $('installGh').style.display='inline-block';
+    if (autoVerify && !$('token').value.trim() && candidates.length) await verifyCredential({silent:true});
   }
   updateNextStep();
 }

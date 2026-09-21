@@ -18,7 +18,7 @@ def test_setup_keeps_manual_flow_and_adds_clean_one_click_provision():
     assert "连接已有 GitHub Bus" in html
     assert '@app.post("/setup/provision", include_in_schema=False)' in routes
     assert '@app.post("/setup/save", include_in_schema=False)' in routes
-    assert 'projects={}' in html
+    assert "不会复制" in html
 
 
 def test_clean_provision_separates_bus_from_runtime_source():
