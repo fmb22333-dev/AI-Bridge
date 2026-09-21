@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
 import zipfile
 from pathlib import Path
@@ -16,8 +17,11 @@ BUNDLE = ROOT / "runtime_bundle.zip"
 INSTALLER_BUNDLE = ROOT / "AI_Bridge_Installer.zip"
 PRODUCT_REPOSITORY = "fmb22333-dev/AI-Bridge"
 PRODUCT_REF = "main"
-SUPERVISOR_VERSION = "0.1.5"
+SUPERVISOR_VERSION = "0.1.6"
 TEXT_SUFFIXES = {".py", ".json", ".toml", ".html", ".css", ".js", ".md", ".txt", ".bat", ".ps1"}
+OFFLINE_LOCK = RUNTIME / "requirements-release-lock.txt"
+OFFLINE_PLATFORM = "win_amd64"
+OFFLINE_PYTHON_MINORS = ("311", "312", "313", "314")
 
 
 def _write_json(path: Path, data: dict) -> None:
@@ -94,29 +98,72 @@ def _build_clean_knowledge() -> dict:
     return build_distribution_knowledge(destination, source_root=source)
 
 
+def _prepare_offline_wheelhouse(destination: Path) -> None:
+    if not OFFLINE_LOCK.is_file():
+        raise RuntimeError(f"Offline dependency lock is missing: {OFFLINE_LOCK}")
+    destination.mkdir(parents=True, exist_ok=True)
+    for python_minor in OFFLINE_PYTHON_MINORS:
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "download",
+                "--disable-pip-version-check",
+                "--only-binary=:all:",
+                "--dest",
+                str(destination),
+                "--platform",
+                OFFLINE_PLATFORM,
+                "--implementation",
+                "cp",
+                "--python-version",
+                python_minor,
+                "--abi",
+                f"cp{python_minor}",
+                "-r",
+                str(OFFLINE_LOCK),
+            ],
+            cwd=ROOT,
+            check=True,
+        )
+    if not any(destination.glob("*.whl")):
+        raise RuntimeError("Offline wheelhouse is empty after dependency download")
+
+
 def _build_runtime_bundle() -> str:
     temp = BUNDLE.with_suffix(".zip.tmp")
     if temp.exists():
         temp.unlink()
-    with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as archive:
-        files = sorted(
-            p
-            for p in RUNTIME.rglob("*")
-            if p.is_file()
-            and "__pycache__" not in p.parts
-            and p.suffix.lower() != ".pyc"
-            and p.name != ".gitkeep"
-        )
-        for path in files:
-            relative = path.relative_to(ROOT).as_posix()
-            info = zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_STORED
-            info.create_system = 3
-            info.external_attr = (0o100644 & 0xFFFF) << 16
-            archive.writestr(info, _canonical_payload(path))
+    with tempfile.TemporaryDirectory(prefix="ai_bridge_wheelhouse_") as temp_dir:
+        wheelhouse = Path(temp_dir) / "_wheelhouse"
+        _prepare_offline_wheelhouse(wheelhouse)
+        with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as archive:
+            files = sorted(
+                p
+                for p in RUNTIME.rglob("*")
+                if p.is_file()
+                and "_wheelhouse" not in p.parts
+                and "__pycache__" not in p.parts
+                and p.suffix.lower() != ".pyc"
+                and p.name != ".gitkeep"
+            )
+            for path in files:
+                relative = path.relative_to(ROOT).as_posix()
+                info = zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_STORED
+                info.create_system = 3
+                info.external_attr = (0o100644 & 0xFFFF) << 16
+                archive.writestr(info, _canonical_payload(path))
+            for path in sorted(wheelhouse.glob("*.whl")):
+                relative = f"runtime/_wheelhouse/{path.name}"
+                info = zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_STORED
+                info.create_system = 3
+                info.external_attr = (0o100644 & 0xFFFF) << 16
+                archive.writestr(info, path.read_bytes())
     temp.replace(BUNDLE)
     return _sha256(BUNDLE)
-
 
 def _build_installer_bundle() -> str:
     temp = INSTALLER_BUNDLE.with_suffix(".zip.tmp")
@@ -193,6 +240,12 @@ def main() -> None:
         "houdini_adapter_version": adapter_version,
         "min_supervisor_version": SUPERVISOR_VERSION,
         "channel": "stable",
+        "offline_bootstrap": {
+            "lock_path": "requirements-release-lock.txt",
+            "wheelhouse_path": "_wheelhouse",
+            "platform": OFFLINE_PLATFORM,
+            "python_minors": [f"3.{item[1:]}" for item in OFFLINE_PYTHON_MINORS],
+        },
         "knowledge": {
             "mode": "clean_distribution",
             "content_digest": knowledge["content_digest"],

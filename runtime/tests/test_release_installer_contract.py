@@ -38,7 +38,7 @@ def test_release_verifier_checks_product_authority_boundaries():
 
 def test_installer_falls_back_to_git_blob_for_large_runtime_archives():
     text = INSTALLER.read_text(encoding="utf-8")
-    assert "$response.git_url" in text
+    assert "git_url" in text
     assert "GitHub Contents API omits inline content for files larger than 1 MB" in text
     assert '$blob.encoding -ne "base64"' in text
     assert "$blob.content" in text
@@ -49,3 +49,19 @@ def test_installer_recovers_from_bad_local_token_for_public_repo():
     assert "$AnonymousHeaders" in text
     assert "raw.githubusercontent.com" in text
     assert "authenticated API, anonymous API, and raw download" in text
+
+
+def test_release_bundles_offline_windows_dependency_wheelhouse():
+    builder = BUILDER.read_text(encoding="utf-8")
+    assert "requirements-release-lock.txt" in builder
+    assert '"--only-binary=:all:"' in builder
+    assert 'OFFLINE_PYTHON_MINORS = ("311", "312", "313", "314")' in builder
+    assert "runtime/_wheelhouse/" in builder
+
+    bootstrap = (
+        ROOT / "bootstrap" / "supervisor" / "0.1.6" / "_System" / "bootstrap.bat"
+    ).read_text(encoding="utf-8")
+    assert "--no-index" in bootstrap
+    assert "--find-links" in bootstrap
+    assert "requirements-release-lock.txt" in bootstrap
+    assert "pip install -e" not in bootstrap
