@@ -1,6 +1,6 @@
 {
   "bundle_path": "runtime_bundle.zip",
-  "bundle_sha256": "1d47db1734d2b9911494e97adbee2a955f23e2dcc7ad24d6680049a7a02242f9",
+  "bundle_sha256": "fe2bbe08a7351f3f6d105f935e8c4570f776a897104b26ee45ad7813dabae415",
   "channel": "stable",
   "houdini_adapter_version": "0.5.27",
   "knowledge": {
@@ -21,11 +21,22 @@
     "manifest_path": "knowledge/houdini/distribution_manifest.json",
     "mode": "clean_distribution"
   },
-  "min_supervisor_version": "0.1.5",
+  "min_supervisor_version": "0.1.6",
+  "offline_bootstrap": {
+    "lock_path": "requirements-release-lock.txt",
+    "platform": "win_amd64",
+    "python_minors": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14"
+    ],
+    "wheelhouse_path": "_wheelhouse"
+  },
   "runtime_path": "runtime",
   "schema_version": "1.1",
-  "source_commit": "fcb2630b80d6c5e0035a34849d7aaa61865a1cdc",
+  "source_commit": "5c1c11a8ca536d6df21bde9328b1962777d45d57",
   "source_ref": "main",
   "source_repository": "fmb22333-dev/AI-Bridge",
-  "version": "0.2.6.84"
+  "version": "0.2.6.85"
 }
