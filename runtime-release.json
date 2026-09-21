@@ -1,6 +1,6 @@
 {
   "bundle_path": "runtime_bundle.zip",
-  "bundle_sha256": "810e185dd8bf9647c57e0df8a119c930e592a6a471200666aa461e31cf9f64e7",
+  "bundle_sha256": "65e2f98c1591107174d671c847fdbe021bb3c8ecd53544eb1be1ab65c3733301",
   "channel": "stable",
   "houdini_adapter_version": "0.5.27",
   "knowledge": {
@@ -35,8 +35,8 @@
   },
   "runtime_path": "runtime",
   "schema_version": "1.1",
-  "source_commit": "161e44b442d36807a25e98ead309104c012696d6",
+  "source_commit": "8d963dec29401a8f6ad632b662954bbceb9ed41b",
   "source_ref": "main",
   "source_repository": "fmb22333-dev/AI-Bridge",
-  "version": "0.2.6.87"
+  "version": "0.2.6.88"
 }
