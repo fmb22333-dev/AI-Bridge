@@ -368,86 +368,85 @@ def install_control_routes(
         )
 
     def _execute_setup_provision(body: GitHubProvisionBody) -> JSONResponse:
+        _set_setup_provision_state("running", "credential", "Resolving GitHub credential")
+        try:
+            token = _resolve_setup_github_token(body.token)
+        except RemoteConfigurationError as exc:
+            _set_setup_provision_state("failed", "credential", str(exc))
+            raise HTTPException(status_code=400, detail=str(exc))
 
-    _set_setup_provision_state("running", "credential", "Resolving GitHub credential")
-    try:
-        token = _resolve_setup_github_token(body.token)
-    except RemoteConfigurationError as exc:
-        _set_setup_provision_state("failed", "credential", str(exc))
-        raise HTTPException(status_code=400, detail=str(exc))
-    runtime_source = normalize_github_repository(body.runtime_source_repository)
-    if runtime_source.count("/") != 1:
-        detail = "Runtime source must be owner/repository"
-        _set_setup_provision_state("failed", "runtime_source", detail)
-        raise HTTPException(status_code=400, detail=detail)
+        runtime_source = normalize_github_repository(body.runtime_source_repository)
+        if runtime_source.count("/") != 1:
+            detail = "Runtime source must be owner/repository"
+            _set_setup_provision_state("failed", "runtime_source", detail)
+            raise HTTPException(status_code=400, detail=detail)
 
-    def progress(stage: str, detail: str) -> None:
-        _set_setup_provision_state("running", stage, detail)
+        def progress(stage: str, detail: str) -> None:
+            _set_setup_provision_state("running", stage, detail)
 
-    try:
-        provisioner = GitHubBusProvisioner(token)
-        provisioned = provisioner.provision(
-            GitHubBusProvisionRequest(
-                repository=body.repository,
-                bridge_id=body.bridge_id.strip(),
-                runtime_source_repository=runtime_source,
-                private=bool(body.private),
-            ),
-            progress=progress,
-        )
-        _set_setup_provision_state(
-            "running",
-            "connect_health",
-            "Checking GitHub Bus branch access",
-            repository=provisioned["repository"],
-        )
-        remote = controller().configure_github(
-            GitHubRemoteConfig(
+        try:
+            provisioner = GitHubBusProvisioner(token)
+            provisioned = provisioner.provision(
+                GitHubBusProvisionRequest(
+                    repository=body.repository,
+                    bridge_id=body.bridge_id.strip(),
+                    runtime_source_repository=runtime_source,
+                    private=bool(body.private),
+                ),
+                progress=progress,
+            )
+            _set_setup_provision_state(
+                "running",
+                "connect_health",
+                "Checking GitHub Bus branch access",
+                repository=provisioned["repository"],
+            )
+            remote = controller().configure_github(
+                GitHubRemoteConfig(
+                    repository=provisioned["repository"],
+                    branch=provisioned["branch"],
+                    bridge_id=body.bridge_id.strip(),
+                ),
+                token,
+                initialize_message_mode=False,
+                require_initial_presence=False,
+            )
+            _set_setup_provision_state(
+                "running",
+                "update_source",
+                "Saving public Runtime update authority",
+                repository=provisioned["repository"],
+            )
+            update_source = {
+                "repository": runtime_source,
+                "branch": "main",
+                "manifest_path": "runtime-release.json",
+                "publish_source_mirror": False,
+                "bootstrap_from_bus": False,
+            }
+            (workspaces_file.parent / "update_source.json").write_text(
+                json.dumps(update_source, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            _set_setup_provision_state(
+                "success",
+                "connected",
+                "GitHub Bus is configured and connected",
                 repository=provisioned["repository"],
                 branch=provisioned["branch"],
                 bridge_id=body.bridge_id.strip(),
-            ),
-            token,
-            initialize_message_mode=False,
-            require_initial_presence=False,
-        )
-        _set_setup_provision_state(
-            "running",
-            "update_source",
-            "Saving public Runtime update authority",
-            repository=provisioned["repository"],
-        )
-        update_source = {
-            "repository": runtime_source,
-            "branch": "main",
-            "manifest_path": "runtime-release.json",
-            "publish_source_mirror": False,
-            "bootstrap_from_bus": False,
-        }
-        (workspaces_file.parent / "update_source.json").write_text(
-            json.dumps(update_source, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
-        _set_setup_provision_state(
-            "success",
-            "connected",
-            "GitHub Bus is configured and connected",
-            repository=provisioned["repository"],
-            branch=provisioned["branch"],
-            bridge_id=body.bridge_id.strip(),
-        )
-        response = JSONResponse({
-            "ok": True,
-            "provisioned": provisioned,
-            "remote": remote,
-            "runtime_source": update_source,
-        })
-        response.set_cookie("ai_bridge_token", auth_token, httponly=True, samesite="strict")
-        return response
-    except (GitHubProvisionError, RemoteConfigurationError, RuntimeError) as exc:
-        _set_setup_provision_state("failed", "failed", str(exc))
-        raise HTTPException(status_code=400, detail=str(exc))
-
+            )
+            response = JSONResponse({
+                "ok": True,
+                "provisioned": provisioned,
+                "remote": remote,
+                "runtime_source": update_source,
+            })
+            response.set_cookie("ai_bridge_token", auth_token, httponly=True, samesite="strict")
+            return response
+        except (GitHubProvisionError, RemoteConfigurationError, RuntimeError) as exc:
+            _set_setup_provision_state("failed", "failed", str(exc))
+            raise HTTPException(status_code=400, detail=str(exc))
 
 
     @app.post("/setup/provision", include_in_schema=False)
