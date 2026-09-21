@@ -35,8 +35,8 @@
     <div class="row">
       <button id="verifyCredential" class="primary" type="button">验证 GitHub 身份</button>
     </div>
-    <div id="credentialStatus" class="status muted">尚未验证。验证不会创建仓库，也不会保存 Token。</div>
-    <small>一键创建私有 Bus 需要 Repository Administration: write；Bus 运行需要 Contents / Issues: read and write。正式连接成功后凭据才保存到本机 Windows DPAPI。</small>
+    <div id="credentialStatus" class="status muted">尚未验证。验证只确认 GitHub 身份，不会测试创建仓库权限，也不会保存 Token。</div>
+    <small>GitHub 身份验证成功 ≠ 一键创建权限已验证。Fine-grained Token 一键创建私有 Bus 还需要 Repository Administration: write，并且 Repository access 必须能覆盖新 Bus。若希望最小权限，建议先手动创建仓库，再把 Token 限定到该仓库并授予 Contents / Issues: write。</small>
   </div>
 
   <div class="card">
@@ -122,7 +122,7 @@ function markVerified(data) {
   verifiedLogin = data.login || "";
   verifiedSource = data.source || "";
   $('credentialStatus').className = 'status ok';
-  $('credentialStatus').textContent = `✓ GitHub 身份已验证：${verifiedLogin} · ${verifiedSource}`;
+  $('credentialStatus').textContent = `✓ GitHub 身份已验证：${verifiedLogin} · ${verifiedSource}。注意：这里只验证身份，尚未验证“创建新仓库”权限。`;
   const current = normalizeRepo($('repo').value);
   if (!current || current === 'ai-bridge-bus' || current.endsWith('/ai-bridge-bus')) {
     $('repo').value = `${verifiedLogin}/ai-bridge-bus`;
@@ -242,29 +242,45 @@ $('ghWebLogin').onclick = async () => {
   } finally { $('ghWebLogin').disabled=false; }
 };
 
+function provisionFailureText(state) {
+  const stage=state?.stage || 'failed';
+  const detail=state?.detail || 'Unknown provisioning failure';
+  const lines=[`Step 2 · ${stage}: ${detail}`];
+  if (state?.error_code==='REPOSITORY_CREATE_PERMISSION_DENIED') {
+    lines.push('');
+    lines.push('GitHub 身份已经验证成功，但当前凭据没有创建这个 Private Repository 的权限。');
+    lines.push('推荐：使用 GitHub CLI 登录后重新点击“一键创建”。');
+    lines.push('或者：点击“手动创建仓库”，创建目标仓库后，再用对该仓库具有 Contents / Issues: write 的 Token 选择“连接已有 GitHub Bus”。');
+  }
+  for (const item of (state?.remediation || [])) {
+    if (!lines.includes(item)) lines.push('• '+item);
+  }
+  return lines.join('\n');
+}
+
 async function pollProvisionState(stopSignal) {
-  while (!stopSignal.done) {
+  const deadline=Date.now()+120000;
+  while (!stopSignal.done && Date.now()<deadline) {
     try {
       const state=await parseResponse(await fetch('/setup/provision/state',{cache:'no-store'}));
       if (state.status && state.status !== 'idle') {
         $('out').className='status '+(state.status==='failed'?'error':state.status==='success'?'ok':'muted');
-        $('out').textContent=`Step 2 · ${state.stage}: ${state.detail || ''}`;
+        $('out').textContent=state.status==='failed' ? provisionFailureText(state) : `Step 2 · ${state.stage}: ${state.detail || ''}`;
       }
       if (state.status==='success' || state.status==='failed') return state;
     } catch {}
     await sleep(500);
   }
+  return {status:'failed',stage:'client_timeout',detail:'Step 2 超过 120 秒仍未完成。可以再次点击恢复/重试，不会重复创建已存在的安全 Bus。'};
 }
 $('provisionRepo').onclick = async () => {
   if (!credentialVerified) return updateNextStep();
-  $('provisionRepo').disabled = true; $('save').disabled = true;
+  $('provisionRepo').disabled=true; $('save').disabled=true;
   $('out').className='status muted';
-  $('out').textContent='Step 2 · starting: 正在启动 GitHub Bus 配置…';
-  const stopSignal={done:false};
-  const progressPromise=pollProvisionState(stopSignal);
+  $('out').textContent='Step 2 · queued: 正在提交 GitHub Bus 配置任务…';
   try {
     const repository=normalizeRepo($('repo').value); $('repo').value=repository;
-    const data=await parseResponse(await fetch('/setup/provision',{
+    await parseResponse(await fetch('/setup/provision/start',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         repository,
@@ -274,17 +290,26 @@ $('provisionRepo').onclick = async () => {
         private:true,
       }),
     }));
+
+    const stopSignal={done:false};
+    const state=await pollProvisionState(stopSignal);
+    stopSignal.done=true;
+    if (!state || state.status!=='success') {
+      $('out').className='status error';
+      $('out').textContent=provisionFailureText(state);
+      return;
+    }
+
     $('token').value='';
-    $('repo').value=data.provisioned?.repository||repository;
+    if (state.repository) $('repo').value=state.repository;
     $('out').className='status ok';
-    $('out').textContent='✓ GitHub Bus 已创建并连接。正在进入 Dashboard…';
+    $('out').textContent='✓ GitHub Bus 已持久化并连接。Step 4 现在可以配置；正在进入 Dashboard…';
+    await loadState({preserveInput:true,autoVerify:false}).catch(()=>{});
     setTimeout(()=>{window.location.href='/';},700);
   } catch(error) {
     $('out').className='status error';
-    $('out').textContent='创建/连接失败：'+error.message;
+    $('out').textContent='Step 2 · client: '+error.message+'\n可以直接再次点击；不会重复创建已存在的安全 Bus。';
   } finally {
-    stopSignal.done=true;
-    await progressPromise.catch(()=>null);
     updateNextStep();
   }
 };

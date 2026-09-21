@@ -17,7 +17,16 @@ BUS_README_MARKER = "<!-- AI_BRIDGE_BUS_README_V1 -->"
 
 
 class GitHubProvisionError(RuntimeError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str | None = None,
+        remediation: list[str] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.remediation = list(remediation or [])
 
 
 @dataclass(frozen=True)
@@ -245,9 +254,21 @@ class GitHubBusProvisioner:
             },
         )
         if response.status_code != 201:
+            detail = self._detail(response)
+            if response.status_code == 403:
+                raise GitHubProvisionError(
+                    "Repository creation was denied by GitHub. The credential can identify the account, "
+                    "but it is not authorized to create this private repository. " + detail,
+                    code="REPOSITORY_CREATE_PERMISSION_DENIED",
+                    remediation=[
+                        "Recommended: sign in with GitHub CLI and retry one-click creation.",
+                        "Fine-grained PAT one-click creation requires repository Administration: write and repository access that can cover the new Bus repository.",
+                        "Least-privilege alternative: create the repository manually, then use a token scoped to that repository with Contents: write and Issues: write and choose Connect existing GitHub Bus.",
+                    ],
+                )
             raise GitHubProvisionError(
-                "Repository creation failed. One-click creation requires repository Administration: write permission. "
-                + self._detail(response)
+                "Repository creation failed. " + detail,
+                code="REPOSITORY_CREATE_FAILED",
             )
         data = response.json()
         return data if isinstance(data, dict) else {}

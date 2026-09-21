@@ -8,6 +8,18 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.89 non-blocking Step 2 + persisted Step 4 authority — 2026-09-21
+
+- Fixed the remaining fresh-install case where Runtime 0.2.6.88 could still leave Step 2 apparently stuck and Step 4 permanently disabled.
+- Step 2 provisioning is now a Runtime-owned background transaction. The UI submits `/setup/provision/start` and then polls `/setup/provision/state`; browser request lifetime no longer owns GitHub repository provisioning.
+- Concurrent/repeated Step 2 clicks attach to the active task rather than starting duplicate repository mutations. The provisioning path remains idempotent against an already-created clean Bus.
+- First-connect GitHub configuration no longer requires an immediate Presence write before persisting the valid Bus config. Repository branch health is verified, then `remote.json`/credential/Bridge ID are persisted and the GitHub runner performs Presence/message-mode work asynchronously with its normal retry semantics.
+- Step 4 now treats persisted `remote.json` as GitHub authority for unlock/Bridge ID, instead of depending only on transient in-memory `runtime_state.remote.configured`. This matches the existing Supabase `_primary_bridge_id` authority behavior.
+- The Setup client has a bounded 120-second observation window with an explicit recover/retry message rather than an indefinitely disabled button.
+- Step 1 now explicitly states that identity verification does not prove repository-creation authority. A Fine-grained PAT that can call `/user` may still fail `POST /user/repos`.
+- Repository-create 403 failures are now structured as `REPOSITORY_CREATE_PERMISSION_DENIED`; the failed provisioning stage is preserved instead of being collapsed to a generic `failed` stage, and Setup renders actionable CLI/manual-repository remediation.
+- One-click PAT guidance now distinguishes broad create permission from the least-privilege existing-repository flow. GitHub CLI remains the recommended one-click path; manual repository creation plus repository-scoped Contents/Issues write is the least-privilege PAT path.
+
 ### Runtime 0.2.6.88 Step 2 provisioning progress + Step 4 unlock repair — 2026-09-21
 
 - Fixed the fresh-install report where Step 2 appeared permanently stuck even after GitHub repository/token work had already succeeded, while Step 4 stayed disabled.

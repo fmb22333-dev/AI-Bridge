@@ -277,3 +277,36 @@ def test_one_click_token_template_requests_repo_creation_permission():
     assert "administration=write" in url
     assert "contents=write" in url
     assert "issues=write" in url
+
+
+def test_first_connect_can_persist_without_initial_presence(tmp_path: Path):
+    service = BridgeService(db=BridgeDB(tmp_path / "bridge.db"), workspaces=WorkspaceRegistry())
+    secrets = MemorySecretStore()
+
+    class PresenceFailTransport(FakeTransport):
+        def publish_presence(self, payload):
+            raise RuntimeError("presence unavailable")
+
+    transport = PresenceFailTransport()
+    controller = RemoteController(
+        service=service,
+        data_dir=tmp_path,
+        runtime_state={"remote": {"configured": False, "status": "unconfigured"}},
+        secret_store=secrets,
+        transport_factory=lambda config, token: transport,
+    )
+    controller._start_github_loop_locked = lambda config, active_transport: None
+
+    config = GitHubRemoteConfig(repository="owner/repo", branch="main", bridge_id="test-bridge")
+    state = controller.configure_github(
+        config,
+        "secret-token",
+        initialize_message_mode=False,
+        require_initial_presence=False,
+    )
+
+    assert state["configured"] is True
+    assert state["status"] == "connected"
+    assert load_remote_config(tmp_path / "remote.json") == config
+    assert secrets.get("github_bus") == "secret-token"
+    assert transport.presence == []

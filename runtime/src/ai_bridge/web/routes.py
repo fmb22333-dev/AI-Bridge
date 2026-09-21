@@ -6,6 +6,8 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
+import uuid
 from pathlib import Path
 
 import httpx
@@ -265,6 +267,9 @@ def install_control_routes(
             raise HTTPException(status_code=503, detail="REMOTE_CONTROLLER_UNAVAILABLE")
         return value
 
+    provision_lock = threading.RLock()
+    provision_worker: dict[str, threading.Thread | None] = {"thread": None}
+
     def no_store_file(path: Path, *, media_type: str | None = None):
         response = FileResponse(path, media_type=media_type)
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -343,12 +348,15 @@ def install_control_routes(
         }
 
     def _set_setup_provision_state(status: str, stage: str, detail: str, **extra) -> None:
+        prior = runtime_state.get("setup_provision")
         payload = {
             "status": status,
             "stage": stage,
             "detail": detail,
             "updated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         }
+        if isinstance(prior, dict) and prior.get("task_id"):
+            payload["task_id"] = prior["task_id"]
         payload.update(extra)
         runtime_state["setup_provision"] = payload
 
@@ -359,14 +367,14 @@ def install_control_routes(
             or {"status": "idle", "stage": "idle", "detail": "No provisioning task is active."}
         )
 
-    @app.post("/setup/provision", include_in_schema=False)
-    def setup_provision(body: GitHubProvisionBody):
+    def _execute_setup_provision(body: GitHubProvisionBody) -> JSONResponse:
         _set_setup_provision_state("running", "credential", "Resolving GitHub credential")
         try:
             token = _resolve_setup_github_token(body.token)
         except RemoteConfigurationError as exc:
             _set_setup_provision_state("failed", "credential", str(exc))
             raise HTTPException(status_code=400, detail=str(exc))
+
         runtime_source = normalize_github_repository(body.runtime_source_repository)
         if runtime_source.count("/") != 1:
             detail = "Runtime source must be owner/repository"
@@ -401,6 +409,7 @@ def install_control_routes(
                 ),
                 token,
                 initialize_message_mode=False,
+                require_initial_presence=False,
             )
             _set_setup_provision_state(
                 "running",
@@ -436,8 +445,78 @@ def install_control_routes(
             response.set_cookie("ai_bridge_token", auth_token, httponly=True, samesite="strict")
             return response
         except (GitHubProvisionError, RemoteConfigurationError, RuntimeError) as exc:
-            _set_setup_provision_state("failed", "failed", str(exc))
+            prior = dict(runtime_state.get("setup_provision") or {})
+            failed_stage = str(prior.get("stage") or "failed")
+            extra = {}
+            if isinstance(exc, GitHubProvisionError):
+                if exc.code:
+                    extra["error_code"] = exc.code
+                if exc.remediation:
+                    extra["remediation"] = list(exc.remediation)
+            _set_setup_provision_state("failed", failed_stage, str(exc), **extra)
             raise HTTPException(status_code=400, detail=str(exc))
+
+
+    @app.post("/setup/provision", include_in_schema=False)
+    def setup_provision(body: GitHubProvisionBody):
+        # Compatibility endpoint. New Setup UI uses /setup/provision/start so
+        # browser request lifetime never owns the provisioning transaction.
+        return _execute_setup_provision(body)
+
+    @app.post("/setup/provision/start", include_in_schema=False)
+    def setup_provision_start(body: GitHubProvisionBody):
+        with provision_lock:
+            current = dict(runtime_state.get("setup_provision") or {})
+            worker = provision_worker.get("thread")
+            if (
+                current.get("status") in {"queued", "running"}
+                and worker is not None
+                and worker.is_alive()
+            ):
+                return JSONResponse(
+                    {
+                        "ok": True,
+                        "accepted": True,
+                        "already_running": True,
+                        "task_id": current.get("task_id"),
+                        "state": current,
+                    },
+                    status_code=202,
+                )
+
+            task_id = "setup-" + uuid.uuid4().hex[:12]
+            _set_setup_provision_state(
+                "queued",
+                "queued",
+                "Provisioning task accepted",
+                task_id=task_id,
+            )
+
+            def run() -> None:
+                try:
+                    _execute_setup_provision(body)
+                except HTTPException:
+                    # _execute_setup_provision already records a terminal failed state.
+                    pass
+                except Exception as exc:
+                    _set_setup_provision_state(
+                        "failed",
+                        "failed",
+                        f"{type(exc).__name__}: {exc}",
+                        task_id=task_id,
+                    )
+
+            thread = threading.Thread(
+                target=run,
+                name=f"AI-Bridge-Setup-{task_id}",
+                daemon=True,
+            )
+            provision_worker["thread"] = thread
+            thread.start()
+            return JSONResponse(
+                {"ok": True, "accepted": True, "task_id": task_id},
+                status_code=202,
+            )
 
     @app.post("/setup/save", include_in_schema=False)
     def setup_save(body: GitHubRemoteRequest):
