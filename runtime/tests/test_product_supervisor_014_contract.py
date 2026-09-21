@@ -1,11 +1,11 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SUPERVISOR = ROOT / "bootstrap" / "supervisor" / "0.1.5" / "_System" / "supervisor.py"
-README = ROOT / "bootstrap" / "supervisor" / "0.1.5" / "README_FIRST.txt"
+SUPERVISOR = ROOT / "bootstrap" / "supervisor" / "0.1.6" / "_System" / "supervisor.py"
+README = ROOT / "bootstrap" / "supervisor" / "0.1.6" / "README_FIRST.txt"
 
 
-def test_supervisor_015_uses_shared_product_authority_and_forbids_bus_bootstrap():
+def test_supervisor_016_uses_shared_product_authority_and_forbids_bus_bootstrap():
     source = SUPERVISOR.read_text(encoding="utf-8")
     assert '"repository": "fmb22333-dev/AI-Bridge"' in source
     assert '"branch": "main"' in source

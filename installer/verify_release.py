@@ -51,6 +51,7 @@ def main() -> None:
         names = set(zf.namelist())
         required = {
             "runtime/pyproject.toml",
+            "runtime/requirements-release-lock.txt",
             "runtime/launch_bridge.py",
             "runtime/src/ai_bridge/app.py",
             "runtime/src/ai_bridge/web/routes.py",
@@ -60,6 +61,18 @@ def main() -> None:
         missing = sorted(required - names)
         if missing:
             fail("Runtime bundle missing: " + ", ".join(missing))
+        wheel_names = [
+            name for name in names
+            if name.startswith("runtime/_wheelhouse/") and name.endswith(".whl")
+        ]
+        if not wheel_names:
+            fail("Runtime bundle offline wheelhouse is empty")
+        for python_minor in ("311", "312", "313", "314"):
+            if not any(
+                "pydantic_core" in name.lower() and f"cp{python_minor}" in name.lower()
+                for name in wheel_names
+            ):
+                fail(f"Runtime bundle missing pydantic-core wheel for CPython {python_minor}")
     for item in supervisor.get("install_files") or []:
         path = ROOT / item["source_path"]
         if not path.is_file():

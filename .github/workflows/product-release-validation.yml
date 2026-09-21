@@ -89,6 +89,13 @@ jobs:
           if ($update.manifest_path -ne "runtime-release.json") { throw "Wrong product manifest authority" }
           if ($update.bootstrap_from_bus -ne $false) { throw "Bus bootstrap must be disabled" }
 
+          # Prove first launch does not require PyPI.
+          $env:PIP_NO_INDEX = "1"
+          & cmd.exe /d /c (Join-Path $target "_System\bootstrap.bat")
+          if ($LASTEXITCODE -ne 0) { throw "Offline Python bootstrap failed" }
+          & (Join-Path $target "_System\.venv\Scripts\python.exe") -c "import fastapi,uvicorn,pydantic,httpx,websockets,pytest"
+          if ($LASTEXITCODE -ne 0) { throw "Offline Runtime dependency import check failed" }
+
       - name: Summary
         if: always()
         shell: pwsh

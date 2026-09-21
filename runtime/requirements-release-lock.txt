@@ -1,0 +1,26 @@
+# AI Bridge Windows release dependency lock.
+# Captured from the last successful public Windows validation environment.
+# The release builder downloads these exact wheels into runtime/_wheelhouse.
+fastapi==0.141.1
+uvicorn==0.53.0
+pydantic==2.13.5
+pydantic-core==2.46.5
+httpx==0.28.1
+httpcore==1.0.9
+websockets==15.0.1
+starlette==1.6.0
+anyio==4.15.1
+certifi==2026.7.22
+idna==3.20
+h11==0.16.0
+click==8.5.0
+typing-extensions==4.16.0
+typing-inspection==0.4.4
+annotated-types==0.8.0
+annotated-doc==0.0.5
+pytest==9.1.1
+colorama==0.4.6
+iniconfig==2.3.0
+packaging==26.3
+pluggy==1.6.0
+pygments==2.21.0

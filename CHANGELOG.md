@@ -8,6 +8,15 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Runtime 0.2.6.85 / Supervisor 0.1.6 offline Python bootstrap — 2026-09-21
+
+- Fixed a real fresh-machine startup failure where installation completed but first launch ran `pip install -e Runtime[test]`; PEP 517 build isolation then required live PyPI access for `setuptools>=68`, so TLS/proxy-restricted machines failed before Runtime startup.
+- Added a pinned Windows release dependency lock derived from the last successful public Windows validation environment and package a local wheelhouse for CPython 3.11, 3.12, 3.13 and 3.14 x64 inside `runtime_bundle.zip`.
+- Supervisor/bootstrap now installs Runtime/test dependencies from the bundled wheelhouse using `--no-index --find-links` before any network fallback. Normal fresh startup therefore requires GitHub release access but not PyPI access.
+- Removed the unnecessary editable Runtime install from first-start bootstrap; Runtime continues to execute from its source tree through the Supervisor-managed `PYTHONPATH`.
+- Product CI fresh-install smoke now sets `PIP_NO_INDEX=1`, runs the installed `_System\\bootstrap.bat`, and verifies all Runtime dependency imports, so future releases cannot silently reintroduce a first-launch PyPI dependency.
+- Corrected the prior public-installer regression assertion to follow the refactored Git-blob helper rather than a case-sensitive local PowerShell variable spelling.
+
 ### Installer public-repository 403 fallback — 2026-09-21
 
 - Fixed fresh/public installation on machines with a stale, invalid, or unrelated `AI_BRIDGE_PRODUCT_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`.
