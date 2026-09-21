@@ -2,11 +2,11 @@
   function fallbackRemoteCard(remote) {
     if (!remote || !remote.configured) {
       const status = remote?.status === "disabled" ? "Disabled" : "未配置";
-      const detail = remote?.status === "disabled" ? "备用通道已断开。" : "Supabase Primary Bus 尚未连接。";
+      const detail = remote?.status === "disabled" ? "Supabase 主通道已断开。" : "Supabase Primary Bus 尚未连接。";
       return `<div class="item remoteState offline"><div class="sessionTitle"><span class="dot"></span><b>${esc(status)}</b><span class="stateText">supabase_primary</span></div><small>${esc(detail)}</small></div>`;
     }
     const good = remote.status === "connected";
-    return `<div class="item remoteState ${good ? "online" : "offline"}"><div class="sessionTitle"><span class="dot"></span><b>${good ? "Connected" : esc(remote.status)}</b><span class="stateText">supabase_fallback</span></div><small>${esc(remote.project_url || "")}</small><small>Bridge ID: <b>${esc(remote.bridge_id || "")}</b> · Poll ${esc(remote.poll_interval_seconds ?? 0.5)}s</small>${remote.credential_saved ? "<small>凭据：已由 Windows DPAPI 安全保存</small>" : ""}${remote.detail ? `<small>${esc(remote.detail)}</small>` : ""}</div>`;
+    return `<div class="item remoteState ${good ? "online" : "offline"}"><div class="sessionTitle"><span class="dot"></span><b>${good ? "Connected" : esc(remote.status)}</b><span class="stateText">supabase_primary</span></div><small>${esc(remote.project_url || "")}</small><small>Bridge ID: <b>${esc(remote.bridge_id || "")}</b> · Poll ${esc(remote.poll_interval_seconds ?? 0.5)}s</small>${remote.credential_saved ? "<small>凭据：已由 Windows DPAPI 安全保存</small>" : ""}${remote.detail ? `<small>${esc(remote.detail)}</small>` : ""}</div>`;
   }
 
   function ensureFallbackCard() {
@@ -44,7 +44,7 @@
       }
     };
     $("#disconnectFallbackRemote").onclick = async () => {
-      if (!confirm("断开 Supabase Backup Bus 并从本机删除保存的 Secret Key？")) return;
+      if (!confirm("断开 Supabase Primary Bus 并从本机删除保存的 Secret Key？")) return;
       const target = $("#fallbackRemoteError");
       try {
         await api("/control/fallback", {method: "DELETE"});

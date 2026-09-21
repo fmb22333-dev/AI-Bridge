@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>AI Bridge</title>
-  <link rel="stylesheet" href="/control/app.css?v=0.2.6.84">
+  <link rel="stylesheet" href="/control/app.css">
 </head>
 <body>
 <main class="shell">
   <header class="topbar">
     <div>
-      <h1>AI Bridge <small>V0.2.6.84</small></h1>
-      <p>GitHub Bus · Local Core · Host Adapters</p>
+      <h1>AI Bridge</h1>
+      <p>Supabase Primary · GitHub Authority · Host Adapters</p>
     </div>
     <div id="coreBadge" class="badge">...</div>
   </header>
@@ -109,7 +109,7 @@
     <div class="sectionTitleRow commandsTitle">
       <div>
         <h2>最近命令</h2>
-        <small>最近 10 条；时间来自 Bridge 本地记录，并按本机时区显示。</small>
+        <small>最近 5 条；时间来自 Bridge 本地记录，并按本机时区显示。</small>
       </div>
       <button id="openCommandHistory" class="tiny">打开完整命令历史</button>
     </div>
@@ -122,9 +122,9 @@
     <div style="display:none"><table><tbody id="commands"></tbody></table></div>
   </article>
 </main>
-<script src="/control/app.js?v=0.2.6.84"></script>
+<script src="/control/app.js"></script>
 <script>
-const RECENT_COMMAND_LIMIT=10;
+const RECENT_COMMAND_LIMIT=5;
 const commandBudgets=new Map();
 const TERMINAL_COMMAND_STATUSES=new Set(["success","failed","denied","conflict","cancelled","canceled","timeout","timed_out","rolled_back"]);
 function commandDate(value){if(!value)return null;const raw=String(value);const normalized=/[zZ]$|[+-]\d\d:\d\d$/.test(raw)?raw:raw.replace(" ","T")+"Z";const date=new Date(normalized);return Number.isNaN(date.getTime())?null:date;}

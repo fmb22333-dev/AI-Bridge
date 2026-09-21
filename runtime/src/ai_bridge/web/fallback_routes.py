@@ -24,12 +24,12 @@ def install_fallback_routes(
     auth_token: str,
     web_root: Path,
 ) -> None:
-    """Install the optional Supabase UI/API surface before the base web routes.
+    """Install the Supabase primary-transport UI/API surface before base web routes.
 
     The setup/dashboard HTML remains owned by the existing product UI. This
     module injects one isolated script into Setup and appends dashboard behavior
-    to the existing app.js response, keeping the backup transport feature
-    removable and independently testable.
+    to the existing app.js response. Historical fallback route/config names remain
+    compatibility surfaces, not transport-role authority.
     """
 
     web_root = Path(web_root)
@@ -47,7 +47,7 @@ def install_fallback_routes(
     @app.get("/setup", include_in_schema=False)
     def setup_page_with_fallback():
         html = (web_root / "templates" / "setup.html").read_text(encoding="utf-8")
-        script = '<script src="/setup/fallback.js?v=0.2.6.55"></script>'
+        script = '<script src="/setup/fallback.js"></script>'
         if script not in html:
             html = html.replace("</body>", script + "\n</body>")
         response = HTMLResponse(html)
