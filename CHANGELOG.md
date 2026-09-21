@@ -17,6 +17,13 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 - Corrected current-product semantic drift: Unreal documentation now matches the ready AIBridgeUE plugin, Supabase UI labels primary transport as primary rather than fallback/backup, the SQL table comment matches current roles, and the public execution specification now models Supabase-primary/GitHub-V5-fallback routing.
 - Removed stale UI cache-version literals (0.2.6.14 / 0.2.6.55 / 0.2.6.84) because the routes already enforce no-store/no-cache. Dashboard recent-command display is consistently five entries, and the displayed product update branch fallback is main rather than bridge-runtime.
 - Added repository-hygiene regression tests so duplicate Supervisor payloads, parallel historical authority docs, the dead Supabase primary extension, hard-coded web cache versions and Unreal scaffold-status drift fail CI if reintroduced.
+- Cleanup branch audit reduced the product tree to **326 blobs with zero duplicate-blob groups**; `bootstrap/supervisor` retains only **0.1.6**, and Runtime no longer ships a second historical authority-doc tree or the unused `supabase_primary_extension.py`.
+- Initial PR validation exposed four tests that still hard-coded the removed Supervisor 0.1.5 path (**506 PASS / 4 FAIL**); those stale test references were corrected rather than restoring the obsolete source tree.
+- Final PR #17 validation Run `35570768742` passed: deterministic build PASS, compileall PASS, **510/510 pytest PASS**, release verifier PASS and PowerShell parser PASS.
+- Main validation Run `35571382741` passed end-to-end: **510/510 pytest PASS**, release verifier PASS, generated artifact publication PASS, fresh GitHub install PASS and bundled offline dependency bootstrap PASS.
+- Published Runtime bundle SHA-256: `ffcafe44ca1243322ccde9a835c8292f500a27a11bd15ad1fd5fb9f00cc9f07d`; installer bundle SHA-256 remains `900b95279341b726295fb3a121b31d971157b395d7af0558f575d280df668697`; generated artifact commit: `354a40e128b9e59ac351ab0bb6ee51e0a4696895`.
+- This was a public-product cleanup only. The private development-source baseline remains `dc9f4ef1ac7111ee86ca6cfaef95f512c4112a8c` and was not advanced.
+
 
 ### Runtime 0.2.6.85 / Supervisor 0.1.6 offline Python bootstrap — 2026-09-21
 
