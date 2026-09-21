@@ -101,12 +101,13 @@ Project authority documents and project entries are created only when the user e
 
 The installer and release assembly described above are implemented for the current Houdini + Unreal product slice:
 
-- Runtime 0.2.6.84
+- Runtime 0.2.6.85
 - Houdini Adapter 0.5.27
 - AIBridgeUE 0.5.3
-- Supervisor 0.1.5
+- Supervisor 0.1.6
 - `AI_Bridge_Installer.zip` containing the one-click BAT/PowerShell entrypoints
 - deterministic Runtime/release manifests with SHA-256 verification
+- bundled Windows Python wheelhouse for offline first-launch dependency bootstrap
 
 Automated Windows validation has passed a clean GitHub re-download/install smoke test.
 

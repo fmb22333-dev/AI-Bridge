@@ -114,10 +114,10 @@ It must not contain:
 
 ## Current product status
 
-Runtime **0.2.6.84**, Houdini Adapter **0.5.27**, AIBridgeUE **0.5.3**, Supervisor **0.1.5**.
+Runtime **0.2.6.85**, Houdini Adapter **0.5.27**, AIBridgeUE **0.5.3**, Supervisor **0.1.6**.
 
 Supabase is the default realtime command/result transport when configured. GitHub V5 remains connected as fallback command transport and remains the durable authority. Supabase credentials are stored through the existing local SecretStore/Windows DPAPI path and are never committed.
 
-The release workflow rebuilds and verifies deterministic Runtime/installer artifacts on `main`, including a fresh-install smoke test. The Dashboard Host Plugins panel supports one-click Houdini install/update and project-scoped AIBridgeUE install/update; Blender remains scaffold-only.
+The release workflow rebuilds and verifies deterministic Runtime/installer artifacts on `main`, including a fresh-install smoke test. The Runtime bundle includes a pinned Windows wheelhouse, so normal first launch installs Python dependencies locally without requiring PyPI access. The Dashboard Host Plugins panel supports one-click Houdini install/update and project-scoped AIBridgeUE install/update; Blender remains scaffold-only.
 
 See [`docs/SUPABASE_PRIMARY_TRANSPORT.md`](docs/SUPABASE_PRIMARY_TRANSPORT.md), [`docs/RELEASE_0.2.6.56.md`](docs/RELEASE_0.2.6.56.md), and [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md).
