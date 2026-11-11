@@ -8,6 +8,18 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Global MCP workspace files and command registration — 2026-11-11 v2
+
+- Exposes existing workspace directory/list, single and batch UTF-8 reads, create/patch and hash-checked patchset operations through the same five MCP tools. Context accepts an optional operation for exact argument schema discovery; Runtime capability advertisement still gates availability.
+- Exposes structured project manifest configuration so authorized command registration no longer requires a separate local API call. Existing manifests require their current SHA; clients must preserve other commands/services because configuration replaces the full manifest. Registration does not execute commands.
+- Retains workspace bounds, generic control-file write protection, hash conflicts, backend batch limits and stable command identities. Documents best-effort rollback and external editor/command side-effect limits.
+- Raises helper transport limits to accommodate supported UTF-8 batches. This is an MCP-only extension; existing clients reload the MCP helper, with no Runtime or Host restart.
+- Publishes matching helper, packaging source and verifier under the dated snapshot directory. Archive timestamps are fixed for reproducible builds.
+- Validation: 56 packaged tests; actual isolated MCP discovery, Unicode request/response, single/batch file edits, stale hash with no partial write, path/control/count denials, manifest creation/update/preservation/hash conflicts and execution of a newly registered harmless command. 211 file hashes verified.
+- Artifact: `downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11_v2.zip`; 506,949 bytes; SHA-256 `a57c377799fd65c30704fa996ef0a1b092b4d06b2debccc595253666d7180f33`. Original snapshot archive is retained. Canonical runtime sources, migration baseline and standard automatic release manifests are unchanged.
+- UE real-time editing, viewport and PIE were not tested in this update. A reported compile with about two minutes of no new output remained observable as running and eventually succeeded; this observation alone is not classified as a process failure.
+
+
 ### Standalone remote-tools Windows installer snapshot — 2026-11-11
 
 - Added a dated, directly downloadable clean installer snapshot and AI-readable installation/protocol guides. Base Runtime 0.2.6.96, remote control revision 2026-11-11.2, Supervisor 0.1.7, AIBridgeUE source 0.6.0.

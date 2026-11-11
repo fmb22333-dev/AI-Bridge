@@ -4,13 +4,14 @@
 
 AI Bridge is a distributable local Runtime for AI-assisted control of host applications. The shared product repository and each installation's Bus repository have deliberately different authority.
 
-## 下载与 AI 安装：2026-11-11 功能包
+## 下载与 AI 安装：2026-11-11 v2 功能包
 
-**同事安装本次远程指令、完整日志、进度和取消功能，请使用下面这个日期版安装包。**
+**同事安装本次远程指令、完整日志、进度、取消，以及全局 MCP 文件读写和命令登记功能，请使用下面这个日期版安装包。**
 
-- [直接下载 Windows 安装包（约 0.5 MB）](https://github.com/fmb22333-dev/AI-Bridge/raw/refs/heads/main/downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11.zip)
+- [直接下载 Windows 安装包（约 0.5 MB）](https://github.com/fmb22333-dev/AI-Bridge/raw/refs/heads/main/downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11_v2.zip)
 - [安装 AI 必读：下载、校验和安装说明](docs/install/REMOTE_TOOLS_2026-11-11.md)
 - [远程查询、日志分页和取消协议](docs/install/REMOTE_TOOLS_PROTOCOL_2026-11-11.md)
+- [MCP 工作区文件读写与命令登记](docs/install/WORKSPACE_MCP_2026-11-11.md)
 
 可以直接把安装说明链接交给同事的 AI。压缩包包含完整功能快照、全局 MCP 注册脚本、Houdini 适配器和 UE 0.6.0 插件源码；不带发送者的凭据、Bridge 身份、工程或历史记录。首次安装需要联网下载 Python 依赖，UE 插件需在接收者工程编译。
 

@@ -1,16 +1,19 @@
-# 下载与安装：2026-11-11 Bridge 功能包
+# 下载与安装：2026-11-11 v2 Bridge 功能包
 
-- [直接下载安装包（Windows，496,119 字节）](https://github.com/fmb22333-dev/AI-Bridge/raw/refs/heads/main/downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11.zip)
-- [SHA-256 校验文件](../../downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11.zip.sha256)
-- [远程协议说明](REMOTE_TOOLS_PROTOCOL_2026-11-11.md)
+- [直接下载安装包（Windows，506,949 字节）](https://github.com/fmb22333-dev/AI-Bridge/raw/refs/heads/main/downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11_v2.zip)
+- [SHA-256 校验文件](../../downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11_v2.zip.sha256)
+- [工作区文件读写与命令登记](WORKSPACE_MCP_2026-11-11.md)
+- [远程日志与取消协议](REMOTE_TOOLS_PROTOCOL_2026-11-11.md)
 
-SHA-256：`f70595565620f0834f210ab26c35a9cdf6e896e9c23ed5bdfb2a83512b27a230`
+SHA-256：`a57c377799fd65c30704fa996ef0a1b092b4d06b2debccc595253666d7180f33`
 
-请安装 AI 先下载到本机、核对 SHA-256，再解压阅读包内 `AI_INSTALL_GUIDE.md` 并执行下面的步骤。安装到接收者自己的目录，保留已有 Bridge/Host 工作和 Codex 配置。Windows + Python 3.11+；首次安装需要联网下载依赖。本包没有离线 wheelhouse，UE 插件提供源码，需要按目标工程编译。
+v2 在原日期包上补齐全局 MCP 的文本文件读写、批量修改和执行命令登记。仍用原来的五个工具；通过 `ta_bridge_context(operation="workspace.patchset.apply")` 或 `operation="workspace.project.configure"` 查看参数。已有 MCP 进程需要重载，UE/Houdini 无需为这次接口更新而重启。
 
-这是独立的、已测试的日期快照，包含 Runtime 0.2.6.96 基础、远程控制修订 2026-11-11.2、Supervisor 0.1.7 的固定版本启动配置及 UE 插件 0.6.0。它没有替换仓库标准自动更新发行清单，不能用旧的 `INSTALL_AI_BRIDGE.ps1` 或旧下载入口替代本包。包内自动 Runtime 更新默认关闭，避免被不同发行版覆盖。
+验证：211 个清单文件哈希、中文/空格解压路径、独立 Runtime 与真实 MCP 读写/命令登记执行、配置保留和冲突拒绝，随包 56 项检查通过。UE 实时编辑、视口和 PIE 未测试。首次联网安装依赖和接收者 UE 编译仍需按其真实环境验收。
 
-验证：206 个清单文件哈希核对、中文/空格路径解压、独立数据目录启动、实际 MCP 初始化和 context 调用、配置保留/备份/重复注册/冲突拒绝，以及随包 38 项检查通过。未在另一台机器上安装全新依赖，也未验证对方 UE 版本编译；首次接入仍按真实环境验收。
+这是独立的日期快照：基础 Runtime 0.2.6.96、远程控制修订 2026-11-11.2、全局 MCP 1.1.0、UE 插件源码 0.6.0。标准产品源代码、迁移基线和自动发行清单没有迁移至此快照。旧包保留，新安装使用 v2。
+
+请安装 AI 下载后先核对哈希，再阅读包内 `AI_INSTALL_GUIDE.md`。以下为同一安装说明。
 
 ---
 
@@ -44,6 +47,9 @@ Houdini：默认安装器识别 21.0 用户目录；其它版本先找实际偏�
 UE：源码位于 `Runtime/Current/unreal_adapter/AIBridgeUE`。新项目复制到 `<工程>/Plugins/AIBridgeUE`；已有插件先比较和备份，保护其自定义改动。不要在活动编辑器中替换已加载 DLL。使用该工程真实 UE 版本和 Editor target 编译，按需安排重开编辑器。包内无编译好的 UE DLL，不能保证跨 UE 版本直接编译；首次接入以该版本真实编译/会话为准。
 
 ## 验收
+
+- v2 工作区文件能力：`ta_bridge_context()` 应返回 `workspace_access`；用 `ta_bridge_context(operation="workspace.patchset.apply")` 查看参数，再按 `WORKSPACE.md` 在接收者授权的测试目录验证。单文件和批量读取会返回 SHA-256；批量修改已有文件必须提供该哈希。更新已安装的同一路径 helper 后需重载 MCP，现有 UE/Houdini 无需重启。
+- 登记执行命令：查询 `workspace.project.configure` 的参数，先读 `.ai-bridge/project.json`，保留原命令和服务，提交完整 manifest 与读取时的哈希；新建 manifest 才省略哈希。登记不会执行命令，执行另用 `workspace.command.run`。这是整体替换，不要遗漏其它条目。
 
 - Codex：重新加载后检查 `codex mcp get ta_bridge --json` 为 enabled；不要把配置文件存在当作工具已经加载。
 - `ta_bridge_context()` 能返回本机工作区/会话；无宿主时 sessions 为空是正常现象。

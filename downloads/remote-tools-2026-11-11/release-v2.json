@@ -1,0 +1,12 @@
+{
+  "package": "AI_Bridge_RemoteTools_2026-11-11_v2.zip",
+  "bytes": 506949,
+  "sha256": "a57c377799fd65c30704fa996ef0a1b092b4d06b2debccc595253666d7180f33",
+  "runtime_base": "0.2.6.96",
+  "global_mcp_version": "1.1.0",
+  "remote_controls_revision": "2026-11-11.2",
+  "ue_plugin_version": "0.6.0",
+  "manifest_files_verified": 211,
+  "packaged_tests_passed": 56,
+  "canonical_release_manifests_changed": false
+}
