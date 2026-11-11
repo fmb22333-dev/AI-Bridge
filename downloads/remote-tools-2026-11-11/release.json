@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "package": "remote-tools-2026-11-11",
+  "archive": "AI_Bridge_RemoteTools_2026-11-11.zip",
+  "bytes": 496119,
+  "sha256": "f70595565620f0834f210ab26c35a9cdf6e896e9c23ed5bdfb2a83512b27a230",
+  "runtime_base": "0.2.6.96",
+  "remote_controls_revision": "2026-11-11.2",
+  "supervisor": "0.1.7",
+  "ue_plugin_source": "0.6.0",
+  "platform": "Windows",
+  "python": ">=3.11",
+  "dependency_install": "online",
+  "ue_binaries_included": false,
+  "sender_state_included": false,
+  "automatic_runtime_updates": "opt-in",
+  "packaged_tests_passed": 38,
+  "install_guide": "docs/install/REMOTE_TOOLS_2026-11-11.md",
+  "source_payload": "included in archive; canonical runtime/ baseline unchanged"
+}

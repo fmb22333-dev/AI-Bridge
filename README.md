@@ -4,6 +4,18 @@
 
 AI Bridge is a distributable local Runtime for AI-assisted control of host applications. The shared product repository and each installation's Bus repository have deliberately different authority.
 
+## 下载与 AI 安装：2026-11-11 功能包
+
+**同事安装本次远程指令、完整日志、进度和取消功能，请使用下面这个日期版安装包。**
+
+- [直接下载 Windows 安装包（约 0.5 MB）](https://github.com/fmb22333-dev/AI-Bridge/raw/refs/heads/main/downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11.zip)
+- [安装 AI 必读：下载、校验和安装说明](docs/install/REMOTE_TOOLS_2026-11-11.md)
+- [远程查询、日志分页和取消协议](docs/install/REMOTE_TOOLS_PROTOCOL_2026-11-11.md)
+
+可以直接把安装说明链接交给同事的 AI。压缩包包含完整功能快照、全局 MCP 注册脚本、Houdini 适配器和 UE 0.6.0 插件源码；不带发送者的凭据、Bridge 身份、工程或历史记录。首次安装需要联网下载 Python 依赖，UE 插件需在接收者工程编译。
+
+这是独立的固定版本快照：基础 Runtime 0.2.6.96 / 远程控制修订 2026-11-11.2。标准产品源代码和自动更新清单暂未迁移到该快照。**本次安装以新指南为准，不要走下方旧版标准发行下载流程。**
+
 ## Authority model
 
 - **This repository** — Runtime, Supervisor, host adapters, installer, protocol/specifications, clean generic Knowledge and release artifacts.
@@ -37,7 +49,7 @@ Supabase PRIMARY   GitHub V5 FALLBACK
 
 Blender remains scaffold-only.
 
-## First install
+## Standard-release first install
 
 `download -> INSTALL_AI_BRIDGE.bat -> Setup UI -> connect/create GitHub Bus -> configure Supabase Primary -> install host plugins`
 
@@ -66,7 +78,7 @@ This repository may contain Runtime/Core source, Supervisor bootstrap, Houdini/U
 
 It must not contain developer credentials, machine Bridge IDs, live workspaces/sessions/PIDs, command/recovery history, local paths, active project authority, project-specific HIP/FBX data or private project-family execution evidence.
 
-## Current product status
+## Main source / standard-release baseline
 
 - Runtime **0.2.6.89**
 - Supervisor **0.1.6**

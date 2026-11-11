@@ -8,6 +8,18 @@ For logging rules, see `docs/CHANGE_POLICY.md`.
 
 ## Unreleased
 
+### Standalone remote-tools Windows installer snapshot — 2026-11-11
+
+- Added a dated, directly downloadable clean installer snapshot and AI-readable installation/protocol guides. Base Runtime 0.2.6.96, remote control revision 2026-11-11.2, Supervisor 0.1.7, AIBridgeUE source 0.6.0.
+- Snapshot includes global Bridge MCP registration, discoverable remote command schemas, process progress/events, lossless paginated saved logs, command-owned cancellation and optional normal closure of the originally bound Host.
+- Preserves the canonical cancellation receipt while mapping Core skipped to the deployed Supabase table's failed terminal index. The precise outcome remains in result.status / result.failure.code.
+- Distribution contains no sender credentials, Bridge identity, workspaces, command/recovery records, projects, virtual environment or compiled UE binaries. Clean Knowledge is regenerated through the distribution filter.
+- Registration backs up existing Codex config, preserves unrelated settings and refuses conflicting installations. Snapshot Runtime auto-updates are opt-in to prevent replacement by an older/different standard release.
+- Validation: manifest hashes, relocated Unicode/space path, isolated Runtime startup, actual global MCP context and configuration merge checks; 38 packaged tests passed. New-machine dependency download and recipient UE compilation remain environment-specific acceptance.
+- Artifact: `downloads/remote-tools-2026-11-11/AI_Bridge_RemoteTools_2026-11-11.zip`; 496,119 bytes; SHA-256 `f70595565620f0834f210ab26c35a9cdf6e896e9c23ed5bdfb2a83512b27a230`.
+- This is a separately packaged snapshot, not a migration of the canonical runtime/ source or existing automated release manifests. The migration baseline and standard release authority are unchanged; use the new dated install guide for this package.
+
+
 ### Runtime 0.2.6.89 non-blocking Step 2 + persisted Step 4 authority — 2026-09-21
 
 - Fixed the remaining fresh-install case where Runtime 0.2.6.88 could still leave Step 2 apparently stuck and Step 4 permanently disabled.
